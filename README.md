@@ -1,17 +1,21 @@
 
-# dotnet-maui-check
-.NET MAUI Check tool
+# dotnet-uno-check
+Uno Check tool
 
-![.NET MAUI Check](https://user-images.githubusercontent.com/271950/112761851-29f53180-8fcb-11eb-92be-c843c794b2af.gif)
+---
+
+Based on Redth's .NET MAUI Check tool: https://github.com/Redth/dotnet-maui-check
+
+---
 
 To install:
 ```
-dotnet tool install -g Redth.Net.Maui.Check
+dotnet tool install -g Uno.Check
 ```
 
 To run:
 ```
-maui-check
+uno-check
 ```
 
 ## Command line arguments
@@ -19,11 +23,11 @@ maui-check
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
 Manifest files are currently used by the doctor to fetch the latest versions and requirements.
-The manifest is hosted by default at: https://aka.ms/dotnet-maui-check-manifest
+The manifest is hosted by default at: TODO: provide link
 Use this option to specify an alternative file path or URL to use.
 
 ```
-maui-check --manifest /some/other/file
+uno-check --manifest /some/other/file
 ```
 
 ### `-f`, `--fix` Fix without prompt
@@ -31,7 +35,7 @@ maui-check --manifest /some/other/file
 You can try using the `--fix` argument to automatically enable solutions to run without being prompted.
 
 ```
-maui-check --fix
+uno-check --fix
 ```
 
 ### `-n`, `--non-interactive` Non-Interactive
@@ -39,16 +43,16 @@ maui-check --fix
 If you're running on CI you may want to run without any required input with the `--non-interactive` argument.  You can combine this with `--fix` to automatically fix without prompting.
 
 ```
-maui-check --non-interactive
+uno-check --non-interactive
 ```
 
 ### `-d`, `--dev` Dev Manifest feed
 
 This uses a more frequently updated manifest with newer versions of things more often.
-The manifest is hosted by default at: https://aka.ms/dotnet-maui-check-manifest-dev
+The manifest is hosted by default at: TODO: add link
 
 ```
-maui-check --dev
+uno-check --dev
 ```
 
 ### `--ci` Continuous Integration
@@ -56,17 +60,17 @@ maui-check --dev
 Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK version from the manifest instead of the global installer.
 
 ```
-maui-check --ci
+uno-check --ci
 ```
 
 
 ### `-s <ID_OR_NAME>`, `--skip <ID_OR_NAME>` Skip Checkup
 
-Skips a checkup by name or id as listed in `maui-check list`.
+Skips a checkup by name or id as listed in `uno-check list`.
 NOTE: If there are any other checkups which depend on a skipped checkup, they will be skipped too. 
 
 ```
-maui-check --skip openjdk --skip androidsdk
+uno-check --skip openjdk --skip androidsdk
 ```
 
 ### `list` List Checkups
@@ -87,5 +91,5 @@ Arguments:
 
 Example:
 
-`maui-check config --dev --nuget-sources --dotnet-version --dotnet-pre true`
+`uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true`
 

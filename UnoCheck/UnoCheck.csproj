@@ -4,22 +4,22 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>maui-check</ToolCommandName>
+    <ToolCommandName>uno-check</ToolCommandName>
     <PackageOutputPath>./artifacts</PackageOutputPath>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>Redth.Net.Maui.Check</PackageId>
-    <Title>.NET MAUI Check Tool</Title>
+    <PackageId>Uno.Check</PackageId>
+    <Title>Uno Platform Check Tool</Title>
     <Version>$(PackageVersion)</Version>
     <Authors>Redth</Authors>
     <Owners>Redth</Owners>
-    <summary>A dotnet tool for helping set up your .NET MAUI environment</summary>
+    <summary>A dotnet tool for helping set up your Uno Platform environment</summary>
     <PackageDescription>
-	A dotnet tool for helping set up your .NET MAUI environment
+	A dotnet tool for helping set up your Uno Platform environment
     </PackageDescription>
-    <Copyright>Copyright © Redth</Copyright>
+    <Copyright>Copyright © Uno Platform</Copyright>
     <PackageProjectUrl>https://github.com/redth/dotnet-maui-check</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/redth/dotnet-maui-check</RepositoryUrl>

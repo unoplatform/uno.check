@@ -97,7 +97,6 @@ namespace DotNetCheck
 			}
 
 			// Process any env variables to be set that might have been set by other checkups
-			// ie: JavaJdkCheckup sets MAUI_DOCTOR_JAVA_HOME
 			foreach (var ev in Util.EnvironmentVariables)
 				process.StartInfo.Environment[ev.Key] = ev.Value?.ToString();
 

@@ -25,15 +25,13 @@ namespace DotNetCheck.Cli
 			Console.Title = ToolInfo.ToolName;
 
 			AnsiConsole.Render(
-				new FigletText(".NET MAUI").LeftAligned().Color(Color.Green));
+				new FigletText("Uno Platform").LeftAligned().Color(new Color(122, 103, 247)));
 
 			AnsiConsole.MarkupLine($"[underline bold green]{Icon.Ambulance} {ToolInfo.ToolName} {Icon.Recommend}[/]");
 			AnsiConsole.Render(new Rule());
 
-			AnsiConsole.MarkupLine("This tool will attempt to evaluate your .NET MAUI development environment.");
-			AnsiConsole.MarkupLine("If problems are detected, this tool may offer the option to try and fix them for you, or suggest a way to fix them yourself.");
-			AnsiConsole.WriteLine();
-			AnsiConsole.MarkupLine("Thanks for choosing .NET MAUI!");
+			AnsiConsole.MarkupLine("This tool will check your Uno Platform development environment.");
+			AnsiConsole.MarkupLine("If problems are detected, it will offer the option to try and fix them for you, or suggest a way to fix them yourself.");
 			AnsiConsole.Render(new Rule());
 
 			if (!Util.IsAdmin() && Util.IsWindows)

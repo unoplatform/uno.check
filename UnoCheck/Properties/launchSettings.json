@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "MauiCheck": {
+    "UnoCheck": {
       "commandName": "Project",
       "commandLineArgs": "--dev"
     }
