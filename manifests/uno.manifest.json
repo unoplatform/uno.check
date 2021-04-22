@@ -107,13 +107,6 @@
           ],
           "packs": [
             {
-              "id": "Microsoft.Maui.Templates",
-              "version": "6.0.100-preview.3.322",
-              "skipManifestCheck": true,
-              "packKind": "template",
-              "templateShortName": "maui"
-            },
-            {
               "id": "Microsoft.iOS.Windows.Sdk",
               "version": "14.4.100-preview.3.1326",
               "skipManifestCheck": true,
