@@ -210,7 +210,7 @@ namespace DotNetCheck.Cli
 								remedy.OnStatusUpdated += remedyStatusUpdated;
 
 								AnsiConsole.MarkupLine($"{Icon.Thinking} Attempting to fix: " + checkup.Title);
-									
+
 								await remedy.Implement(sharedState, cts.Token);
 
 								didFix = true;
