@@ -32,7 +32,10 @@ namespace DotNetCheck
 			CheckupManager.RegisterCheckupContributors(
 				new DotNetSdkCheckupContributor());
 
-			CheckupManager.RegisterCheckups(new DotNetSentinelCheckup());
+			CheckupManager.RegisterCheckups(
+				new DotNetSentinelCheckup(),
+				new WSLCheckup()
+			);
 
 			var app = new CommandApp();
 
