@@ -38,6 +38,8 @@ namespace DotNetCheck
 		public bool UseSystemShell { get; set; } = true;
 
 		public IReadOnlyDictionary<string, string> EnvironmentVariables { get; set; } = new Dictionary<string, string>();
+
+		public Encoding OutputEncoding { get; set; }
 	}
 
 	public class ShellProcessRunner
@@ -105,6 +107,11 @@ namespace DotNetCheck
 
 			if (Options.RedirectInput)
 				process.StartInfo.RedirectStandardInput = true;
+
+			if (options.OutputEncoding != null)
+			{
+				process.StartInfo.StandardOutputEncoding = options.OutputEncoding;
+			}
 
 			process.OutputDataReceived += (s, e) =>
 			{
