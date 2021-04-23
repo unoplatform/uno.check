@@ -24,6 +24,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/redth/dotnet-maui-check</RepositoryUrl>
     <AssemblyFileVersion>$(PackageVersion)</AssemblyFileVersion>
+    <RootNamespace>DotNetCheck</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
