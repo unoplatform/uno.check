@@ -8,7 +8,7 @@
       "minimumVersion": "12.4"
     },
     "vswin": {
-      "minimumVersion": "16.9.0"
+      "minimumVersion": "16.8.0"
     },
     "vsmac": {
       "minimumVersion": "8.9.0"
@@ -68,7 +68,7 @@
     "dotnet": {
       "sdks": [
         {
-          "version": "6.0.100-preview.3.21202.5",
+          "version": "5.0.102",
           "enableWorkloadResolver": true,
           "urls": {
             "win64": "https://dotnetcli.azureedge.net/dotnet/Sdk/__VERSION__/dotnet-sdk-__VERSION__-win-x64.exe",
@@ -79,48 +79,24 @@
             "https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json"
           ],
           "workloads": [
-            {
-              "workloadId": "microsoft-android-sdk-full",
-              "packageId": "Microsoft.NET.Workload.Android",
-              "version": "11.0.200-preview.3.196"
-            },
-            {
-              "workloadId": "microsoft-ios-sdk-full",
-              "packageId": "Microsoft.NET.Workload.iOS",
-              "version": "14.4.100-preview.3.1326"
-            },
-            {
-              "workloadId": "microsoft-maccatalyst-sdk-full",
-              "packageId": "Microsoft.NET.Workload.MacCatalyst",
-              "version": "14.3.100-preview.3.471"
-            },
-            {
-              "workloadId": "microsoft-tvos-sdk-full",
-              "packageId": "Microsoft.NET.Workload.tvOS",
-              "version": "14.3.100-preview.3.1379"
-            },
-            {
-              "workloadId": "microsoft-macos-sdk-full",
-              "packageId": "Microsoft.NET.Workload.macOS",
-              "version": "11.1.100-preview.3.1379"
-            }
-          ],
-          "packs": [
-            {
-              "id": "Microsoft.iOS.Windows.Sdk",
-              "version": "14.4.100-preview.3.1326",
-              "skipManifestCheck": true,
-              "packKind": "sdk",
-              "arch": "win64"
-            },
-            {
-              "id": "Microsoft.iOS.Windows.Sdk",
-              "version": "14.4.100-preview.3.1326",
-              "skipManifestCheck": true,
-              "packKind": "sdk",
-              "arch": "win"
-            }
+
           ]
+        }
+      ]
+    },
+    "vswindows": {
+      "workloads": [
+        {
+          "id": "Microsoft.VisualStudio.Workload.Universal",
+          "name": "Universal Windows Platform development"
+        },
+        {
+          "id": "Microsoft.VisualStudio.Workload.NetCrossPlat",
+          "name": "Mobile development with .NET"
+        },
+        {
+          "id": "Microsoft.VisualStudio.Workload.NetWeb",
+          "name": "ASP.NET and web development"
         }
       ]
     }
