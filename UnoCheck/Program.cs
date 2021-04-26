@@ -25,9 +25,11 @@ namespace DotNetCheck
 				new AndroidEmulatorCheckup(),
 				new VisualStudioMacCheckup(),
 				new VisualStudioWindowsCheckup(),
+				new VSWinWorkloadsCheckup(),
 				new AndroidSdkPackagesCheckup(),
 				new XCodeCheckup(),
-				new DotNetCheckup());
+				new DotNetCheckup()
+			);
 
 			CheckupManager.RegisterCheckupContributors(
 				new DotNetSdkCheckupContributor());

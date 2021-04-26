@@ -69,7 +69,7 @@ namespace DotNetCheck.Checkups
 			}
 		}
 
-		Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo()
+		public static Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo(string requires = "")
 		{
 			var items = new List<VisualStudioInfo>();
 
@@ -85,7 +85,7 @@ namespace DotNetCheck.Checkups
 				return default;
 
 			var r = ShellProcessRunner.Run(path,
-				"-all -requires Microsoft.Component.MSBuild -format json -prerelease");
+				$"-all -requires Microsoft.Component.MSBuild {requires} -format json -prerelease");
 
 			var str = r.GetOutput();
 
