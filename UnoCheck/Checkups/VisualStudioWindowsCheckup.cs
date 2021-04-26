@@ -52,7 +52,21 @@ namespace DotNetCheck.Checkups
 			if (vsinfo.Any(vs => vs.Version.IsCompatible(MinimumVersion, ExactVersion)))
 				return DiagnosticResult.Ok(this);
 
-			return new DiagnosticResult(Status.Error, this);
+			if (vsinfo.Any())
+			{
+				// VS is installed, but out of date
+				return new DiagnosticResult(
+						Status.Error,
+						this,
+						prescription: new Suggestion("Update Visual Studio", "Visual Studio is out of date. You should run Visual Studio Installer to update to the latest version.")
+					); 
+			}
+			else
+			{
+				// VS is not installed, but another IDE might be, so don't raise an error
+				ReportStatus("Visual Studio is not installed", Status.Warning);
+				return new DiagnosticResult(Status.Warning, this);
+			}
 		}
 
 		Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo()
