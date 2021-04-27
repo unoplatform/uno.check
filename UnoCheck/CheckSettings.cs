@@ -1,8 +1,9 @@
 ﻿using Spectre.Console.Cli;
+using System.ComponentModel;
 
 namespace DotNetCheck.Cli
 {
-	public class CheckSettings : CommandSettings
+	public partial class CheckSettings : CommandSettings
 	{
 		[CommandOption("-m|--manifest <FILE_OR_URL>")]
 		public string Manifest { get; set; }

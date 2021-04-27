@@ -2,7 +2,7 @@
 
 namespace DotNetCheck
 {
-	public class ListCheckupSettings : CommandSettings
+	public partial class ListCheckupSettings : CommandSettings
 	{
 		[CommandOption("-m|--manifest <FILE_OR_URL>")]
 		public string Manifest { get; set; }

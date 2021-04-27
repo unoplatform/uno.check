@@ -22,7 +22,7 @@ namespace DotNetCheck
 
 			var sharedState = new SharedState();
 
-			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState);
+			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);
 
 			foreach (var c in checkups)
 			{

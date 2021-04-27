@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DotNetCheck.Models
 {
-	public abstract class Checkup
+	public abstract partial class Checkup
 	{
 		public Checkup()
 		{ }

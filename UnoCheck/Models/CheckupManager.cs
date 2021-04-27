@@ -16,7 +16,7 @@ namespace DotNetCheck.Models
 		public static void RegisterCheckupContributors(params CheckupContributor[] checkupContributors)
 			=> registeredCheckupContributors.AddRange(checkupContributors);
 
-		public static IEnumerable<Checkup> BuildCheckupGraph(Manifest.Manifest manifest, SharedState sharedState)
+		public static IEnumerable<Checkup> BuildCheckupGraph(Manifest.Manifest manifest, SharedState sharedState, string[]? targetPlatformFlags)
 		{
 			var checkups = new List<Checkup>();
 
@@ -29,7 +29,8 @@ namespace DotNetCheck.Models
 					checkups.AddRange(contributed);
 			}
 
-			var filtered = checkups.Where(c => c.IsPlatformSupported(Util.Platform));
+			var targetPlatforms = TargetPlatformHelper.GetTargetPlatformsFromFlags(targetPlatformFlags);
+			var filtered = checkups.Where(c => c.IsPlatformSupported(Util.Platform) && ((c.ApplicableTargets & targetPlatforms) != TargetPlatform.None));
 			var checkupIds = filtered.Select(c => c.Id);
 
 			var sorted = TopologicalSort<Checkup>(filtered, c =>

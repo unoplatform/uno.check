@@ -29,6 +29,8 @@ namespace DotNetCheck.Checkups
 		public override bool ShouldExamine(SharedState history)
 			=> RequiredPackages?.Any() ?? false;
 
+		public override TargetPlatform ApplicableTargets => TargetPlatform.Android;
+
 		class AndroidComponentWrapper
 		{
 			public IAndroidComponent Component
