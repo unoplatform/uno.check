@@ -21,7 +21,7 @@ namespace DotNetCheck.Checkups
 
 		public override string Title => "Windows Subsystem for Linux";
 
-		public override TargetPlatform ApplicableTargets => TargetPlatform.SkiaGtk | TargetPlatform.WebAssembly;
+		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.SkiaGtk | TargetPlatform.WebAssembly;
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{

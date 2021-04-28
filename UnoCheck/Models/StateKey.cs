@@ -1,0 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace DotNetCheck.Models
+{
+	public static class StateKey
+	{
+		public const string EntryPoint = "EntryPoint";
+
+		public const string TargetPlatforms = "target_platforms";
+	}
+}

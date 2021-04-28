@@ -9,6 +9,6 @@ namespace DotNetCheck.Models
 		/// <summary>
 		/// Target platforms to which the checkup applies.
 		/// </summary>
-		public virtual TargetPlatform ApplicableTargets => TargetPlatform.All;
+		public virtual TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.All;
 	}
 }

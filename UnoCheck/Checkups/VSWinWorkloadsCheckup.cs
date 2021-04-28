@@ -23,6 +23,36 @@ namespace DotNetCheck.Checkups
 
 		public override bool ShouldExamine(SharedState history) => Manifest?.Check?.VSWindows?.Workloads != null;
 
+		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest)
+		{
+			if (!(manifest?.Check?.VSWindows?.Workloads is { } workloads))
+			{
+				return TargetPlatform.All;
+			}
+
+			var output = TargetPlatform.None;
+			foreach (var workload in workloads)
+			{
+				output |= GetApplicableTargetsForWorkload(workload);
+			}
+			return output;
+		}
+
+		private TargetPlatform GetApplicableTargetsForWorkload(VSWinWorkload workload)
+		{
+			var output = TargetPlatform.None;
+			if (workload.RequiredBy is { } requiredBy)
+			{
+				foreach (var targetFlag in requiredBy)
+				{
+					var target = TargetPlatformHelper.GetTargetPlatformFromFlag(targetFlag);
+					output |= target;
+				}
+			}
+
+			return output;
+		}
+
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
 			if (!(Manifest?.Check?.VSWindows?.Workloads is { } workloads))
@@ -30,10 +60,17 @@ namespace DotNetCheck.Checkups
 				return DiagnosticResult.Ok(this);
 			}
 
+			history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var activeTargetPlatforms);
 			var missingWorkloads = new List<VSWinWorkload>();
 			foreach (var workload in workloads)
 			{
 				if (workload.Id == null)
+				{
+					continue;
+				}
+
+				var workloadTargets = GetApplicableTargetsForWorkload(workload);
+				if ((activeTargetPlatforms & workloadTargets) == TargetPlatform.None)
 				{
 					continue;
 				}
@@ -63,7 +100,7 @@ namespace DotNetCheck.Checkups
 				var result = new DiagnosticResult(
 					Status.Error,
 					this,
-					prescription: new Suggestion("Install missing workloads", 
+					prescription: new Suggestion("Install missing workloads",
 					"Some required workloads were not found. You should run Visual Studio Installer to install the missing workloads.")
 				);
 				return result;

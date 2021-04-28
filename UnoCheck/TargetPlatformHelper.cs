@@ -25,7 +25,7 @@ namespace DotNetCheck
 			return output;
 		}
 
-		private static TargetPlatform GetTargetPlatformFromFlag(string flag)
+		public static TargetPlatform GetTargetPlatformFromFlag(string flag)
 		{
 			switch (flag.ToLowerInvariant())
 			{
@@ -58,6 +58,8 @@ namespace DotNetCheck
 					return TargetPlatform.SkiaWPF | TargetPlatform.SkiaGtk | TargetPlatform.SkiaTizen;
 				case "linux":
 					return TargetPlatform.SkiaGtk;
+				case "web":
+					return TargetPlatform.WebAssembly;
 
 				case "all":
 					return TargetPlatform.All;

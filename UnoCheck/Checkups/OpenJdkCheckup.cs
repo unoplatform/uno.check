@@ -44,7 +44,7 @@ namespace DotNetCheck.Checkups
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.OpenJdk != null;
 
-		public override TargetPlatform ApplicableTargets => TargetPlatform.Android;
+		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.Android;
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{

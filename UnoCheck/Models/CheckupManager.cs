@@ -30,7 +30,7 @@ namespace DotNetCheck.Models
 			}
 
 			var targetPlatforms = TargetPlatformHelper.GetTargetPlatformsFromFlags(targetPlatformFlags);
-			var filtered = checkups.Where(c => c.IsPlatformSupported(Util.Platform) && ((c.ApplicableTargets & targetPlatforms) != TargetPlatform.None));
+			var filtered = checkups.Where(c => c.IsPlatformSupported(Util.Platform) && ((c.GetApplicableTargets(manifest) & targetPlatforms) != TargetPlatform.None));
 			var checkupIds = filtered.Select(c => c.Id);
 
 			var sorted = TopologicalSort<Checkup>(filtered, c =>

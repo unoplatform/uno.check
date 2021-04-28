@@ -11,27 +11,33 @@ namespace DotNetCheck.Models
 		Dictionary<string, string> envVars = new Dictionary<string, string>();
 		Dictionary<string, Dictionary<string, object>> charts = new Dictionary<string, Dictionary<string, object>>();
 
-		public void ContributeState(Checkup checkup, string key, object value)
-		{
-			var checkupId = checkup.Id;
+		public void ContributeState(Checkup checkup, string key, object value) => ContributeState(checkup.Id, key, value);
 
+		public void ContributeState(string checkupId, string key, object value)
+		{
 			if (!charts.ContainsKey(checkupId))
 				charts.Add(checkupId, new Dictionary<string, object>());
 
 			charts[checkupId][key] = value;
 		}
 
-		public bool TryGetState<T>(string checkupId, string key, out T notes) where T : class
+		public bool TryGetState<T>(string checkupId, string key, out T notes)
 		{
 			notes = default;
 
 			if (charts.TryGetValue(checkupId, out var checkupNotes) && checkupNotes.TryGetValue(key, out var value))
-				notes = value as T;
+			{
+				if (value is T t)
+				{
+					notes = t;
+					return true;
+				}
+			}
 
-			return notes != default;
+			return false;
 		}
 
-		public bool TryGetStateFromAll<T>(string key, out IEnumerable<T> notes) where T : class
+		public bool TryGetStateFromAll<T>(string key, out IEnumerable<T> notes)
 		{
 			var all = new List<T>();
 
