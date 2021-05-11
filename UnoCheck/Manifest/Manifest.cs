@@ -7,8 +7,8 @@ namespace DotNetCheck.Manifest
 {
 	public partial class Manifest
 	{
-		public const string DefaultManifestUrl = "https://aka.ms/dotnet-maui-check-manifest";
-		public const string DevManifestUrl = "https://aka.ms/dotnet-maui-check-manifest-dev";
+		public const string DefaultManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json";
+		public const string DevManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-dev.manifest.json";
 
 		public static Task<Manifest> FromFileOrUrl(string fileOrUrl)
 		{

@@ -5,26 +5,18 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>uno-check</ToolCommandName>
-    <PackageOutputPath>./artifacts</PackageOutputPath>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>DotNetCheck</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageId>Uno.Check</PackageId>
-    <Title>Uno Platform Check Tool</Title>
-    <Version>$(PackageVersion)</Version>
-    <Authors>Redth</Authors>
-    <Owners>Redth</Owners>
-    <summary>A dotnet tool for helping set up your Uno Platform environment</summary>
-    <PackageDescription>
-	A dotnet tool for helping set up your Uno Platform environment
-    </PackageDescription>
-    <Copyright>Copyright © Uno Platform</Copyright>
-    <PackageProjectUrl>https://github.com/redth/dotnet-maui-check</PackageProjectUrl>
+    <PackageDescription>A dotnet tool for helping set up your Uno Platform environment</PackageDescription>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/redth/dotnet-maui-check</RepositoryUrl>
-    <AssemblyFileVersion>$(PackageVersion)</AssemblyFileVersion>
-    <RootNamespace>DotNetCheck</RootNamespace>
+    <PackageProjectUrl>https://github.com/unoplatform/uno.check</PackageProjectUrl>
+    <Authors>unoplatform</Authors>
+    <Copyright>Copyright © Uno Platform</Copyright>
+    <Title>Uno Platform Check Tool</Title>
   </PropertyGroup>
 
   <ItemGroup>
