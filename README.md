@@ -23,7 +23,7 @@ uno-check
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
 Manifest files are currently used by the doctor to fetch the latest versions and requirements.
-The manifest is hosted by default at: TODO: provide link
+The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json
 Use this option to specify an alternative file path or URL to use.
 
 ```
@@ -49,7 +49,7 @@ uno-check --non-interactive
 ### `-d`, `--dev` Dev Manifest feed
 
 This uses a more frequently updated manifest with newer versions of things more often.
-The manifest is hosted by default at: TODO: add link
+The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-dev.manifest.json
 
 ```
 uno-check --dev
