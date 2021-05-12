@@ -24,8 +24,10 @@ namespace DotNetCheck.Cli
 
 			Console.Title = ToolInfo.ToolName;
 
+			AnsiConsole.Markup(AsciiAssets.UnoLogo);
+			AnsiConsole.WriteLine();
 			AnsiConsole.Render(
-				new FigletText("Uno Platform").LeftAligned().Color(new Color(122, 103, 247)));
+				new FigletText("uno-check").LeftAligned().Color(new Color(122, 103, 247)));
 
 			AnsiConsole.MarkupLine($"[underline bold green]{Icon.Ambulance} {ToolInfo.ToolName} {Icon.Recommend}[/]");
 			AnsiConsole.Render(new Rule());

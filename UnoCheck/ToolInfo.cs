@@ -51,7 +51,7 @@ namespace DotNetCheck
 			if (!nonInteractive)
 			{
 				AnsiConsole.WriteLine();
-				AnsiConsole.WriteLine("Press enter to exit...");
+				AnsiConsole.WriteLine("Press Enter to finish...");
 				Console.ReadLine();
 			}
 		}
