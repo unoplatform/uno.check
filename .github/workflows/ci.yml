@@ -56,17 +56,28 @@ jobs:
     needs:
       - build
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Download Artifacts
         uses: actions/download-artifact@v2
         with:
           name: NuGet
-          path: NuGet
+          path: artifacts
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '3.1.x'
 
+      - name: Setup SignClient
+        run: |
+          dotnet tool install --tool-path build SignClient
+
+      - name: SignClient
+        run: |
+          build\SignClient sign -i artifacts\*.nupkg -c build\SignClient.json -r "${{ secrets.SIGN_CLIENT_USER }}" -s "${{ secrets.SIGN_CLIENT_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
+
       - name: NuGet Push
         run: |
-          dotnet nuget push NuGet\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_API_KEY }} --skip-duplicate
+          dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_ORG_API_KEY }}
