@@ -12,12 +12,17 @@
   <PropertyGroup>
     <PackageId>Uno.Check</PackageId>
     <PackageDescription>A dotnet tool for helping set up your Uno Platform environment</PackageDescription>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/unoplatform/uno.check</PackageProjectUrl>
     <Authors>unoplatform</Authors>
     <Copyright>Copyright © Uno Platform</Copyright>
     <Title>Uno Platform Check Tool</Title>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\build\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="NuGet.Packaging" Version="5.9.0" />
