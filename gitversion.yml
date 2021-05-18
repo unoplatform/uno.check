@@ -1,6 +1,5 @@
 assembly-versioning-scheme: MajorMinorPatch
 mode: Mainline
-next-version: 1.0
 
 branches:
   main:
@@ -11,8 +10,8 @@ branches:
     is-source-branch-for: ['beta', 'stable']
 
   pull-request:
-    regex: ^(pull|pull\-requests|pr)[/-]
     mode: ContinuousDeployment
+    regex: ^(pull|pull\-requests|pr)[/-]
     tag: 'PullRequest'
     tag-number-pattern: '[/-](?<number>\d+)[-/]'
     increment: Inherit
@@ -31,24 +30,8 @@ branches:
     source-branches: ['main','beta']
     is-mainline: true
 
-  dev:
-    mode: ContinuousDeployment
-    regex: ^dev/.*?/(.*?)
-    tag: dev.{BranchName}
-    source-branches: ['main', 'release', 'projects', 'feature']
-    increment: none
-
-  projects:
-    tag: proj-{BranchName}
-    regex: ^projects/(.*?)
-    source-branches: ['main']
-    increment: none
-
-  feature:
-    tag: feature.{BranchName}
-    regex: ^feature/(.*?)
-    source-branches: ['main']
-    increment: none
+  release:
+    regex: ignore
 
 ignore:
   sha: []
