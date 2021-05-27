@@ -18,12 +18,44 @@ To run:
 uno-check
 ```
 
+![uno-check running](https://github.com/unoplatform/uno/raw/master/doc/articles/Assets/uno-check-running.gif)
+
 ## Command line arguments
+
+The following command line arguments can be used to customise the tool's behavior.
+
+### `--target` Choose target platforms
+
+Uno Platform supports a number of platforms, and you may only wish to develop for a subset of them. By default the tool runs checks for all supported platforms. If you use the `--target` argument, it will only run checks for the nominated target or targets.
+
+So for example the following will only check your environment for web and Linux development:
+
+```
+uno-check --target wasm --target linux
+```
+
+The following argument values for `--target` are supported:
+
+
+| Value     | Comments          |
+|-----------|-------------------|
+| wasm      |                   |
+| ios       |                   |
+| android   |                   |
+| macos     |                   |
+| skiagtk   |                   |
+| linux     | Alias for skiagtk |
+| skiawpf   |                   |
+| skiatizen |                   |
+| uwp       |                   |
+| win32     |                   |
+| all       | All platforms     |
 
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
-Manifest files are currently used by the doctor to fetch the latest versions and requirements.
-The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json
+The manifest file is used by the tool to fetch the latest versions and requirements.
+The default manifest is hosted at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json
+
 Use this option to specify an alternative file path or URL to use.
 
 ```
@@ -48,7 +80,8 @@ uno-check --non-interactive
 
 ### `-d`, `--dev` Dev Manifest feed
 
-This uses a more frequently updated manifest with newer versions of things more often.
+This uses a more frequently updated manifest with newer versions of things more often. If you use the prerelease versions of Uno.UI NuGet packages, you should use this flag.
+
 The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-dev.manifest.json
 
 ```
@@ -92,4 +125,3 @@ Arguments:
 Example:
 
 `uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true`
-
