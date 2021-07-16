@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>uno-check</ToolCommandName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -25,11 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="NuGet.Packaging" Version="5.9.0" />
     <PackageReference Include="NuGet.Protocol" Version="5.9.0" />
     <PackageReference Include="NuGet.Versioning" Version="5.9.0" />
     <PackageReference Include="Microsoft.Build.Framework" Version="16.9.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.1" />
     <PackageReference Include="vswhere" Version="2.8.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -71,10 +72,8 @@
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\libs\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="..\..\..\.nuget\packages\xamarin.libzipsharp\1.0.24\runtimes\osx\native\libzip.dylib" />
-    <None Remove="..\..\..\.nuget\packages\xamarin.libzipsharp\1.0.24\runtimes\linux-x64\native\libzip.so" />
-    <None Remove="..\..\..\.nuget\packages\xamarin.libzipsharp\1.0.24\runtimes\linux-x86\native\libzip.so" />
+    <Reference Include="Xamarin.Installer.AndroidSDK.Manager">
+      <HintPath>..\libs\Xamarin.Installer.AndroidSDK.Manager.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

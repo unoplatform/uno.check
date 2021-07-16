@@ -2,7 +2,7 @@
   "profiles": {
     "UnoCheck": {
       "commandName": "Project",
-      "commandLineArgs": "--dev"
+      "commandLineArgs": "--verbose --main"
     }
   }
 }
