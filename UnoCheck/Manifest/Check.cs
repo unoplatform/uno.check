@@ -84,7 +84,7 @@ namespace DotNetCheck.Manifest
 					foreach (var item in pinstList)
 						SubstituteVariables(item, variables);
 				}
-				else if (ptype.IsClass && ptype.Assembly == typeof(Check).Assembly)
+				else if (pval != null && ptype.IsClass && ptype.Assembly == typeof(Check).Assembly)
 				{
 					SubstituteVariables(pval, variables);
 				}

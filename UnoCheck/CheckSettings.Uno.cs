@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 
-namespace DotNetCheck.Cli
+namespace DotNetCheck
 {
 	partial class CheckSettings
 	{
