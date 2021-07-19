@@ -28,7 +28,7 @@ namespace DotNetCheck
 				channel switch
 				{
 					ManifestChannel.Preview => Manifest.Manifest.PreviewManifestUrl,
-					ManifestChannel.Main => Manifest.Manifest.MainManifestUrl,
+					ManifestChannel.Main => Manifest.Manifest.DefaultManifestUrl,
 					ManifestChannel.Default => Manifest.Manifest.DefaultManifestUrl,
 					_ => Manifest.Manifest.DefaultManifestUrl
 				};
