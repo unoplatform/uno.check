@@ -2,42 +2,15 @@
   "check": {
     "toolVersion": "0.6.1",
     "variables": {
-      "MAUI_VERSION": "6.0.100-preview.6.1001",
       "OPENJDK_VERSION": "11.0.10.9",
-      "MONOTOOLCHAIN_VERSION": "6.0.0-preview.6.21352.12"
+      "MONOTOOLCHAIN_VERSION": "6.0.0-preview.6.21352.12",
+      "DOTNET_SDK_VERSION": "6.0.100-preview.6.21355.2",
+      "MACCATALYST_SDK_VERSION": "15.0.100-preview.6.63",
+      "IOS_SDK_VERSION": "15.0.100-preview.6.63",
+      "TVOS_SDK_VERSION": "15.0.100-preview.6.63",
+      "MACOS_SDK_VERSION": "12.0.100-preview.6.63",
+      "ANDROID_SDK_VERSION": "30.0.100-preview.6.62"
     },
-    "variableMappers": [
-      {
-        "$type": "DotNetCheck.Manifest.XmlVariableMapper, unocheck",
-        "sourceUri": "https://raw.githubusercontent.com/dotnet/maui/main/eng/Versions.props",
-        "mappings": [
-          {
-            "name": "DOTNET_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosoftDotnetSdkInternalPackageVersion/text()"
-          },
-          {
-            "name": "MACCATALYST_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosoftMacCatalystSdkPackageVersion/text()"
-          },
-          {
-            "name": "IOS_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosoftiOSSdkPackageVersion/text()"
-          },
-          {
-            "name": "TVOS_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosofttvOSSdkPackageVersion/text()"
-          },
-          {
-            "name": "MACOS_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosoftmacOSSdkPackageVersion/text()"
-          },
-          {
-            "name": "ANDROID_SDK_VERSION",
-            "xpath": "//Project/PropertyGroup/MicrosoftAndroidSdkWindowsPackageVersion/text()"
-          }
-        ]
-      }
-    ],
     "openjdk": {
       "version": "11.0",
       "urls": {
@@ -148,11 +121,6 @@
               "workloadId": "microsoft-macos-sdk-full",
               "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.100",
               "version": "$(MACOS_SDK_VERSION)"
-            },
-            {
-              "workloadId": "maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.100",
-              "version": "$(MAUI_VERSION)"
             },
             {
               "workloadId": "microsoft-net-runtime-android",

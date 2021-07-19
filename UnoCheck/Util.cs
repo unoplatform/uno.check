@@ -69,6 +69,9 @@ namespace DotNetCheck
 		public static bool IsMac
 			=> Platform == Platform.OSX;
 
+		public static bool IsLinux
+			=> Platform == Platform.Linux;
+
 		public const string ArchWin = "win";
 		public const string ArchWin64 = "win64";
 		public const string ArchWinArm64 = "winArm64";
