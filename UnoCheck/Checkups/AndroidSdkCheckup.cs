@@ -31,6 +31,39 @@ namespace DotNetCheck.Checkups
 
 		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.Android;
 
+		string[] macSdkLocations = new string[]
+		{
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Android", "sdk"),
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Android", "android-sdk-macosx"),
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "Android", "sdk"),
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "android-sdk-macosx"),
+		};
+
+		string[] unixSdkLocations = new string[] { };
+
+		string[] winSdkLocations = new string[]
+		{
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Android", "android-sdk")
+		};
+
+		public string FindBestSdkLocation()
+        {
+			var possibleLocations = Util.IsWindows ? winSdkLocations : (Util.IsMac ? macSdkLocations : unixSdkLocations);
+
+			foreach (var p in possibleLocations)
+            {
+				if (Directory.Exists(p) && (Directory.GetFileSystemEntries(p)?.Any() ?? false))
+					return p;
+            }
+
+			return DefaultSdkLocation;
+        }
+
+		public string DefaultSdkLocation
+			=> Util.IsWindows
+				? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Android", "android-sdk")
+				: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Android", "sdk");
+
 		class AndroidComponentWrapper
 		{
 			public IAndroidComponent Component
@@ -48,6 +81,8 @@ namespace DotNetCheck.Checkups
 		{
 			var jdkPath = history.GetEnvironmentVariable("JAVA_HOME") ?? Environment.GetEnvironmentVariable("JAVA_HOME");
 
+			string androidSdkPath = null;
+
 			try
 			{
 				// Set the logger to override the default one that is set in this library
@@ -58,21 +93,23 @@ namespace DotNetCheck.Checkups
 					if (Util.Verbose || traceLevel == System.Diagnostics.TraceLevel.Error)
 						Util.LogAlways(msg);
 
-				}, null, null, jdkPath);
-
+				}, androidSdkPath, null, jdkPath);
 			}
 			catch (Exception ex)
 			{
 				Util.Exception(ex);
 			}
 
+			if (string.IsNullOrEmpty(androidSdkPath))
+				androidSdkPath = FindBestSdkLocation();
+
 			var missingPackages = new List<IAndroidComponent>();
 
 			var installer = new AndroidSDKInstaller(new Helper(), AndroidManifestType.GoogleV2);
 
-			installer.Discover();
+			installer.Discover(new List<string> { androidSdkPath });
 
-			var sdkInstance = installer.FindInstance(null);
+			var sdkInstance = installer.FindInstance(androidSdkPath);
 
 			if (string.IsNullOrEmpty(sdkInstance?.Path))
 			{
@@ -131,7 +168,7 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 			return Task.FromResult(new DiagnosticResult(
 				Status.Error,
 				this,
-				new Suggestion("Install or Update Android SDK pacakges",
+				new Suggestion("Install or Update Android SDK packages",
 					desc,
 					new Solutions.ActionSolution(async cancelToken =>
 					{

@@ -69,6 +69,9 @@ namespace DotNetCheck
 		public static bool IsMac
 			=> Platform == Platform.OSX;
 
+		public static bool IsLinux
+			=> Platform == Platform.Linux;
+
 		public const string ArchWin = "win";
 		public const string ArchWin64 = "win64";
 		public const string ArchWinArm64 = "winArm64";
@@ -170,6 +173,24 @@ namespace DotNetCheck
 			return false;
 		}
 
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string[] args)
+			=> WrapShellCommandWithSudo(cmd, null, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, string[] args)
+		{
+			var actualCmd = cmd;
+			var actualArgs = string.Join(" ", args);
+
+			if (!Util.IsWindows)
+			{
+				actualCmd = ShellProcessRunner.MacOSShell;
+				actualArgs = $"-c 'sudo {cmd} {actualArgs}'"; 
+			}
+
+			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs) { WorkingDirectory = workingDir } );
+			return Task.FromResult(cli.WaitForExit());
+		}
+
 		public static async Task<bool> WrapCopyWithShellSudo(string destination, bool isFile, Func<string, Task<bool>> wrapping)
 		{
 			var intermediate = destination;
@@ -220,6 +241,38 @@ namespace DotNetCheck
 			}
 
 			return r;
+		}
+
+		public static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+		{
+			// Get the subdirectories for the specified directory.
+			var dir = new DirectoryInfo(sourceDirName);
+
+			if (!dir.Exists)
+				return;
+
+			var dirs = dir.GetDirectories();
+
+			// If the destination directory doesn't exist, create it.
+			Directory.CreateDirectory(destDirName);
+
+			// Get the files in the directory and copy them to the new location.
+			var files = dir.GetFiles();
+			foreach (var file in files)
+			{
+				var tempPath = Path.Combine(destDirName, file.Name);
+				file.CopyTo(tempPath, false);
+			}
+
+			// If copying subdirectories, copy them and their contents to new location.
+			if (copySubDirs)
+			{
+				foreach (var subdir in dirs)
+				{
+					var tempPath = Path.Combine(destDirName, subdir.Name);
+					DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
+				}
+			}
 		}
 	}
 

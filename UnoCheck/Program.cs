@@ -28,15 +28,17 @@ namespace DotNetCheck
 				new VSWinWorkloadsCheckup(),
 				new AndroidSdkPackagesCheckup(),
 				new XCodeCheckup(),
-				new DotNetCheckup()
-			);
+				new DotNetCheckup(),
+				new DotNetWorkloadDuplicatesCheckup(),
+				new EdgeWebView2Checkup());
 
 			CheckupManager.RegisterCheckupContributors(
 				new DotNetSdkCheckupContributor());
 
 			CheckupManager.RegisterCheckups(
 				new DotNetSentinelCheckup(),
-				new WSLCheckup()
+				new WSLCheckup(),
+				new GTK3Checkup()
 			);
 
 			var app = new CommandApp();

@@ -29,7 +29,7 @@ namespace DotNetCheck.Cli
 			AnsiConsole.Render(
 				new FigletText("uno-check").LeftAligned().Color(new Color(122, 103, 247)));
 
-			AnsiConsole.MarkupLine($"[underline bold green]{Icon.Ambulance} {ToolInfo.ToolName} {Icon.Recommend}[/]");
+			AnsiConsole.MarkupLine($"[underline bold green]{Icon.Ambulance} {ToolInfo.ToolName} v{ToolInfo.CurrentVersion} {Icon.Recommend}[/]");
 			AnsiConsole.Render(new Rule());
 
 			AnsiConsole.MarkupLine("This tool will check your Uno Platform development environment.");
@@ -63,7 +63,13 @@ namespace DotNetCheck.Cli
 
 			AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Synchronizing configuration...[/]");
 
-			var manifest = await ToolInfo.LoadManifest(settings.Manifest, settings.Dev);
+			var channel = ManifestChannel.Default;
+			if (settings.Preview)
+				channel = ManifestChannel.Preview;
+			if (settings.Main)
+				channel = ManifestChannel.Main;
+
+			var manifest = await ToolInfo.LoadManifest(settings.Manifest, channel);
 
 			if (!ToolInfo.Validate(manifest))
 			{
@@ -253,10 +259,28 @@ namespace DotNetCheck.Cli
 
 			var hasErrors = erroredChecks.Any();
 
+			var warningChecks = results.Values.Where(d => d.Status == Models.Status.Warning && !skippedChecks.Contains(d.Checkup.Id));
+			var hasWarnings = warningChecks.Any();
+
 			if (hasErrors)
 			{
+				AnsiConsole.Console.WriteLine();
+
+				foreach (var ec in erroredChecks)
+					Util.Log($"{ec.Checkup.Id}: {ec.Message}");
+
 				AnsiConsole.MarkupLine($"[bold red]{Icon.Bell} There were one or more problems detected.[/]");
 				AnsiConsole.MarkupLine($"[bold red]Please review the errors and correct them and run {ToolInfo.ToolCommand} again.[/]");
+			}
+			else if (hasWarnings)
+			{
+				AnsiConsole.Console.WriteLine();
+
+				foreach (var wc in warningChecks)
+					Util.Log($"{wc.Checkup.Id}: {wc.Message}");
+
+				AnsiConsole.Console.WriteLine();
+				AnsiConsole.MarkupLine($"[bold darkorange3_1]{Icon.Warning} Things look almost great, except some pesky warning(s) which may or may not be a problem, but at least if they are, you'll know where to start searching![/]");
 			}
 			else
 			{
