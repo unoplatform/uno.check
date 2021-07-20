@@ -61,7 +61,7 @@ jobs:
         path: .\artifacts
 
   testwin:
-    name: Use Tool - Windows
+    name: Validate Tool - Windows
     needs: build
     runs-on: windows-latest
     steps:
@@ -102,7 +102,7 @@ jobs:
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests\uno.ui-preview.manifest.json
 
   testmac:
-    name: Use Tool - macOS
+    name: Validate Tool - macOS
     needs: build
     runs-on: macos-latest
     steps:
@@ -137,6 +137,53 @@ jobs:
         shell: pwsh
         run: |
           brew install gtk+3
+
+      - name: Install and Run Tool
+        shell: pwsh
+        run: |
+          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          $ProgressPreference = 'SilentlyContinue'
+          & dotnet --list-sdks
+          & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+
+  testlinux:
+    name: Validate Tool - Linux
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: NuGet
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+
+      - name: Setup GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.9
+        with:
+          versionSpec: '5.x'
+    
+      - name: GitVersion
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.9
+        with:
+          useConfigFile: true
+          configFilePath: gitversion.yml
+
+      - name: Install GTK+3
+        shell: pwsh
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
 
       - name: Install and Run Tool
         shell: pwsh
