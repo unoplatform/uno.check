@@ -7,6 +7,8 @@
     <ToolCommandName>uno-check</ToolCommandName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>DotNetCheck</RootNamespace>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -20,32 +22,37 @@
     <Title>Uno Platform Check Tool</Title>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="..\build\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
-    <PackageReference Include="NuGet.Packaging" Version="5.9.0" />
-    <PackageReference Include="NuGet.Protocol" Version="5.9.0" />
-    <PackageReference Include="NuGet.Versioning" Version="5.9.0" />
+    <PackageReference Include="NuGet.Packaging" Version="5.10.0" />
+    <PackageReference Include="NuGet.Protocol" Version="5.10.0" />
+    <PackageReference Include="NuGet.Versioning" Version="5.10.0" />
     <PackageReference Include="Microsoft.Build.Framework" Version="16.9.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.1" />
     <PackageReference Include="vswhere" Version="2.8.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="plist-cil" Version="2.1.0" />
-    <PackageReference Include="Spectre.Console" Version="0.38.0" />
-    <PackageReference Include="Xamarin.LibZipSharp" Version="1.0.24" />
+    <PackageReference Include="plist-cil" Version="2.2.0" />
+    <PackageReference Include="Spectre.Console" Version="0.41.0" />
+    <PackageReference Include="Xamarin.LibZipSharp" Version="2.0.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition=" '$(OS)' != 'Windows_NT' " />
     <PackageReference Include="ini-parser-netstandard" Version="2.5.2" />
-    <PackageReference Include="Polly" Version="7.1.0" />
-    <PackageReference Include="Xwt" Version="0.2.211">
+    <PackageReference Include="Polly" Version="7.2.2" />
+    <PackageReference Include="Xwt" Version="0.2.247">
       <!-- There is no netstandard2.0 version of this package -->
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.DotNet.MSBuildSdkResolver">
@@ -76,4 +83,21 @@
       <HintPath>..\libs\Xamarin.Installer.AndroidSDK.Manager.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <PropertyGroup>
+    <SigningTimestampServer>http://timestamp.entrust.net/TSS/RFC3161sha2TS</SigningTimestampServer>
+    <SignToolPath>C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe</SignToolPath>
+  </PropertyGroup>
+
+  <Target Name="AuthenticodeSignBeforeBack" BeforeTargets="GenerateNuspec" Condition="'$(SigningCertificatePfxFile)' != ''">
+    <ItemGroup>
+      <FilesToSign Include="@(_PackageFiles)" Condition=" '%(_PackageFiles.Filename)%(_PackageFiles.Extension)' == 'MauiCheck.dll' " />
+      <FilesToSign Include="@(_PackageFiles)" Condition=" '%(_PackageFiles.Filename)%(_PackageFiles.Extension)' == 'maui-check.exe' " />
+    </ItemGroup>
+    <Exec Command="&quot;$(SignToolPath)&quot; sign /v /f $(SigningCertificatePfxFile) /fd sha256 /tr $(SigningTimestampServer) %(FilesToSign.FullPath)" />
+  </Target>
+
+  <Target Name="NugetSignAfterPack" AfterTargets="Pack" Condition="'$(SigningCertificatePfxFile)' != ''">
+    <Exec Command="nuget sign $(PackageOutputAbsolutePath)\*.nupkg -CertificatePath $(SigningCertificatePfxFile) -Timestamper $(SigningTimestampServer)" />
+  </Target>
 </Project>
