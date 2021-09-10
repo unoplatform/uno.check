@@ -138,13 +138,6 @@
               "workloadManifestId": "microsoft.net.workload.mono.toolchain",
               "packageId": "microsoft.net.workload.mono.toolchain.manifest-6.0.100",
               "version": "$(WASMTOOLS_VERSION)"
-            },
-            {
-              "workloadId": "microsoft-net-sdk-emscripten",
-              "workloadManifestId": "microsoft.net.workload.emscripten",
-              "packageId": "microsoft.net.workload.emscripten.manifest-6.0.100",
-              "version": "$(EMSCRIPTEN_WORKLOAD_VERSION)",
-              "abstract": true
             }
           ],
           "packs": []
