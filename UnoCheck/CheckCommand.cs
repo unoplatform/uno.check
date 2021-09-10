@@ -92,7 +92,7 @@ namespace DotNetCheck.Cli
 
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
-			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState);
+			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);
 
 			AnsiConsole.MarkupLine(" ok");
 
