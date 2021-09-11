@@ -13,7 +13,7 @@
     },
     "variableMappers": [
       {
-        "$type": "DotNetCheck.Manifest.NuGetFeedVariableMapper, MauiCheck",
+        "$type": "DotNetCheck.Manifest.NuGetFeedVariableMapper, UnoCheck",
         "packageSources": [ "https://aka.ms/dotnet/maui/rc1/index.json" ],
         "mappings": [
           {
