@@ -44,12 +44,9 @@ namespace DotNetCheck.Checkups
 
 			if (vsinfo.Any())
 			{
-				// VS is installed, but out of date
-				return new DiagnosticResult(
-						Status.Error,
-						this,
-						prescription: new Suggestion("Update Visual Studio", "Visual Studio is out of date. You should run Visual Studio Installer to update to the latest version.")
-					); 
+				ReportStatus($"Missing Visual Studio >= {MinimumVersion.ThisOrExact(ExactVersion)}", Status.Error);
+
+				return new DiagnosticResult(Status.Error, this);
 			}
 			else
 			{

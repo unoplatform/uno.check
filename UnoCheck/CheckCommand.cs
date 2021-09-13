@@ -85,6 +85,11 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("DOTNET_ROOT", settings.DotNetSdkRoot);
 			}
 
+			if (settings.ForceDotNet)
+				sharedState.SetEnvironmentVariable("DOTNET_FORCE", "true");
+			if (settings.CI)
+				sharedState.SetEnvironmentVariable("CI", "true");
+
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
 			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);

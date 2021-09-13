@@ -34,11 +34,7 @@ namespace DotNetCheck.DotNet
 
 			CleanEmptyWorkloadDirectories(sdkRoot, sdkVersion);
 
-			manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion);
-
-			UpdateWorkloadResolver();
-
-			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "maui-check-net-working-dir");
+			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "maui-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
 			Directory.CreateDirectory(DotNetCliWorkingDir);
 
 			var globalJson = new DotNetGlobalJson();
@@ -51,15 +47,181 @@ namespace DotNetCheck.DotNet
 		public readonly string SdkRoot;
 		public readonly string SdkVersion;
 
-		readonly SdkDirectoryWorkloadManifestProvider manifestProvider;
-		WorkloadResolver workloadResolver;
-
 		public readonly string[] NuGetPackageSources;
 
 		readonly string DotNetCliWorkingDir;
 
-		void UpdateWorkloadResolver()
-			=> workloadResolver = WorkloadResolver.Create(manifestProvider, SdkRoot, SdkVersion);
+		public async Task Repair()
+		{
+			RemoveOldMetadata();
+
+			await CliRepair();
+		}
+
+		public async Task Install(Manifest.DotNetWorkload[] workloads)
+		{
+			var rollbackFile = WriteRollbackFile(workloads);
+
+			RemoveOldMetadata();
+
+			await CliUpdateWithRollback(rollbackFile);
+
+			await CliInstall(workloads.Where(w => !w.Abstract).Select(w => w.Id));
+		}
+
+		string WriteRollbackFile(Manifest.DotNetWorkload[] workloads)
+		{
+			var workloadRolback = GetInstalledWorkloadManifestIdsAndVersions();
+
+			foreach (var workload in workloads)
+				workloadRolback[workload.WorkloadManifestId] = workload.Version;
+
+			var json = new StringBuilder();
+			json.AppendLine("{");
+			json.AppendLine(string.Join("," + Environment.NewLine,
+				workloads.Select(wl => $"    \"{wl.WorkloadManifestId}\": \"{wl.Version}\"")));
+			json.AppendLine("}");
+
+			var rollbackFile = Path.Combine(DotNetCliWorkingDir, "workload.json");
+			File.WriteAllText(rollbackFile, json.ToString());
+
+			Util.Log($"Updating with Rollback File:" + Environment.NewLine + json.ToString());
+
+			return rollbackFile;
+		}
+
+		Dictionary<string, string> GetInstalledWorkloadManifestIdsAndVersions()
+		{
+			var items = new Dictionary<string, string>();
+
+			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion);
+
+			foreach (var manifestInfo in manifestProvider.GetManifests())
+			{
+				using (var manifestStream = manifestInfo.openManifestStream())
+				{
+					var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.manifestId, manifestStream);
+					items[manifestInfo.manifestId] = m.Version;
+				}
+			}
+
+			return items;
+		}
+
+		public IEnumerable<(string id, string version)> GetInstalledWorkloads()
+		{
+			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion);
+
+			foreach (var manifestInfo in manifestProvider.GetManifests())
+			{
+				using (var manifestStream = manifestInfo.openManifestStream())
+				{
+					var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.manifestId, manifestStream);
+
+					// Each workload manifest can have one or more workloads defined
+					foreach (var wl in m.Workloads)
+						yield return (wl.Key.ToString(), m.Version);
+				}
+			}
+		}
+
+		void RemoveOldMetadata()
+		{
+			var dir = GetInstalledWorkloadMetadataDir();
+
+			var oldWorkloadIds = new [] {
+				"microsoft-android-sdk-full",
+				"microsoft-ios-sdk-full",
+				"microsoft-maccatalyst-sdk-full",
+				"microsoft-macos-sdk-full",
+				"microsoft-tvos-sdk-full"
+			};
+
+			foreach (var owid in oldWorkloadIds)
+			{
+				try
+				{
+					var f = Path.Combine(dir, owid);
+					if (File.Exists(f))
+						File.Delete(f);
+				}
+				catch { }
+			}
+		}
+
+		async Task CliInstall(IEnumerable<string> workloadIds)
+		{
+			// dotnet workload install id --skip-manifest-update --add-source x
+			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
+
+			// Arg switched to --source in >= preview 7
+			var addSourceArg = "--source";
+			if (NuGetVersion.Parse(SdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
+				addSourceArg = "--add-source";
+
+			var args = new List<string>
+			{
+				"workload",
+				"install",
+				"--no-cache",
+				"--disable-parallel"
+			};
+			args.AddRange(workloadIds);
+			args.Add("--skip-manifest-update");
+			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+
+			// Throw if this failed with a bad exit code
+			if (r.ExitCode != 0)
+				throw new Exception("Workload Install failed: `dotnet " + string.Join(' ', args) + "`");
+		}
+
+		async Task CliUpdateWithRollback(string rollbackFile)
+		{
+			// dotnet workload install id --skip-manifest-update --add-source x
+			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
+
+			var args = new List<string>
+			{
+				"workload",
+				"update",
+				"--no-cache",
+				"--disable-parallel",
+				"--from-rollback-file",
+				$"\"{rollbackFile}\""
+			};
+			args.AddRange(NuGetPackageSources.Select(ps => $"--source \"{ps}\""));
+
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+
+			if (r.ExitCode != 0)
+				throw new Exception("Workload Update failed: `dotnet " + string.Join(' ', args) + "`");
+		}
+
+		async Task CliRepair()
+		{
+			// dotnet workload install id --skip-manifest-update --add-source x
+			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
+
+			// Arg switched to --source in >= preview 7
+			var addSourceArg = "--source";
+			if (NuGetVersion.Parse(SdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
+				addSourceArg = "--add-source";
+
+			var args = new List<string>
+			{
+				"workload",
+				"repair"
+			};
+			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+
+			// Throw if this failed with a bad exit code
+			if (r.ExitCode != 0)
+				throw new Exception("Workload Repair failed: `dotnet " + string.Join(' ', args) + "`");
+		}
 
 		void CleanEmptyWorkloadDirectories(string sdkRoot, string sdkVersion)
 		{
@@ -85,409 +247,17 @@ namespace DotNetCheck.DotNet
 			}
 		}
 
-		void DeleteExistingWorkloads(string sdkRoot, string sdkVersion, string workloadIdentifier)
-		{
-			// Run dotnet workload uninstall first on the workload id
-			try
-			{
-				Util.Log($"Running workload uninstall for {workloadIdentifier}");
-
-				var dotnetExe = Path.Combine(sdkRoot, DotNetSdk.DotNetExeName);
-
-				var args = new[] { "workload", "uninstall", workloadIdentifier };
-
-				Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, args.ToArray());
-			}
-			catch (Exception ex)
-			{
-				Util.Exception(ex);
-			}
-
-			if (NuGetVersion.TryParse(sdkVersion, out var v))
-			{
-				var sdkBand = $"{v.Major}.{v.Minor}.{v.Patch}";
-
-				// Try and clean up the metadata dir too
-				var metadataMarkerFile = Path.Combine(sdkRoot, "metadata", "workloads", sdkBand, "InstalledWorkloads", workloadIdentifier);
-
-				if (File.Exists(metadataMarkerFile))
-				{
-					try { File.Delete(metadataMarkerFile); }
-					catch { }
-				}
-
-				var manifestsDir = Path.Combine(sdkRoot, "sdk-manifests", sdkBand);
-
-				if (Directory.Exists(manifestsDir))
-				{
-					foreach (var dir in Directory.GetDirectories(manifestsDir))
-					{
-						var delete = false;
-						var manifestFile = Path.Combine(dir, "WorkloadManifest.json");
-
-						if (File.Exists(manifestFile))
-						{
-							var json = JObject.Parse(File.ReadAllText(manifestFile));
-							var workloadsJson = json["workloads"];
-
-							foreach (var wj in workloadsJson.Children())
-							{
-								var wid = (wj as JProperty)?.Name;
-
-								if (wid == workloadIdentifier)
-								{
-									delete = true;
-									break;
-								}
-							}
-		
-							if (delete)
-							{
-								Util.Log($"Existing workload with id: {workloadIdentifier} found, deleting...");
-
-								try { Util.Delete(dir, false); }
-								catch { }
-							}
-						}
-					}
-				}
-			}
-
-			// Refresh the resolver to account for the uninstall
-			UpdateWorkloadResolver();
-		}
-
-		public IEnumerable<(string id, string version)> GetInstalledWorkloads()
-		{
-			foreach (var manifestInfo in manifestProvider.GetManifests())
-			{
-				var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.manifestId, manifestInfo.manifestStream);
-
-				// Each workload manifest can have one or more workloads defined
-				foreach (var wl in m.Workloads)
-					yield return (wl.Key.ToString(), m.Version);
-			}
-		}
-
-		public IEnumerable<WorkloadResolver.PackInfo> GetPacksInWorkload(string workloadId)
-		{
-			var packs = workloadResolver.GetPacksInWorkload(workloadId);
-			foreach (var p in packs)
-			{
-				var packInfo = workloadResolver.TryGetPackInfo(p);
-				if (packInfo != null)
-					yield return packInfo;
-			}
-		}
-
-		public async Task CliInstall(string workloadId)
-		{
-			// dotnet workload install id --skip-manifest-update --add-source x
-			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
-
-			var pkgSrcArgs = NuGetPackageSources.Select(ps => $"--add-source \"{ps}\"");
-
-			var args = new[] { "workload", "install", workloadId, "--skip-manifest-update" }.Concat(pkgSrcArgs);
-
-			await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, args.ToArray());
-
-			// Refresh the resolver to account for the install
-			UpdateWorkloadResolver();
-		}
-
-		public async Task UninstallTemplate(string templatePackId)
-		{
-			// dotnet new --uninstall <template>
-			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
-
-			var args = new[] { "new", "--uninstall", templatePackId };
-
-			await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, args.ToArray());
-		}
-
-		public Task<bool> InstallWorkloadManifest(string packageId, string workloadId, NuGetVersion manifestPackageVersion, CancellationToken cancelToken)
-		{
-			DeleteExistingWorkloads(SdkRoot, SdkVersion, workloadId);
-
-			var manifestRoot = GetSdkManifestRoot();
-
-			return AcquireNuGet(packageId, manifestPackageVersion, manifestRoot, false, cancelToken, true);
-		}
-
-		string GetSdkManifestRoot()
+		string GetInstalledWorkloadMetadataDir()
 		{
 			int last2DigitsTo0(int versionBuild)
 				=> versionBuild / 100 * 100;
-
-			string manifestDirectory;
 
 			if (!Version.TryParse(SdkVersion.Split('-')[0], out var result))
 				throw new ArgumentException("Invalid 'SdkVersion' version: " + SdkVersion);
 
 			var sdkVersionBand = $"{result.Major}.{result.Minor}.{last2DigitsTo0(result.Build)}";
-			var environmentVariable = Environment.GetEnvironmentVariable("DOTNETSDK_WORKLOAD_MANIFEST_ROOT");
-			if (!string.IsNullOrEmpty(environmentVariable))
-				manifestDirectory = environmentVariable;
-			else
-				manifestDirectory = Path.Combine(SdkRoot, "sdk-manifests", sdkVersionBand);
-
-			return manifestDirectory;
-		}
-
-		static async Task<bool> DownloadAndExtractNuGet(SourceRepository nugetSource, SourceCacheContext cache, ILogger logger, string packageId, NuGetVersion packageVersion, string destination, bool appendVersionToExtractPath, CancellationToken cancelToken)
-		{
-			var deleteAfter = false;
-			var tmpPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-			try
-			{
-				Directory.CreateDirectory(tmpPath);
-				deleteAfter = true;
-			}
-			catch
-			{
-				tmpPath = Path.GetTempPath();
-			}
-
-			var packageIdentity = new PackageIdentity(packageId, packageVersion);
-
-			var nugetSettings = NuGet.Configuration.NullSettings.Instance;
-
-			var byIdRes = await nugetSource.GetResourceAsync<FindPackageByIdResource>();
-
-			// Cause a retry if this is null
-			if (byIdRes == null)
-				throw new InvalidDataException();
-
-			if (await byIdRes.DoesPackageExistAsync(packageId, packageVersion, cache, logger, cancelToken))
-			{
-				var downloaderResource = await nugetSource.GetResourceAsync<DownloadResource>(cancelToken);
-
-				using var downloader = await byIdRes.GetPackageDownloaderAsync(packageIdentity, cache, logger, cancelToken);
-
-				var downloadContext = new PackageDownloadContext(cache, tmpPath, true);
-
-				// Download the package (might come from the shared package cache).
-				var downloadResult = await downloaderResource.GetDownloadResourceResultAsync(
-					new PackageIdentity(packageId, packageVersion),
-					downloadContext,
-					tmpPath,
-					logger,
-					cancelToken);
-
-				var clientPolicy = ClientPolicyContext.GetClientPolicy(nugetSettings, logger);
-
-				var packagePathResolver = new DotNetSdkPackPackagePathResolver(destination, appendVersionToExtractPath, true);
-
-				var fullDestinationDir = packagePathResolver.GetInstallPath(packageIdentity);
-
-				// Try and delete the destination if it exists first
-				try
-				{
-					if (Directory.Exists(fullDestinationDir))
-						Util.Delete(fullDestinationDir, false);
-				}
-				catch (Exception ex)
-				{
-					Util.Exception(ex);
-				}
-
-				var packageExtractionContext = new PackageExtractionContext(
-					PackageSaveMode.Files | PackageSaveMode.Nuspec,
-					XmlDocFileSaveMode.Skip,
-					clientPolicy,
-					logger);
-
-				// Extract the package into the target directory.
-				await PackageExtractor.ExtractPackageAsync(
-					downloadResult.PackageSource,
-					downloadResult.PackageStream,
-					packagePathResolver,
-					packageExtractionContext,
-					cancelToken);
-
-				// Check for data/WorkloadManifest.json and data/WorkloadManifest.targets
-				var dataDir = Path.Combine(fullDestinationDir, "data");
-
-				if (Directory.Exists(dataDir))
-				{
-					try { Util.DirectoryCopy(dataDir, fullDestinationDir, true); }
-					catch (Exception ex) { Util.Exception(ex); }
-				}
-
-				try { Directory.Delete(dataDir, true); }
-				catch (Exception ex) { Util.Exception(ex); }
-
-				// Try deleting files that need not be kept after extracting
-				try
-				{
-					var files = Directory.GetFiles(fullDestinationDir);
-
-					foreach (var f in files)
-					{
-						var fileName = Path.GetFileName(f);
-						if (fileName.Equals("WorkloadManifest.json")
-							|| fileName.Equals("WorkloadManifest.targets"))
-							continue;
-
-						try { Util.Delete(f, true); }
-						catch { }
-					}
-				}
-				catch { }
-
-				try
-				{
-					if (deleteAfter)
-						Directory.Delete(tmpPath, true);
-				}
-				catch (Exception ex) { Util.Exception(ex); }
-
-				return true;
-			}
-
-			return false;
-		}
-
-		class DotNetSdkPackPackagePathResolver : PackagePathResolver
-		{
-			public DotNetSdkPackPackagePathResolver(string rootDirectory, bool appendVersionToPath, bool isWorkload)
-				: base(rootDirectory, false)
-			{
-				AppendVersionToPath = appendVersionToPath;
-				IsWorkload = isWorkload;
-			}
-
-			public readonly bool AppendVersionToPath;
-			public readonly bool IsWorkload;
-
-			public override string GetPackageDirectoryName(PackageIdentity packageIdentity)
-				=> GetPathBase(packageIdentity).ToString();
-
-			public override string GetPackageFileName(PackageIdentity packageIdentity)
-				=> GetPathBase(packageIdentity) + PackagingCoreConstants.NupkgExtension;
-
-			string GetPathBase(PackageIdentity packageIdentity)
-			{
-				if (AppendVersionToPath)
-					return Path.Combine(packageIdentity.Id, packageIdentity.Version.ToString());
-
-				// Workloads have a package id that ends with .Manifest-x.y.z but we don't actually
-				// want that part in the path we install the workload to
-				// Let's replace
-				if (IsWorkload)
-				{
-					return Regex.Replace(
-						packageIdentity.Id,
-						@"\.Manifest-\d+\.\d+\.\d+$",
-						string.Empty,
-						RegexOptions.Singleline | RegexOptions.IgnoreCase)
-							?.ToLowerInvariant();
-				}
-
-				return packageIdentity.Id;
-			}
-		}
-
-		async Task<bool> DownloadNuGet(SourceRepository nugetSource, SourceCacheContext cache, ILogger logger, string packageId, NuGetVersion packageVersion, string destination, CancellationToken cancelToken)
-		{
-			var byIdRes = await nugetSource.GetResourceAsync<FindPackageByIdResource>();
-
-			// Cause a retry if this is null
-			if (byIdRes == null)
-				throw new InvalidDataException();
-
-			if (await byIdRes.DoesPackageExistAsync(packageId, packageVersion, cache, logger, cancelToken))
-			{
-				using var downloader = await byIdRes.GetPackageDownloaderAsync(new PackageIdentity(packageId, packageVersion), cache, logger, cancelToken);
-
-				if (downloader == null)
-					throw new InvalidDataException();
-
-				// If the file exists in the destination, delete it first
-				try
-				{
-					if (File.Exists(destination))
-						Util.Delete(destination, true);
-				}
-				catch (Exception ex)
-				{
-					Util.Exception(ex);
-				}
-
-				await downloader.CopyNupkgFileToAsync(destination, cancelToken);
-
-				return true;
-			}
-
-			return false;
-		}
-
-		async Task<bool> AcquireNuGet(string packageId, NuGetVersion packageVersion, string destination, bool appendVersionToExtractPath, CancellationToken cancelToken, bool extract)
-		{
-			var nugetCache = NullSourceCacheContext.Instance;
-			var nugetLogger = NullLogger.Instance;
-
-			var ok = false;
-
-			foreach (var pkgSrc in NuGetPackageSources)
-			{
-				var nugetSource = Repository.Factory.GetCoreV3(pkgSrc);
-
-				try
-				{
-					var result = await Policy
-						.Handle<ObjectDisposedException>()
-						.Or<OperationCanceledException>()
-						.Or<IOException>()
-						.Or<InvalidDataException>()
-						.RetryAsync(3)
-						.ExecuteAsync(async () =>
-						{
-							if (extract)
-							{
-								return await Util.WrapCopyWithShellSudo(destination, false, d =>
-									DownloadAndExtractNuGet(
-										nugetSource,
-										nugetCache,
-										nugetLogger,
-										packageId,
-										packageVersion,
-										d,
-										appendVersionToExtractPath,
-										cancelToken));
-							}
-							else
-							{
-								return await Util.WrapCopyWithShellSudo(destination, true, d =>
-									DownloadNuGet(
-										nugetSource,
-										nugetCache,
-										nugetLogger,
-										packageId,
-										packageVersion,
-										d,
-										cancelToken));
-							}
-						});
-
-					// We just need one success from any of the package sources
-					if (result)
-					{
-						ok = true;
-
-						// If we installed from this package source, no need to try any others
-						break;
-					}
-				}
-				catch (Exception ex)
-				{
-					Util.Exception(ex);
-					throw ex;
-				}
-			}
-
-			return ok;
+			
+			return Path.Combine(SdkRoot, "metadata", "workloads", sdkVersionBand, "InstalledWorkloads");
 		}
 	}
 }
