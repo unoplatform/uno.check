@@ -49,9 +49,13 @@ jobs:
         useConfigFile: true
         configFilePath: gitversion.yml
 
+    - name: Add .NET 6 eng source
+      run: |
+        dotnet nuget add source -n dotnet6 https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json
+
     - name: Build - CI
       run: |
-        dotnet pack -c Release -p:PackageVersion=${{ steps.gitversion.outputs.semVer }} -p:AssemblyFileVersion=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj -p:RestoreConfigFile=NuGet.config
+        dotnet pack -c Release -p:PackageVersion=${{ steps.gitversion.outputs.semVer }} -p:AssemblyFileVersion=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
