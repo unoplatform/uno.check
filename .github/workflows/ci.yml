@@ -55,7 +55,8 @@ jobs:
 
     - name: Build - CI
       run: |
-        dotnet pack -c Release -p:PackageVersion=${{ steps.gitversion.outputs.semVer }} -p:AssemblyFileVersion=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj
+        $adjustedPackageVersion="${{ steps.gitversion.outputs.semVer }}".ToLower();
+        dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:AssemblyFileVersion=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
