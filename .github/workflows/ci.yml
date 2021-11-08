@@ -203,10 +203,6 @@ jobs:
         run: |
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
-          & dotnet --list-sdks
-  
-          Install failure : The settings file in the tool's NuGet package is invalid: Failed to retrieve tool configuration: Could not find a part of the path '/home/runner/.dotnet/tools/.store/uno.check/0.2.0-pullrequest0009.165/uno.check/0.2.0-PullRequest0009.165/tools/netcoreapp3.1/any/DotnetToolSettings.xml'.
-  
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
 
