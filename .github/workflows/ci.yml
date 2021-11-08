@@ -205,7 +205,7 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
 
   publish:
     name: Publish
