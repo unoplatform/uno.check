@@ -48,7 +48,14 @@ namespace DotNetCheck.Solutions
 			var data = await http.GetStringAsync(scriptUrl);
 			File.WriteAllText(scriptPath, data);
 
-			var exe = Util.IsWindows ? "powershell" : "sh";
+			var exe = Util.Platform switch
+			{
+				Platform.Linux => "bash",
+				Platform.OSX => "sh",
+				Platform.Windows => "powershell",
+				_ => throw new NotSupportedException($"Unsupported platform {Util.Platform}")
+			};
+
 			var args = Util.IsWindows
 					? $"{scriptPath} -InstallDir {sdkRoot} -Version {Version}"
 					: $"{scriptPath} --install-dir {sdkRoot} --version {Version}";

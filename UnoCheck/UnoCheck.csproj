@@ -9,7 +9,8 @@
     <RootNamespace>DotNetCheck</RootNamespace>
     <!--<PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>-->
     <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+		<RollForward>Major</RollForward>
+	</PropertyGroup>
 
   <PropertyGroup>
     <PackageId>Uno.Check</PackageId>
