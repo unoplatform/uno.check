@@ -4,11 +4,11 @@
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
       "DOTNET_SDK_VERSION": "6.0.100",
-      "MACCATALYST_SDK_VERSION": "15.0.101-preview.11.383",
-      "IOS_SDK_VERSION": "15.0.101-preview.11.383",
-      "TVOS_SDK_VERSION": "15.0.101-preview.11.383",
-      "MACOS_SDK_VERSION": "12.0.101-preview.11.383",
-      "ANDROID_SDK_VERSION": "31.0.101-preview.11.80",
+      "MACCATALYST_SDK_VERSION": "15.0.101-preview.11.391",
+      "IOS_SDK_VERSION": "15.0.101-preview.11.391",
+      "TVOS_SDK_VERSION": "15.0.101-preview.11.391",
+      "MACOS_SDK_VERSION": "12.0.101-preview.11.391",
+      "ANDROID_SDK_VERSION": "31.0.101-preview.11.81",
       "WASMTOOLS_VERSION": "6.0.0-rtm.21518.12"
     },
     "variableMappers": [

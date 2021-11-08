@@ -30,7 +30,7 @@
           {
             "name": "EMSCRIPTEN_WORKLOAD_VERSION",
             "packageId": "microsoft.net.workload.emscripten.manifest-6.0.100",
-            "packageVersion": "6.0.0-rtm.21518.12"
+            "packageVersion": "6.0.0"
           }
         ]
       }
@@ -127,37 +127,43 @@
               "workloadId": "android-aot",
               "workloadManifestId": "microsoft.net.sdk.android",
               "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.100",
-              "version": "$(ANDROID_SDK_VERSION)"
+              "version": "$(ANDROID_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
               "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.100",
-              "version": "$(IOS_SDK_VERSION)"
+              "version": "$(IOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
               "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.100",
-              "version": "$(MACCATALYST_SDK_VERSION)"
+              "version": "$(MACCATALYST_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
               "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.100",
-              "version": "$(TVOS_SDK_VERSION)"
+              "version": "$(TVOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
               "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.100",
-              "version": "$(MACOS_SDK_VERSION)"
+              "version": "$(MACOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
               "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.100",
-              "version": "$(MAUI_VERSION)"
+              "version": "$(MAUI_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             }
             //{
             //  "workloadId": "wasm-tools",

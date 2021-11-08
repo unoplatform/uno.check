@@ -62,7 +62,7 @@ namespace DotNetCheck.Checkups
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
 
-			foreach (var rp in RequiredWorkloads.Where(w => w.SupportedPlatforms.Contains(Util.Platform)))
+			foreach (var rp in RequiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false))
 			{
 				if (!NuGetVersion.TryParse(rp.Version, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
