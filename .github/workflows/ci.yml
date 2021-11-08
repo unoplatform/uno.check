@@ -49,10 +49,6 @@ jobs:
         useConfigFile: true
         configFilePath: gitversion.yml
 
-    - name: Add .NET 6 eng source
-      run: |
-        dotnet nuget add source -n dotnet6 https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json
-
     - name: Build - CI
       run: |
         $adjustedPackageVersion="${{ steps.gitversion.outputs.semVer }}".ToLower();
