@@ -20,6 +20,9 @@ namespace DotNetCheck.Checkups
 		public IEnumerable<AndroidEmulator> RequiredEmulators
 			=> Manifest?.Check?.Android?.Emulators;
 
+		public override bool IsPlatformSupported(Platform platform)
+			=> platform == Platform.OSX || platform == Platform.Windows;
+			
 		public override string Id => "androidemulator";
 
 		public override string Title => "Android Emulator";
