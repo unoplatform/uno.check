@@ -42,6 +42,9 @@ namespace DotNetCheck.Checkups
 
 		static string PlatformJavaCExtension => Util.IsWindows ? ".exe" : string.Empty;
 
+		public override bool IsPlatformSupported(Platform platform)
+			=> platform == Platform.OSX || platform == Platform.Windows;
+
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.OpenJdk != null;
 
