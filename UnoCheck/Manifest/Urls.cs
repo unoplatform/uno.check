@@ -24,7 +24,17 @@ namespace DotNetCheck.Manifest
 		public Uri Linux { get; set; }
 
 		public Uri Get(string version, Platform? platform = default)
-			=> new Uri(For(platform ?? Util.Platform)?.ToString().Replace("__VERSION__", version));
+		{
+			var uri = For(platform ?? Util.Platform)?.ToString();
+			if(uri != null)
+			{
+				return new Uri(uri.Replace("__VERSION__", version));
+			}
+			else
+			{
+				return null;
+			}
+		}
 
 		Uri For(Platform platform)
 			=> platform switch

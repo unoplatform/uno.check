@@ -26,6 +26,9 @@ namespace DotNetCheck.Checkups
 
 		List<string> temporaryFiles = new List<string>();
 
+		public override bool IsPlatformSupported(Platform platform)
+			=> platform == Platform.OSX || platform == Platform.Windows;
+
 		public override bool ShouldExamine(SharedState history)
 			=> RequiredPackages?.Any() ?? false;
 
