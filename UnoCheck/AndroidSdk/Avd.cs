@@ -36,20 +36,28 @@ namespace DotNetCheck.AndroidSdk
 			{
 				try
 				{
-					var avdIniFile = System.IO.Path.Combine(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(avdPath) + ".ini");
+					
 					var configIniFile = System.IO.Path.Combine(avdPath, "config.ini");
 
-					if (File.Exists(avdIniFile))
+					if (File.Exists(configIniFile))
 					{
-						var avdIni = ParseIni(avdIniFile);
-						
-						if (File.Exists(configIniFile))
-						{
-							var configIni = ParseIni(configIniFile);
+						var configIni = ParseIni(configIniFile);
+						var avdName = "";
+						if (!configIni.TryGetValue("AvdId", out avdName))
+                        {
+							return null;
+                        }
 
-							var avd = new Avd();
-							avd.Name = System.IO.Path.GetFileNameWithoutExtension(avdIniFile);
-							avd.Path = avdPath;
+						var avd = new Avd();
+						avd.Name = avdName;
+						avd.Path = avdPath;
+
+						var avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
+
+						if (File.Exists(avdIniFile))
+						{
+							var avdIni = ParseIni(avdIniFile);
+
 							if (avdIni.TryGetValue("target", out var avdTarget))
 								avd.Target = avdTarget;
 							if (configIni.TryGetValue("hw.device.name", out var avdDevice))
@@ -60,6 +68,9 @@ namespace DotNetCheck.AndroidSdk
 							return avd;
 						}
 					}
+
+
+					
 				}
 				catch (Exception ex)
 				{
@@ -80,7 +91,7 @@ namespace DotNetCheck.AndroidSdk
 						var parts = line?.Split(new char[] { '=' }, 2);
 
 						if (parts?.Any() ?? false)
-							d[parts[0]] = parts[1];
+							d[parts[0].Trim()] = parts[1].Trim();
 					}
 				}
 
