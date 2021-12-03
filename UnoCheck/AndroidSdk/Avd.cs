@@ -67,10 +67,7 @@ namespace DotNetCheck.AndroidSdk
 
 							return avd;
 						}
-					}
-
-
-					
+					}				
 				}
 				catch (Exception ex)
 				{
