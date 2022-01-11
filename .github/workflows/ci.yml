@@ -61,9 +61,18 @@ jobs:
         path: .\artifacts
 
   testwin:
-    name: Validate Tool - Windows
+    name: Validate Tool - Windows - ${{ matrix.manifest_name }}
     needs: build
     runs-on: windows-latest
+
+    strategy:
+      matrix:
+       include:
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Stable
+         - manifest: 'manifests\uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -99,12 +108,21 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests\uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testmac:
-    name: Validate Tool - macOS
+    name: Validate Tool - macOS - ${{ matrix.manifest_name }}
     needs: build
     runs-on: macos-latest
+
+    strategy:
+      matrix:
+       include:
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -145,12 +163,21 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testlinux:
-    name: Validate Tool - Linux
+    name: Validate Tool - Linux - ${{ matrix.manifest_name }}
     needs: build
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+       include:
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -191,7 +218,7 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   publish:
     name: Publish
