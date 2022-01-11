@@ -3,13 +3,13 @@
     "toolVersion": "1.0.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.100",
-      "MACCATALYST_SDK_VERSION": "15.0.101-preview.11.391",
-      "IOS_SDK_VERSION": "15.0.101-preview.11.391",
-      "TVOS_SDK_VERSION": "15.0.101-preview.11.391",
-      "MACOS_SDK_VERSION": "12.0.101-preview.11.391",
-      "ANDROID_SDK_VERSION": "31.0.101-preview.11.81",
-      "WASMTOOLS_VERSION": "6.0.0-rtm.21518.12"
+      "DOTNET_SDK_VERSION": "6.0.200-preview.21617.4",
+      "MACCATALYST_SDK_VERSION": "15.2.200-preview.12.1",
+      "IOS_SDK_VERSION": "15.2.200-preview.12.1",
+      "TVOS_SDK_VERSION": "15.2.200-preview.12.1",
+      "MACOS_SDK_VERSION": "12.1.200-preview.12.1",
+      "ANDROID_SDK_VERSION": "31.0.200-preview.12.2",
+      "WASMTOOLS_VERSION": "6.0.200-preview.21617.4"
     },
     "variableMappers": [
       {
@@ -18,8 +18,8 @@
         "mappings": [
           {
             "name": "MAUI_VERSION",
-            "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.100",
-            "packageVersion": "6.0.101-preview.10.*"
+            "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.200",
+            "packageVersion": "6.0.200-preview.12.*"
           }
         ]
       },
@@ -29,7 +29,7 @@
         "mappings": [
           {
             "name": "EMSCRIPTEN_WORKLOAD_VERSION",
-            "packageId": "microsoft.net.workload.emscripten.manifest-6.0.100",
+            "packageId": "microsoft.net.workload.emscripten.manifest-6.0.200",
             "packageVersion": "6.0.0"
           }
         ]
@@ -126,55 +126,55 @@
             {
               "workloadId": "android-aot",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.200",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.200",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.200",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.200",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.200",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.100",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.200",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
             //{
             //  "workloadId": "wasm-tools",
             //  "workloadManifestId": "microsoft.net.workload.mono.toolchain",
-            //  "packageId": "microsoft.net.workload.mono.toolchain.manifest-6.0.100",
+            //  "packageId": "microsoft.net.workload.mono.toolchain.manifest-6.0.200",
             //  "version": "$(WASMTOOLS_VERSION)"
             //},
             //{
             //  "workloadId": "microsoft-net-sdk-emscripten",
             //  "workloadManifestId": "microsoft.net.workload.emscripten",
-            //  "packageId": "microsoft.net.workload.emscripten.manifest-6.0.100",
+            //  "packageId": "microsoft.net.workload.emscripten.manifest-6.0.200",
             //  "version": "$(EMSCRIPTEN_WORKLOAD_VERSION)",
             //  "abstract": true
             //}
