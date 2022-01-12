@@ -118,8 +118,8 @@ jobs:
     strategy:
       matrix:
        include:
-         - manifest: 'manifests/uno.ui.manifest.json'
-           manifest_name: Stable
+         #- manifest: 'manifests/uno.ui.manifest.json'
+         #  manifest_name: Stable
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
 
