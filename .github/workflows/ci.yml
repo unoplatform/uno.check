@@ -61,9 +61,18 @@ jobs:
         path: .\artifacts
 
   testwin:
-    name: Validate Tool - Windows
+    name: Validate Tool - Windows - ${{ matrix.manifest_name }}
     needs: build
     runs-on: windows-latest
+
+    strategy:
+      matrix:
+       include:
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Stable
+         - manifest: 'manifests\uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -99,12 +108,35 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests\uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testmac:
-    name: Validate Tool - macOS
+    name: Validate Tool - macOS - ${{ matrix.manifest_name }}
     needs: build
     runs-on: macos-latest
+
+    strategy:
+      matrix:
+       include:
+         # Disabled as of 2022-01-12 becqause of macOS .NET 6.0.100 installation failure on CI agents:
+         #
+         #   Executing dotnet-install script...
+         #   sh /var/folders/24/8k48jl6d249_n_qfxwsl6xvm0000gn/T/dotnet-install.sh --install-dir /Users/runner/.dotnet --version 6.0.100
+         #   SHELL: /bin/zsh /var/folders/24/8k48jl6d249_n_qfxwsl6xvm0000gn/T/tmpVaukbx.tmp
+         #   dotnet-install: Note that the intended use of this script is for Continuous Integration (CI) scenarios, where:
+         #   dotnet-install: - The SDK needs to be installed without user interaction and without admin rights.
+         #   dotnet-install: - The SDK installation doesn't need to persist across multiple CI runs.
+         #   dotnet-install: To set up a development environment or to run apps, use installers rather than this script. Visit https://dotnet.microsoft.com/download to get the installer.
+         #
+         #   dotnet-install: .NET Core SDK with version '' is already installed.
+         #   Fix applied.  Checking again...
+         #
+         #- manifest: 'manifests/uno.ui.manifest.json'
+         #  manifest_name: Stable
+
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -145,12 +177,21 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testlinux:
-    name: Validate Tool - Linux
+    name: Validate Tool - Linux - ${{ matrix.manifest_name }}
     needs: build
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+       include:
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -191,7 +232,7 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest manifests/uno.ui-preview.manifest.json
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip openjdk --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   publish:
     name: Publish

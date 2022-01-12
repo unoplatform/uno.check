@@ -2,7 +2,7 @@
   "profiles": {
     "UnoCheck": {
       "commandName": "Project",
-      "commandLineArgs": "--verbose --manifest C:\\s\\nv.github\\uno.check\\manifests\\uno.ui.manifest.json"
+      "commandLineArgs": "--verbose --manifest C:\\s\\nv.github\\uno.check\\manifests\\uno.ui-preview.manifest.json"
     },
     "WSL 2": {
       "commandName": "WSL2",
