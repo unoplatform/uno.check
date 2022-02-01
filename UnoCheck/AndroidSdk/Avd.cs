@@ -40,17 +40,21 @@ namespace DotNetCheck.AndroidSdk
 					if (File.Exists(configIniFile))
 					{
 						var configIni = ParseIni(configIniFile);
-						if (!configIni.TryGetValue("AvdId", out var avdName))
-                        {
-							return null;
-                        }
 
 						var avd = new Avd();
-						avd.Name = avdName;
 						avd.Path = avdPath;
+						string avdIniFile = "";
+						if (configIni.TryGetValue("AvdId", out var avdName))
+						{
+							avd.Name = avdName;
+							avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
+						}
+						else
+						{
+							var configIniFolder = System.IO.Path.GetDirectoryName(configIniFile);
+							avdIniFile = System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini";
 
-						var avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
-
+						}
 						if (File.Exists(avdIniFile))
 						{
 							var avdIni = ParseIni(avdIniFile);
