@@ -3,13 +3,13 @@
     "toolVersion": "1.0.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.200-preview.22055.15",
-      "MACCATALYST_SDK_VERSION": "15.2.200-preview.12.4",
-      "IOS_SDK_VERSION": "15.2.200-preview.12.4",
-      "TVOS_SDK_VERSION": "15.2.200-preview.12.4",
-      "MACOS_SDK_VERSION": "12.1.200-preview.12.4",
-      "ANDROID_SDK_VERSION": "31.0.200-preview.12.2",
-      "WASMTOOLS_VERSION": "6.0.200-preview.22055.15"
+      "DOTNET_SDK_VERSION": "6.0.200",
+      "MACCATALYST_SDK_VERSION": "15.2.301-preview.13.5",
+      "IOS_SDK_VERSION": "15.2.301-preview.13.5",
+      "TVOS_SDK_VERSION": "15.2.301-preview.13.5",
+      "MACOS_SDK_VERSION": "12.1.301-preview.13.5",
+      "ANDROID_SDK_VERSION": "31.0.200-preview.13.41",
+      "WASMTOOLS_VERSION": "6.0.200-rtm.22106.1"
     },
     "variableMappers": [
       {
@@ -19,18 +19,7 @@
           {
             "name": "MAUI_VERSION",
             "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.200",
-            "packageVersion": "6.0.200-preview.12.*"
-          }
-        ]
-      },
-      {
-        "$type": "DotNetCheck.Manifest.NuGetFeedVariableMapper, UnoCheck",
-        "packageSources": [ "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json" ],
-        "mappings": [
-          {
-            "name": "EMSCRIPTEN_WORKLOAD_VERSION",
-            "packageId": "microsoft.net.workload.emscripten.manifest-6.0.200",
-            "packageVersion": "6.0.0"
+            "packageVersion": "6.0.200-preview.13.*"
           }
         ]
       }
@@ -116,15 +105,11 @@
             "osx": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-x64.pkg"
           },
           "packageSources": [
-            "https://pkgs.dev.azure.com/xamarin/public/_packaging/maui-main/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json",
-            "https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json",
-            "https://api.nuget.org/v3/index.json"
+            "https://api.nuget.org/v3/index.json",
           ],
           "workloads": [
             {
-              "workloadId": "android-aot",
+              "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
               "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.200",
               "version": "$(ANDROID_SDK_VERSION)",
@@ -157,27 +142,7 @@
               "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.200",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
-            },
-            {
-              "workloadId": "maui",
-              "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.200",
-              "version": "$(MAUI_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
             }
-            //{
-            //  "workloadId": "wasm-tools",
-            //  "workloadManifestId": "microsoft.net.workload.mono.toolchain",
-            //  "packageId": "microsoft.net.workload.mono.toolchain.manifest-6.0.200",
-            //  "version": "$(WASMTOOLS_VERSION)"
-            //},
-            //{
-            //  "workloadId": "microsoft-net-sdk-emscripten",
-            //  "workloadManifestId": "microsoft.net.workload.emscripten",
-            //  "packageId": "microsoft.net.workload.emscripten.manifest-6.0.200",
-            //  "version": "$(EMSCRIPTEN_WORKLOAD_VERSION)",
-            //  "abstract": true
-            //}
           ],
           "packs": []
         }
