@@ -56,10 +56,16 @@ namespace DotNetCheck.Checkups
 			{
 				var process = new ShellProcessRunner(new ShellProcessRunnerOptions("wsl", "-l") { OutputEncoding = Encoding.Unicode });
 				var result = process.WaitForExit();
-				return result.StandardOutput
-					.Where(s => !string.IsNullOrWhiteSpace(s))
-					.Skip(1)
-					.ToArray();
+				
+				if (result.ExitCode == 0)
+				{
+					return result.StandardOutput
+						.Where(s => !string.IsNullOrWhiteSpace(s))
+						.Skip(1)
+						.ToArray();
+				}
+
+				return null;
 			}
 			catch
 			{
