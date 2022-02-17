@@ -12,17 +12,6 @@
       "WASMTOOLS_VERSION": "6.0.200-rtm.22106.1"
     },
     "variableMappers": [
-      {
-        "$type": "DotNetCheck.Manifest.NuGetFeedVariableMapper, UnoCheck",
-        "packageSources": [ "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json" ],
-        "mappings": [
-          {
-            "name": "MAUI_VERSION",
-            "packageId": "Microsoft.NET.Sdk.Maui.Manifest-6.0.200",
-            "packageVersion": "6.0.200-preview.13.*"
-          }
-        ]
-      }
     ],
     "openjdk": {
       "version": "11.0",
@@ -75,8 +64,8 @@
           "version": "31.0.3"
         },
         {
-          "path": "cmdline-tools;3.0",
-          "version": "3.0"
+          "path": "cmdline-tools;5.0",
+          "version": "5.0"
         }
       ],
       "emulators": [
@@ -109,7 +98,7 @@
           ],
           "workloads": [
             {
-              "workloadId": "android",
+              "workloadId": "android-aot",
               "workloadManifestId": "microsoft.net.sdk.android",
               "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.200",
               "version": "$(ANDROID_SDK_VERSION)",
