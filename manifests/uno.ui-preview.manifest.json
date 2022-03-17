@@ -1,15 +1,15 @@
 {
   "check": {
-    "toolVersion": "1.1.0",
+    "toolVersion": "1.1.0", 
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.200",
-      "MACCATALYST_SDK_VERSION": "15.2.301-preview.13.5",
-      "IOS_SDK_VERSION": "15.2.301-preview.13.5",
-      "TVOS_SDK_VERSION": "15.2.301-preview.13.5",
-      "MACOS_SDK_VERSION": "12.1.301-preview.13.5",
-      "ANDROID_SDK_VERSION": "31.0.200-preview.13.41",
-      "WASMTOOLS_VERSION": "6.0.200-rtm.22106.1"
+      "DOTNET_SDK_VERSION": "6.0.300-preview.22154.4",
+      "MACCATALYST_SDK_VERSION": "15.2.303-rc.1.55",
+      "IOS_SDK_VERSION": "15.2.303-rc.1.55",
+      "TVOS_SDK_VERSION": "15.2.303-rc.1.55",
+      "MACOS_SDK_VERSION": "12.1.303-rc.1.55",
+      "ANDROID_SDK_VERSION": "31.0.300-rc.1.17",
+      "WASMTOOLS_VERSION": "6.0.300-preview.22154.4"
     },
     "variableMappers": [
     ],
@@ -25,7 +25,7 @@
       "exactVersionName": "13 Beta 5"
     },
     "vswin": {
-      "minimumVersion": "17.2.0-pre.1.0"
+      "minimumVersion": "17.2.0-pre.2.0"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
@@ -95,40 +95,44 @@
           },
           "packageSources": [
             "https://api.nuget.org/v3/index.json",
+            "https://pkgs.dev.azure.com/xamarin/public/_packaging/maui-main/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json",
+            "https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json",
           ],
           "workloads": [
             {
-              "workloadId": "android-aot",
+              "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.300",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.300",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.300",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.300",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.300",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
