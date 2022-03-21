@@ -21,8 +21,8 @@
       }
     },
     "xcode": {
-      "exactVersion": "19223.2",
-      "exactVersionName": "13 Beta 5"
+      "exactVersion": "13E113",
+      "exactVersionName": "13.3"
     },
     "vswin": {
       "minimumVersion": "17.2.0-pre.2.0"
