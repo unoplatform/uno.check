@@ -52,7 +52,7 @@ namespace DotNetCheck.AndroidSdk
 						else
 						{
 							var configIniFolder = System.IO.Path.GetDirectoryName(configIniFile);
-							avdIniFile = System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini";
+							avdIniFile = System.IO.Path.Combine(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini");
 
 						}
 						if (File.Exists(avdIniFile))
