@@ -266,7 +266,7 @@ jobs:
 
       - name: SignClient
         run: |
-          build\SignClient sign -i artifacts\*.nupkg -c build\SignClient.json -r "${{ secrets.SIGN_CLIENT_USER }}" -s "${{ secrets.SIGN_CLIENT_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
+          build\SignClient sign -i artifacts\*.nupkg -c build\SignClient.json -r "${{ secrets.UNO_PLATFORM_CODESIGN_USERNAME }}" -s "${{ secrets.UNO_PLATFORM_CODESIGN_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
 
       - name: NuGet Push
         run: |
