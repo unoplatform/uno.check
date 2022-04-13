@@ -1,15 +1,16 @@
 {
   "check": {
-    "toolVersion": "1.1.0", 
+    "toolVersion": "1.2.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.300-preview.22154.4",
-      "MACCATALYST_SDK_VERSION": "15.2.303-rc.1.55",
-      "IOS_SDK_VERSION": "15.2.303-rc.1.55",
-      "TVOS_SDK_VERSION": "15.2.303-rc.1.55",
-      "MACOS_SDK_VERSION": "12.1.303-rc.1.55",
-      "ANDROID_SDK_VERSION": "31.0.300-rc.1.17",
-      "WASMTOOLS_VERSION": "6.0.300-preview.22154.4"
+      "DOTNET_SDK_VERSION": "6.0.300-preview.22179.2",
+      "MACCATALYST_SDK_VERSION": "15.4.100-rc.1.125",
+      "IOS_SDK_VERSION": "15.4.100-rc.1.125",
+      "TVOS_SDK_VERSION": "15.4.100-rc.1.125",
+      "MACOS_SDK_VERSION": "12.3.100-rc.1.125",
+      "ANDROID_SDK_VERSION": "32.0.300-rc.1.4",
+      "MONO_TOOLCHAIN_VERSION": "6.0.4",
+      "EMSCRIPTEN_VERSION": "6.0.4"
     },
     "variableMappers": [
     ],
@@ -38,11 +39,11 @@
           "version": "30.8.4"
         },
         {
-          "path": "build-tools;31.0.0",
-          "version": "31.0.0"
+          "path": "build-tools;32.0.0",
+          "version": "32.0.0"
         },
         {
-          "path": "platforms;android-31",
+          "path": "platforms;android-32",
           "version": "1"
         },
         {
@@ -87,7 +88,7 @@
         {
           "version": "$(DOTNET_SDK_VERSION)",
           "requireExact": false,
-          "enableWorkloadResolver": false,
+          "enableWorkloadResolver": true,
           "urls": {
             "win64": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x64.exe",
             "win": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x86.exe",
@@ -95,10 +96,7 @@
           },
           "packageSources": [
             "https://api.nuget.org/v3/index.json",
-            "https://pkgs.dev.azure.com/xamarin/public/_packaging/maui-main/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json",
-            "https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json",
+            "https://aka.ms/dotnet6/nuget/index.json"
           ],
           "workloads": [
             {
@@ -134,6 +132,24 @@
               "workloadManifestId": "microsoft.net.sdk.macos",
               "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.300",
               "version": "$(MACOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              // This workload is required to avoid ios/android workloads to rollback to
+              // maui-pre versions. (Required at RC1 timeframe)
+              "workloadId": "wasm-tools",
+              "workloadManifestId": "microsoft.net.workload.mono.toolchain",
+              "packageId": "microsoft.net.workload.mono.toolchain-6.0.300",
+              "version": "$(MONO_TOOLCHAIN_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              // This workload is required to avoid ios/android workloads to rollback to
+              // maui-pre versions. (Required at RC1 timeframe)
+              "workloadId": "wasm-tools",
+              "workloadManifestId": "microsoft.net.workload.emscripten",
+              "packageId": "microsoft.net.workload.emscripten-6.0.300",
+              "version": "$(EMSCRIPTEN_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
           ],
