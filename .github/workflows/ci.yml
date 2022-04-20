@@ -108,7 +108,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --skip androidemulator --skip androidsdk --manifest ${{ matrix.manifest }}
 
   testmac:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}
@@ -156,7 +156,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '6.0.200'
+          dotnet-version: '6.0.300-preview.22204.3'
 
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
@@ -182,7 +182,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --skip androidemulator --skip androidsdk --manifest ${{ matrix.manifest }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
