@@ -116,6 +116,26 @@ namespace DotNetCheck.Checkups
 
 			if (string.IsNullOrEmpty(sdkInstance?.Path))
 			{
+				try
+				{
+					var data = new System.Net.WebClient().DownloadData("https://dl.google.com/android/repository/sys-img/android-desktop/sys-img2-3.xml");
+				}
+				catch(System.Net.WebException ex)
+                {
+					if(ex.Response is System.Net.HttpWebResponse response && response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+						history.SetEnvironmentVariable("ANDROID_EMULATOR_SKIP", "true");
+
+						return Task.FromResult(
+						new DiagnosticResult(
+							Status.Warning,
+							this,
+							"Failed to find Android SDK (See https://github.com/unoplatform/uno.check/issues/48 for more information).",
+							new Suggestion("Failed to validate the Android SDK (See [underline]https://github.com/unoplatform/uno.check/issues/48[/] for details).",
+							"For more information to install the Android SDK see: [underline]https://aka.ms/dotnet-androidsdk-help[/]")));
+					}
+				}
+
 				return Task.FromResult(
 				new DiagnosticResult(
 					Status.Error,
@@ -142,7 +162,7 @@ namespace DotNetCheck.Checkups
 					var pkgToInstall = sdkInstance?.Components?.AllNotInstalled()?
 						.FirstOrDefault(p => p.Path.Equals(package.Path.Trim(), StringComparison.OrdinalIgnoreCase)
 							&& p.Revision >= (v ?? p.Revision));
-						
+
 					ReportStatus($"{package.Path} ({package.Version}) missing.", Status.Error);
 
 					if (pkgToInstall != null)
@@ -180,7 +200,7 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 							var downloads = installer.GetDownloadItems(installationSet);
 							using (var httpClient = new HttpClient())
 							{
-								// Provide a default timeout value of 7 minutes if a value is not provided.
+									// Provide a default timeout value of 7 minutes if a value is not provided.
 								httpClient.Timeout = TimeSpan.FromMinutes(120);
 								await Task.WhenAll(downloads.Select(d => Download(httpClient, d)));
 							}
@@ -206,6 +226,7 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 							}
 						}
 					}))));
+
 		}
 
 		IAndroidComponent FindInstalledPackage(IEnumerable<IAndroidComponent> installed, params Manifest.AndroidPackage[] acceptablePackages)
