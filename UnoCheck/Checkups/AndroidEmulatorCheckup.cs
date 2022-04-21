@@ -34,6 +34,12 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
+			if(history.GetEnvironmentVariable("ANDROID_EMULATOR_SKIP") == "true")
+            {
+				return Task.FromResult(
+					new DiagnosticResult(Status.Warning, this, $"Installation skipped for https://github.com/unoplatform/uno.check/issues/48"));
+			}
+
 			AndroidSdk.AvdManager avdManager = null;
 
 			var javaHome = history.GetEnvironmentVariable("JAVA_HOME");
