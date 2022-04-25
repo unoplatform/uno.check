@@ -28,7 +28,7 @@ namespace DotNetCheck.Checkups
 		{
 			if(Util.IsMac)
 			{
-				if (!File.Exists("/usr/local/lib/libgdk-3.0.dylib"))
+				if (!File.Exists("/usr/local/lib/libgdk-3.0.dylib") && !File.Exists("/opt/homebrew/lib/libgdk-3.0.dylib"))
 				{
 					return Task.FromResult(new DiagnosticResult(
 						Status.Error,
