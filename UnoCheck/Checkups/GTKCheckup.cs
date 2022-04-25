@@ -33,7 +33,7 @@ namespace DotNetCheck.Checkups
 					return Task.FromResult(new DiagnosticResult(
 						Status.Error,
 						this,
-						new Suggestion($"Install Gtk+3 with \"brew install gtk+3\"")));
+						new Suggestion($"Install Gtk+3 with \"brew install gtk+3 gnome-icon-theme\"")));
 				}
 			}
 			else if(Util.IsLinux)
