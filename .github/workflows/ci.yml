@@ -113,10 +113,10 @@ jobs:
   testmac:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}
     needs: build
-    runs-on: macos-latest
 
     strategy:
       matrix:
+       os: [macos-11, macos-12]
        include:
          # Disabled as of 2022-01-12 becqause of macOS .NET 6.0.100 installation failure on CI agents:
          #
@@ -136,6 +136,8 @@ jobs:
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
+           
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
