@@ -4,11 +4,11 @@
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
       "DOTNET_SDK_VERSION": "6.0.300-preview.22204.3",
-      "MACCATALYST_SDK_VERSION": "15.4.100-rc.1.125",
-      "IOS_SDK_VERSION": "15.4.100-rc.1.125",
-      "TVOS_SDK_VERSION": "15.4.100-rc.1.125",
-      "MACOS_SDK_VERSION": "12.3.100-rc.1.125",
-      "ANDROID_SDK_VERSION": "32.0.300-rc.1.4",
+      "MACCATALYST_SDK_VERSION": "15.4.200-rc.2.191",
+      "IOS_SDK_VERSION": "15.4.200-rc.2.191",
+      "TVOS_SDK_VERSION": "15.4.200-rc.2.191",
+      "MACOS_SDK_VERSION": "12.3.200-rc.2.191",
+      "ANDROID_SDK_VERSION": "32.0.300-rc.2.27",
       "MONO_TOOLCHAIN_VERSION": "6.0.4",
       "EMSCRIPTEN_VERSION": "6.0.4"
     },
@@ -136,7 +136,7 @@
             },
             {
               // This workload is required to avoid ios/android workloads to rollback to
-              // maui-pre versions. (Required at RC1 timeframe)
+              // maui-pre versions. (Required at RC2 timeframe)
               "workloadId": "wasm-tools",
               "workloadManifestId": "microsoft.net.workload.mono.toolchain",
               "packageId": "microsoft.net.workload.mono.toolchain-6.0.300",
@@ -145,7 +145,7 @@
             },
             {
               // This workload is required to avoid ios/android workloads to rollback to
-              // maui-pre versions. (Required at RC1 timeframe)
+              // maui-pre versions. (Required at RC2 timeframe)
               "workloadId": "wasm-tools",
               "workloadManifestId": "microsoft.net.workload.emscripten",
               "packageId": "microsoft.net.workload.emscripten-6.0.300",
