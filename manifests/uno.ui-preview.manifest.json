@@ -9,7 +9,7 @@
       "TVOS_SDK_VERSION": "15.4.200-rc.2.191",
       "MACOS_SDK_VERSION": "12.3.200-rc.2.191",
       "ANDROID_SDK_VERSION": "32.0.300-rc.2.27",
-      "MONO_TOOLCHAIN_VERSION": "6.0.5",
+      "MONO_TOOLCHAIN_VERSION": "6.0.4",
       "EMSCRIPTEN_VERSION": "6.0.4"
     },
     "variableMappers": [
