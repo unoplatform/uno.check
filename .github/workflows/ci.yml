@@ -118,7 +118,7 @@ jobs:
       matrix:
        os: [macos-11, macos-12]
        include:
-         # Disabled as of 2022-01-12 becqause of macOS .NET 6.0.100 installation failure on CI agents:
+         # Disabled as of 2022-01-12 because of macOS .NET 6.0.100 installation failure on CI agents:
          #
          #   Executing dotnet-install script...
          #   sh /var/folders/24/8k48jl6d249_n_qfxwsl6xvm0000gn/T/dotnet-install.sh --install-dir /Users/runner/.dotnet --version 6.0.100

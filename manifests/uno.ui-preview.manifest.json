@@ -4,11 +4,11 @@
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
       "DOTNET_SDK_VERSION": "6.0.300-preview.22204.3",
-      "MACCATALYST_SDK_VERSION": "15.4.200-rc.2.191",
-      "IOS_SDK_VERSION": "15.4.200-rc.2.191",
-      "TVOS_SDK_VERSION": "15.4.200-rc.2.191",
-      "MACOS_SDK_VERSION": "12.3.200-rc.2.191",
-      "ANDROID_SDK_VERSION": "32.0.300-rc.2.27",
+      "MACCATALYST_SDK_VERSION": "15.4.300-rc.3.83",
+      "IOS_SDK_VERSION": "15.4.300-rc.3.83",
+      "TVOS_SDK_VERSION": "15.4.300-rc.3.83",
+      "MACOS_SDK_VERSION": "12.3.300-rc.3.83",
+      "ANDROID_SDK_VERSION": "32.0.300-rc.3.45",
       "MONO_TOOLCHAIN_VERSION": "6.0.4",
       "EMSCRIPTEN_VERSION": "6.0.4"
     },
@@ -26,7 +26,7 @@
       "exactVersionName": "13.3"
     },
     "vswin": {
-      "minimumVersion": "17.2.0-pre.2.0"
+      "minimumVersion": "17.2.0-pre.5.0"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
