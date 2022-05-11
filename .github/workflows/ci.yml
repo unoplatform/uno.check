@@ -111,7 +111,7 @@ jobs:
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testmac:
-    name: Validate Tool - macOS - ${{ matrix.manifest_name }}
+    name: Validate Tool - macOS - ${{ matrix.manifest_name }}/${{ matrix.os }}
     needs: build
 
     strategy:
@@ -154,11 +154,6 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '3.1.x'
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '6.0.300-preview.22204.3'
 
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
