@@ -25,4 +25,4 @@ uno-check
 
 ![uno-check running](https://github.com/unoplatform/uno/raw/master/doc/articles/Assets/uno-check-running.gif)
 
-Visit our [documentation](docs/using-uno-check.md) for more details.
+Visit our [documentation](doc/using-uno-check.md) for more details.
