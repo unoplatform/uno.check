@@ -10,7 +10,6 @@
       "MACOS_SDK_VERSION": "12.3.300-rc.3.83",
       "ANDROID_SDK_VERSION": "32.0.300-rc.3.45",
       "MONO_TOOLCHAIN_VERSION": "6.0.5",
-      "EMSCRIPTEN_VERSION": "6.0.5"
     },
     "variableMappers": [
     ],
@@ -141,15 +140,6 @@
               "workloadManifestId": "microsoft.net.workload.mono.toolchain",
               "packageId": "microsoft.net.workload.mono.toolchain-6.0.300",
               "version": "$(MONO_TOOLCHAIN_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
-            },
-            {
-              // This workload is required to avoid ios/android workloads to rollback to
-              // maui-pre versions. (Required at RC2 timeframe)
-              "workloadId": "wasm-tools",
-              "workloadManifestId": "microsoft.net.workload.emscripten",
-              "packageId": "microsoft.net.workload.emscripten-6.0.300",
-              "version": "$(EMSCRIPTEN_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
           ],
