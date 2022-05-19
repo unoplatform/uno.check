@@ -89,9 +89,9 @@
           "requireExact": false,
           "enableWorkloadResolver": true,
           "urls": {
-            "win64": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x64.exe",
-            "win": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x86.exe",
-            "osx": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-x64.pkg",
+            "win64": "https://download.visualstudio.microsoft.com/download/pr/deb4711b-7bbc-4afa-8884-9f2b964797f2/fb603c451b2a6e0a2cb5372d33ed68b9/dotnet-sdk-6.0.300-win-x64.exe",
+            "win": "https://download.visualstudio.microsoft.com/download/pr/3ebd154a-7be1-46fe-b90f-119be60586d9/bfea0a9cd49b264ee432ef9e7121131d/dotnet-sdk-6.0.300-win-x86.exe",
+            "osx": "https://download.visualstudio.microsoft.com/download/pr/a048efaf-c4ee-4c22-a987-2bda2a58253c/3ddde00d1b2cf420a0d870df26bc56f8/dotnet-sdk-6.0.300-osx-x64.pkg",
             "osxArm64": "https://download.visualstudio.microsoft.com/download/pr/9e14be2d-f676-41ca-8483-ca43bb9c2fc6/7c647915c92303c11a444f88c66f174f/dotnet-sdk-6.0.300-osx-arm64.pkg"
           },
           "packageSources": [
