@@ -27,7 +27,12 @@ If it finds something missing, out of date, or misconfigured, it will either off
     ```
     For additional options, see below.
 
-1. If you are using Visual Studio 2022 17.2 Preview 4 or later, use the following:
+    On a mac, you may need to run the command this way:
+    ```
+    ~/.dotnet/tools/uno-check
+    ```
+
+1. If you are using Visual Studio 2022 17.3 Preview 1 or later, use the following:
     ```
     uno-check --pre
     ```
