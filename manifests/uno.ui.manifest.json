@@ -1,15 +1,15 @@
 {
   "check": {
-    "toolVersion": "1.1.0",
+    "toolVersion": "1.2.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.200",
-      "MACCATALYST_SDK_VERSION": "15.2.301-preview.13.5",
-      "IOS_SDK_VERSION": "15.2.301-preview.13.5",
-      "TVOS_SDK_VERSION": "15.2.301-preview.13.5",
-      "MACOS_SDK_VERSION": "12.1.301-preview.13.5",
-      "ANDROID_SDK_VERSION": "31.0.200-preview.13.41",
-      "WASMTOOLS_VERSION": "6.0.200-rtm.22106.1"
+      "DOTNET_SDK_VERSION": "6.0.300",
+      "MACCATALYST_SDK_VERSION": "15.4.303",
+      "IOS_SDK_VERSION": "15.4.303",
+      "TVOS_SDK_VERSION": "15.4.303",
+      "MACOS_SDK_VERSION": "12.3.303",
+      "ANDROID_SDK_VERSION": "32.0.301",
+      "MONO_TOOLCHAIN_VERSION": "6.0.5"
     },
     "variableMappers": [
     ],
@@ -21,11 +21,11 @@
       }
     },
     "xcode": {
-      "exactVersion": "19223.2",
-      "exactVersionName": "13 Beta 5"
+      "exactVersion": "13E113",
+      "exactVersionName": "13.3"
     },
     "vswin": {
-      "minimumVersion": "17.1.0"
+      "minimumVersion": "17.3.0-pre.1.0"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
@@ -38,11 +38,11 @@
           "version": "30.8.4"
         },
         {
-          "path": "build-tools;31.0.0",
-          "version": "31.0.0"
+          "path": "build-tools;32.0.0",
+          "version": "32.0.0"
         },
         {
-          "path": "platforms;android-31",
+          "path": "platforms;android-32",
           "version": "1"
         },
         {
@@ -87,49 +87,60 @@
         {
           "version": "$(DOTNET_SDK_VERSION)",
           "requireExact": false,
-          "enableWorkloadResolver": false,
+          "enableWorkloadResolver": true,
           "urls": {
-            "win64": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x64.exe",
-            "win": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x86.exe",
-            "osx": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-x64.pkg"
+            "win64": "https://download.visualstudio.microsoft.com/download/pr/deb4711b-7bbc-4afa-8884-9f2b964797f2/fb603c451b2a6e0a2cb5372d33ed68b9/dotnet-sdk-6.0.300-win-x64.exe",
+            "win": "https://download.visualstudio.microsoft.com/download/pr/3ebd154a-7be1-46fe-b90f-119be60586d9/bfea0a9cd49b264ee432ef9e7121131d/dotnet-sdk-6.0.300-win-x86.exe",
+            "osx": "https://download.visualstudio.microsoft.com/download/pr/a048efaf-c4ee-4c22-a987-2bda2a58253c/3ddde00d1b2cf420a0d870df26bc56f8/dotnet-sdk-6.0.300-osx-x64.pkg",
+            "osxArm64": "https://download.visualstudio.microsoft.com/download/pr/9e14be2d-f676-41ca-8483-ca43bb9c2fc6/7c647915c92303c11a444f88c66f174f/dotnet-sdk-6.0.300-osx-arm64.pkg"
           },
           "packageSources": [
             "https://api.nuget.org/v3/index.json",
+            "https://aka.ms/dotnet6/nuget/index.json"
           ],
           "workloads": [
             {
-              "workloadId": "android-aot",
+              "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.300",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.300",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.300",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.300",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.200",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.300",
               "version": "$(MACOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              // This workload is required to avoid ios/android workloads to rollback to
+              // maui-pre versions. (Required at RC2 timeframe)
+              "workloadId": "wasm-tools",
+              "workloadManifestId": "microsoft.net.workload.mono.toolchain",
+              "packageId": "microsoft.net.workload.mono.toolchain-6.0.300",
+              "version": "$(MONO_TOOLCHAIN_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
           ],
