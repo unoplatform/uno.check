@@ -64,7 +64,9 @@ namespace DotNetCheck.Checkups
 
 			foreach (var rp in RequiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false))
 			{
-				if (!NuGetVersion.TryParse(rp.Version, out var rpVersion))
+                string version = rp.Version.Split("/", StringSplitOptions.None).FirstOrDefault();
+
+                if (!NuGetVersion.TryParse(version, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
 
 				// TODO: Eventually check actual workload resolver api for installed workloads and

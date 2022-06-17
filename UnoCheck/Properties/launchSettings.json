@@ -2,11 +2,10 @@
   "profiles": {
     "UnoCheck": {
       "commandName": "Project",
-      "commandLineArgs": "--verbose --pre"
+      "commandLineArgs": "--verbose --manifest C:\\s\\unoplatform\\uno.check\\manifests\\uno.ui-preview.manifest.json"
     },
     "WSL 2": {
       "commandName": "WSL2",
-      "environmentVariables": {},
       "distributionName": ""
     }
   }

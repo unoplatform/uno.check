@@ -3,13 +3,13 @@
     "toolVersion": "1.2.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.300",
-      "MACCATALYST_SDK_VERSION": "15.4.303",
-      "IOS_SDK_VERSION": "15.4.303",
-      "TVOS_SDK_VERSION": "15.4.303",
-      "MACOS_SDK_VERSION": "12.3.303",
-      "ANDROID_SDK_VERSION": "32.0.301",
-      "MONO_TOOLCHAIN_VERSION": "6.0.5"
+      "DOTNET_SDK_VERSION": "6.0.400-preview.22301.10",
+      "MACCATALYST_SDK_VERSION": "15.4.408/6.0.400",
+      "IOS_SDK_VERSION": "15.4.408/6.0.400",
+      "TVOS_SDK_VERSION": "15.4.408/6.0.400",
+      "MACOS_SDK_VERSION": "12.3.408/6.0.400",
+      "ANDROID_SDK_VERSION": "32.0.415/6.0.300",
+      "MONO_TOOLCHAIN_VERSION": "6.0.6/6.0.300"
     },
     "variableMappers": [
     ],
@@ -25,7 +25,7 @@
       "exactVersionName": "13.3"
     },
     "vswin": {
-      "minimumVersion": "17.3.0-pre.1.0"
+      "minimumVersion": "17.3.0-pre.2.0"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
@@ -109,28 +109,28 @@
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.300",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.400",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.300",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.400",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.300",
+              "packageId": "Microsoft.NET.Sdk.tvOS.Manifest-6.0.400",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.300",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.400",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
