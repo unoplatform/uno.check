@@ -55,17 +55,41 @@ namespace DotNetCheck.Checkups
 			if (force)
 				wasForceRunAlready = true;
 
-			var workloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
 
+			var validWorkloads = RequiredWorkloads
+				.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false)
+				.ToArray();
 
-			var installedPackageWorkloads = workloadManager.GetInstalledWorkloads();
+			var workloadManagers = validWorkloads
+				.Select(w => w.Version.Split("/", StringSplitOptions.None).LastOrDefault() is { Length: > 0 } workloadSdkVersion ? workloadSdkVersion : sdkVersion)
+				.Concat(new[] { sdkVersion })
+				.Distinct()
+				.ToDictionary(v => v, v => new DotNetWorkloadManager(SdkRoot, v, NuGetPackageSources));
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
 
 			foreach (var rp in RequiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false))
 			{
-				if (!NuGetVersion.TryParse(rp.Version, out var rpVersion))
+				var versionParts = rp.Version.Split("/", StringSplitOptions.None);
+				var workloadVersion = versionParts.First();
+				var workloadSdkVersion = versionParts.ElementAtOrDefault(1) is { Length: > 0 } v ? v : sdkVersion;
+
+				if (!workloadManagers.TryGetValue(workloadSdkVersion, out var workloadManager))
+				{
+					throw new Exception($"Unable to find workload manager for version [{rp.Id}: {rp.Version}]");
+				}
+
+                var installedPackageWorkloads = workloadManager.GetInstalledWorkloads();
+
+                if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
+
+#if DEBUG
+				foreach(var installedWorload in installedPackageWorkloads)
+                {
+                    ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
+                }
+#endif
 
 				// TODO: Eventually check actual workload resolver api for installed workloads and
 				// compare the manifest version once it has a string in it
@@ -83,7 +107,9 @@ namespace DotNetCheck.Checkups
 			if (!missingWorkloads.Any() && !force)
 				return DiagnosticResult.Ok(this);
 
-			return new DiagnosticResult(
+			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
+
+            return new DiagnosticResult(
 				Status.Error,
 				this,
 				new Suggestion("Install or Update SDK Workloads",
@@ -93,7 +119,7 @@ namespace DotNetCheck.Checkups
 					{
 						try
 						{
-							await workloadManager.Repair();
+							await genericWorkloadManager.Repair();
 						}
 						catch (Exception ex)
 						{
@@ -101,7 +127,7 @@ namespace DotNetCheck.Checkups
 						}
 					}
 
-					await workloadManager.Install(RequiredWorkloads);
+					await genericWorkloadManager.Install(RequiredWorkloads);
 				})));
 		}
 	}
