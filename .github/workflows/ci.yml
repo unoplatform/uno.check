@@ -155,11 +155,14 @@ jobs:
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
+           previous_tool_version: ''
+           previous_tool_params: ''
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: ''
+
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.4.2
