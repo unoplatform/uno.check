@@ -96,9 +96,6 @@
           },
           "packageSources": [
             "https://api.nuget.org/v3/index.json",
-            "https://pkgs.dev.azure.com/xamarin/public/_packaging/maui-main/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/azure-public/vside/_packaging/xamarin-impl/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json",
             "https://aka.ms/dotnet6/nuget/index.json"
           ],
           "workloads": [
