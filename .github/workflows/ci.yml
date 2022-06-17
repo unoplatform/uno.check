@@ -13,7 +13,7 @@ on:
       - release/**
 
 jobs:
-  build:
+  build_tool:
     name: Build
     runs-on: windows-latest
     steps:
@@ -62,7 +62,7 @@ jobs:
 
   testwin:
     name: Validate Tool - Windows - ${{ matrix.manifest_name }}
-    needs: build
+    needs: build_tool
     runs-on: windows-latest
 
     strategy:
@@ -72,6 +72,14 @@ jobs:
            manifest_name: Stable
          - manifest: 'manifests\uno.ui-preview.manifest.json'
            manifest_name: Preview
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Stable Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: ''
+         - manifest: 'manifests\uno.ui-preview.manifest.json'
+           manifest_name: Preview Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: '--pre'
 
     steps:
       - name: Checkout
@@ -101,6 +109,17 @@ jobs:
           useConfigFile: true
           configFilePath: gitversion.yml
 
+      - name: Install and Run Previous Tool
+        if: ${{ matrix.previous_tool_version }} != ''
+        shell: pwsh
+        run: |
+          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          $ProgressPreference = 'SilentlyContinue'
+          & dotnet --list-sdks
+          & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
+          & dotnet tool uninstall --global uno.check
+
       - name: Install and Run Tool
         shell: pwsh
         run: |
@@ -112,7 +131,7 @@ jobs:
 
   testmac:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}/${{ matrix.os }}
-    needs: build
+    needs: build_tool
 
     strategy:
       matrix:
@@ -137,6 +156,16 @@ jobs:
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
            
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: ''
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: '--pre'
+
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -172,6 +201,17 @@ jobs:
         run: |
           brew install gtk+3
 
+      - name: Install and Run Previous Tool
+        if: ${{ matrix.previous_tool_version }} != ''
+        shell: pwsh
+        run: |
+          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          $ProgressPreference = 'SilentlyContinue'
+          & dotnet --list-sdks
+          & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
+          & dotnet tool uninstall --global uno.check
+
       - name: Install and Run Tool
         shell: pwsh
         run: |
@@ -183,7 +223,7 @@ jobs:
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
-    needs: build
+    needs: build_tool
     runs-on: ubuntu-latest
 
     strategy:
@@ -193,6 +233,15 @@ jobs:
            manifest_name: Stable
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
+           
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: ''
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: '--pre'
 
     steps:
       - name: Checkout
@@ -228,6 +277,17 @@ jobs:
           sudo apt update
           sudo apt install libgtk-3-dev
 
+      - name: Install and Run Previous Tool
+        if: ${{ matrix.previous_tool_version }} != ''
+        shell: pwsh
+        run: |
+          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          $ProgressPreference = 'SilentlyContinue'
+          & dotnet --list-sdks
+          & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
+          & dotnet tool uninstall --global uno.check
+
       - name: Install and Run Tool
         shell: pwsh
         run: |
@@ -235,13 +295,14 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+  
 
   publish:
     name: Publish
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: windows-latest
     needs:
-      - build
+      - build_tool
     steps:
       - name: Checkout
         uses: actions/checkout@v2
