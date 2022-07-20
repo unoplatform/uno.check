@@ -110,6 +110,8 @@ namespace DotNetCheck.DotNet
 		{
 			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion, null);
 
+			var workloadResolver = WorkloadResolver.Create(manifestProvider, SdkRoot, SdkVersion, null);
+
 			foreach (var manifestInfo in manifestProvider.GetManifests())
 			{
 				using (var manifestStream = manifestInfo.OpenManifestStream())
@@ -118,8 +120,40 @@ namespace DotNetCheck.DotNet
 
 					// Each workload manifest can have one or more workloads defined
 					foreach (var wl in m.Workloads)
+					{
+						if (wl.Value is WorkloadDefinition wd && !AreWorkloadPacksInstalled(wd, workloadResolver))
+						{
+							continue;
+						}
+
 						yield return (wl.Key.ToString(), m.Version);
+					}
 				}
+			}
+
+			bool AreWorkloadPacksInstalled(WorkloadDefinition workload, WorkloadResolver workloadResolver)
+			{
+				foreach (var packId in workload.Packs ?? Enumerable.Empty<WorkloadPackId>())
+				{
+					var pack = workloadResolver.TryGetPackInfo(packId);
+
+					if (pack != null)
+					{
+						var packInstalled =
+							pack.Kind switch
+							{
+								WorkloadPackKind.Library or WorkloadPackKind.Template => File.Exists(pack.Path),
+								_ => Directory.Exists(pack.Path)
+							};
+
+						if (!packInstalled)
+						{
+							return false;
+						}
+					}
+				}
+
+				return true;
 			}
 		}
 
