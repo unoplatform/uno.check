@@ -7,7 +7,7 @@
       "MACCATALYST_SDK_VERSION": "15.4.430/6.0.400",
       "IOS_SDK_VERSION": "15.4.430/6.0.400",
       "MACOS_SDK_VERSION": "12.3.430/6.0.400",
-      "ANDROID_SDK_VERSION": "32.0.424/6.0.300"
+      "ANDROID_SDK_VERSION": "32.0.440/6.0.300"
     },
     "variableMappers": [
     ],
@@ -23,7 +23,7 @@
       "exactVersionName": "13.3"
     },
     "vswin": {
-      "minimumVersion": "17.3.0-pre.3.0"
+      "minimumVersion": "17.3.0-pre.4.0"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
