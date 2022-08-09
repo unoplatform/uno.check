@@ -32,7 +32,7 @@ If it finds something missing, out of date, or misconfigured, it will either off
     ~/.dotnet/tools/uno-check
     ```
 
-1. If you are using Visual Studio 2022 17.3 Preview 1 or later, use the following:
+1. If you are using Visual Studio 2022 17.4 Preview 1 or later, use the following:
     ```
     uno-check --pre
     ```
