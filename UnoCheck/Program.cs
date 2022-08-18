@@ -38,7 +38,8 @@ namespace DotNetCheck
 			CheckupManager.RegisterCheckups(
 				new DotNetSentinelCheckup(),
 				new WSLCheckup(),
-				new GTK3Checkup()
+				new GTK3Checkup(),
+				new WindowsLongPathCheckup()
 			);
 
 			var app = new CommandApp();
