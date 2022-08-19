@@ -39,7 +39,8 @@ namespace DotNetCheck
 				new DotNetSentinelCheckup(),
 				new WSLCheckup(),
 				new GTK3Checkup(),
-				new WindowsLongPathCheckup()
+				new WindowsLongPathCheckup(),
+				new WindowsPhytonInstallationCheckup()
 			);
 
 			var app = new CommandApp();
