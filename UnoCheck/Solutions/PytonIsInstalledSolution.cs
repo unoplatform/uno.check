@@ -23,9 +23,9 @@ namespace DotNetCheck.Solutions
 			};
 			_ = Process.Start(ps);
 
-			ReportStatus("The Phyton version can be downloaded on this website..");
+			ReportStatus("The Phyton version can be downloaded from Windows Store.");
 		}
 		
-		private const string PythonDownloadUrl = "https://www.python.org/downloads/";
+		private const string PythonDownloadUrl = "https://www.microsoft.com/store/productId/9PJPW5LDXLZ5";
 	}
 }
