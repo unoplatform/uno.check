@@ -39,6 +39,7 @@ namespace DotNetCheck
 				new DotNetSentinelCheckup(),
 				new WSLCheckup(),
 				new GTK3Checkup(),
+				new WindowsPhytonInstallationCheckup(),
 				new WindowsLongPathCheckup()
 			);
 
