@@ -40,7 +40,8 @@ namespace DotNetCheck
 				new WSLCheckup(),
 				new GTK3Checkup(),
 				new WindowsPhytonInstallationCheckup(),
-				new WindowsLongPathCheckup()
+				new WindowsLongPathCheckup(),
+				new LinuxNinjaPresenceCheckup()
 			);
 
 			var app = new CommandApp();
