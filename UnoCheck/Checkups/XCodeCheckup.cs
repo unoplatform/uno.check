@@ -40,50 +40,72 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var selected = GetSelectedXCode();
-
-			if (selected.Version.IsCompatible(MinimumVersion, ExactVersion))
+			try
 			{
-				// Selected version is good
-				ReportStatus($"Xcode.app ({VersionName})", Status.Ok);
-				return Task.FromResult(DiagnosticResult.Ok(this));
-			}
+				var selected = GetSelectedXCode();
 
-			XCodeInfo eligibleXcode = null;
-
-			var xcodes = FindXCodeInstalls();
-
-			foreach (var x in xcodes)
-			{
-				if (x.Version.IsCompatible(MinimumVersion, ExactVersion))
+				if (selected.Version.IsCompatible(MinimumVersion, ExactVersion))
 				{
-					eligibleXcode = x;
-					break;
+					// Selected version is good
+					ReportStatus($"Xcode.app ({VersionName})", Status.Ok);
+					return Task.FromResult(DiagnosticResult.Ok(this));
 				}
-			}
 
-			if (eligibleXcode != null)
-			{
-				// If this is the case, they need to run xcode-select -s
-				ReportStatus($"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})", Status.Error);
+				XCodeInfo eligibleXcode = null;
+
+				var xcodes = FindXCodeInstalls();
+
+				foreach (var x in xcodes)
+				{
+					if (x.Version.IsCompatible(MinimumVersion, ExactVersion))
+					{
+						eligibleXcode = x;
+						break;
+					}
+				}
+
+				if (eligibleXcode != null)
+				{
+					// If this is the case, they need to run xcode-select -s
+					ReportStatus($"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})", Status.Error);
+
+					return Task.FromResult(new DiagnosticResult(
+						Status.Error,
+						this,
+						new Suggestion("Run xcode-select -s <Path>",
+							new Solutions.ActionSolution((sln, cancelToken) =>
+							{
+								ShellProcessRunner.Run("xcode-select", "-s " + eligibleXcode.Path);
+								return Task.CompletedTask;
+							}))));
+				}
+
+
+				ReportStatus($"Xcode.app ({VersionName}) not installed.", Status.Error);
 
 				return Task.FromResult(new DiagnosticResult(
 					Status.Error,
 					this,
-					new Suggestion("Run xcode-select -s <Path>",
-						new Solutions.ActionSolution((sln, cancelToken) =>
-						{
-							ShellProcessRunner.Run("xcode-select", "-s " + eligibleXcode.Path);
-							return Task.CompletedTask;
-						}))));
+					new Suggestion($"Download XCode {VersionName}")));
 			}
+			catch(InvalidDataException)
+			{
+				return Task.FromResult(new DiagnosticResult(
+						Status.Error,
+						this,
+						new Suggestion("Run xcode-select --install",
+							new Solutions.ActionSolution((sln, cancelToken) =>
+							{	
+								var result = ShellProcessRunner.Run("xcode-select", "--install");
 
-			ReportStatus($"Xcode.app ({VersionName}) not installed.", Status.Error);
+								if(result.ExitCode == 0)
+								{
+									this.Examine(history);
+								}
 
-			return Task.FromResult(new DiagnosticResult(
-				Status.Error,
-				this,
-				new Suggestion($"Download XCode {VersionName}")));
+								return Task.CompletedTask;
+							}))));
+			}
 		}
 
 		XCodeInfo GetSelectedXCode()
