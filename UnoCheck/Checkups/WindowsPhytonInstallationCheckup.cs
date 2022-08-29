@@ -18,7 +18,7 @@ namespace DotNetCheck.Checkups
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
 			RegistryKey pyLaucherKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Python\PyLauncher", false);
-			string? path = pyLaucherKey.GetValue(InstallDirKey)?.ToString();
+			string? path = pyLaucherKey?.GetValue(InstallDirKey)?.ToString();
 
 			if (pyLaucherKey is null || string.IsNullOrEmpty(path))
 			{
