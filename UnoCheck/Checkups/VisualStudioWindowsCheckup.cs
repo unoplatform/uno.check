@@ -46,7 +46,7 @@ namespace DotNetCheck.Checkups
 			{
 				ReportStatus($"Missing Visual Studio >= {MinimumVersion.ThisOrExact(ExactVersion)}", Status.Error);
 
-				return new DiagnosticResult(Status.Error, this);
+				return new DiagnosticResult(Status.Warning, this);
 			}
 			else
 			{

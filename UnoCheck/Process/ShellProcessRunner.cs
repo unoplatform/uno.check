@@ -23,7 +23,7 @@ namespace DotNetCheck
 			Args = args;
 			CancellationToken = cancellationToken;
 		}
-		 
+
 		public string Executable { get; set; }
 		public string Args { get; set; }
 
@@ -184,7 +184,8 @@ namespace DotNetCheck
 			try
 			{
 				process.WaitForExit();
-			} catch (Exception ex) { Util.Exception(ex); }
+			}
+			catch (Exception ex) { Util.Exception(ex); }
 
 			if (standardError?.Any(l => l?.Contains("error: more than one device/emulator") ?? false) ?? false)
 				throw new Exception("More than one Device/Emulator detected, you must specify which Serial to target.");

@@ -18,6 +18,12 @@
         "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg"
       }
     },
+    "gtk": {
+      "version": "3.24.31",
+      "urls": {
+        "win64": "https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
+      }
+    },
     "xcode": {
       "exactVersion": "13E113",
       "exactVersionName": "13.3"
