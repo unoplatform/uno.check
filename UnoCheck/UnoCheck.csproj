@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="NuGet.Packaging" Version="5.10.0" />
 		<PackageReference Include="NuGet.Protocol" Version="5.10.0" />
 		<PackageReference Include="NuGet.Versioning" Version="5.10.0" />
