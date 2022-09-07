@@ -29,7 +29,7 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				ReportStatus($"Hyper-V is configured!", Status.Ok);
+				ReportStatus($"Hyper-V is configured", Status.Ok);
 
 				return Task.FromResult(DiagnosticResult.Ok(this));
 			}
