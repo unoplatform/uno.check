@@ -24,7 +24,7 @@ namespace DotNetCheck.Checkups
 				return Task.FromResult(new DiagnosticResult(
 				Status.Warning,
 				this,
-				new Suggestion($"Activate Hyper-V on this computer to benefit from faster Android Emulators!",
+				new Suggestion($"Activate Hyper-V on this computer to benefit from faster Android Emulators",
 				new HyperVActivationSolution())));
 			}
 			else
