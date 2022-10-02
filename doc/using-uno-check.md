@@ -108,14 +108,14 @@ If you're running on CI you may want to run without any required input with the 
 uno-check --non-interactive
 ```
 
-### `--preview` Preview Manifest feed
+###  `--pre`, `--preview`, `-d`, `--dev` Preview Manifest feed
 
 This uses a more frequently updated manifest with newer versions of things more often. If you use the prerelease versions of Uno.UI NuGet packages, you should use this flag.
 
-The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-dev.manifest.json
+The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json
 
 ```
-uno-check --dev
+uno-check --pre
 ```
 
 ### `--ci` Continuous Integration
