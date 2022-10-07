@@ -3,11 +3,11 @@
     "toolVersion": "1.5.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "6.0.400-rtm.22364.21",
-      "MACCATALYST_SDK_VERSION": "15.4.446-ci.-release-6-0-4xx.446/6.0.400",
-      "IOS_SDK_VERSION": "15.4.446-ci.-release-6-0-4xx.446/6.0.400",
-      "MACOS_SDK_VERSION": "12.3.446-ci.-release-6-0-4xx.446/6.0.400",
-      "ANDROID_SDK_VERSION": "32.0.448/6.0.400"
+      "DOTNET_SDK_VERSION": "7.0.100-rc.1.22431.12",
+      "MACCATALYST_SDK_VERSION": "15.4.1029-rc.1/7.0.100-rc.1",
+      "IOS_SDK_VERSION": "15.4.1029-rc.1/7.0.100-rc.1",
+      "MACOS_SDK_VERSION": "12.3.1029-rc.1/7.0.100-rc.1",
+      "ANDROID_SDK_VERSION": "33.0.0-rc.1.151/7.0.100-rc.1"
     },
     "variableMappers": [
     ],
@@ -19,11 +19,11 @@
       }
     },
     "xcode": {
-      "exactVersion": "13E113",
-      "exactVersionName": "13.3"
+      "exactVersion": "14A400",
+      "exactVersionName": "14.0"
     },
     "vswin": {
-      "minimumVersion": "17.3.0-pre.6.0"
+      "minimumVersion": "17.4.0-pre.2.1"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
@@ -87,10 +87,10 @@
           "requireExact": false,
           "enableWorkloadResolver": true,
           "urls": {
-            "win64": "https://dotnetbuilds.azureedge.net/public/Sdk/6.0.400-rtm.22364.21/dotnet-sdk-6.0.400-win-x64.exe",
-            "win": "https://dotnetbuilds.azureedge.net/public/Sdk/6.0.400-rtm.22364.21/dotnet-sdk-6.0.400-win-x86.exe",
-            "osx": "https://dotnetbuilds.azureedge.net/public/Sdk/6.0.400-rtm.22364.21/dotnet-sdk-6.0.400-osx-x64.pkg",
-            "osxArm64": "https://dotnetbuilds.azureedge.net/public/Sdk/6.0.400-rtm.22364.21/dotnet-sdk-6.0.400-osx-arm64.pkg"
+            "win64": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x64.exe",
+            "win": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x86.exe",
+            "osx": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-x64.pkg",
+            "osxArm64": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-arm64.pkg"
           },
           "packageSources": [
             "https://api.nuget.org/v3/index.json"
@@ -99,28 +99,28 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-6.0.300",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-7.0.100-rc.1",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-6.0.400",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-7.0.100-rc.1",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-6.0.400",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-7.0.100-rc.1",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-6.0.400",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-7.0.100-rc.1",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }

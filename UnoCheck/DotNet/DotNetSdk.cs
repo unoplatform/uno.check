@@ -141,11 +141,28 @@ namespace DotNetCheck.DotNet
 							Util.Log($"Directory does not exist: {locStr}");
 					}
 				}
-				catch
+				catch(Exception e)
 				{
+#if DEBUG
 					// Bad line, ignore
+					Util.Log($"Failed parsing sdk list output: {e}");
+#endif
 				}
 			}
+
+#if DEBUG
+            Util.Log($"SDK List exit code: {r.ExitCode}");
+
+            if (r.StandardError is { Count: > 0 })
+			{
+				Util.Log($"SDK List stderr: {string.Join("\n", r.StandardError)}");
+			}
+
+			if (r.StandardOutput is { Count: > 0 })
+			{
+				Util.Log($"SDK List stdout: {string.Join("\n", r.StandardOutput)}");
+			}
+#endif
 
 			return Task.FromResult<IEnumerable<DotNetSdkInfo>>(sdks);
 		}
