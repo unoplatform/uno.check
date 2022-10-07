@@ -135,39 +135,58 @@ jobs:
 
     strategy:
       matrix:
-       os: [macos-11, macos-12]
        include:
-         # Disabled as of 2022-01-12 because of macOS .NET 6.0.100 installation failure on CI agents:
-         #
-         #   Executing dotnet-install script...
-         #   sh /var/folders/24/8k48jl6d249_n_qfxwsl6xvm0000gn/T/dotnet-install.sh --install-dir /Users/runner/.dotnet --version 6.0.100
-         #   SHELL: /bin/zsh /var/folders/24/8k48jl6d249_n_qfxwsl6xvm0000gn/T/tmpVaukbx.tmp
-         #   dotnet-install: Note that the intended use of this script is for Continuous Integration (CI) scenarios, where:
-         #   dotnet-install: - The SDK needs to be installed without user interaction and without admin rights.
-         #   dotnet-install: - The SDK installation doesn't need to persist across multiple CI runs.
-         #   dotnet-install: To set up a development environment or to run apps, use installers rather than this script. Visit https://dotnet.microsoft.com/download to get the installer.
-         #
-         #   dotnet-install: .NET Core SDK with version '' is already installed.
-         #   Fix applied.  Checking again...
-         #
-         #- manifest: 'manifests/uno.ui.manifest.json'
-         #  manifest_name: Stable
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable
+           os: macos-11
+           dotnet_version: 6.0.401
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
            previous_tool_version: ''
            previous_tool_params: ''
+           os: macos-11
+           dotnet_version: 7.0.100-rc.1.22431.12
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: ''
+           os: macos-11
+           dotnet_version: 6.0.401
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+           os: macos-11
+           dotnet_version: 7.0.100-rc.1.22431.12
 
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable
+           os: macos-12
+           dotnet_version: 6.0.401
+
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview
+           previous_tool_version: ''
+           previous_tool_params: ''
+           os: macos-12
+           dotnet_version: 7.0.100-rc.1.22431.12
+           
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Stable Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: ''
+           os: macos-12
+           dotnet_version: 6.0.401
+
+         - manifest: 'manifests/uno.ui-preview.manifest.json'
+           manifest_name: Preview Upgrade
+           previous_tool_version: 1.4.2
+           previous_tool_params: '--pre'
+           os: macos-12
+           dotnet_version: 7.0.100-rc.1.22431.12
 
     runs-on: ${{ matrix.os }}
 
@@ -186,6 +205,12 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '3.1.x'
+    
+      # Preinstall .NET as it may fail on some build agents
+      - name: Setup .NET Core ${{ matrix.dotnet_version }}
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '${{ matrix.dotnet_version }}'
 
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
