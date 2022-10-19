@@ -146,7 +146,7 @@ jobs:
            previous_tool_version: ''
            previous_tool_params: ''
            os: macos-11
-           dotnet_version: 7.0.100-rc.1.22431.12
+           dotnet_version: 7.0.100-rc.2.22477.23
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
@@ -160,7 +160,7 @@ jobs:
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
            os: macos-11
-           dotnet_version: 7.0.100-rc.1.22431.12
+           dotnet_version: 7.0.100-rc.2.22477.23
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
@@ -172,7 +172,7 @@ jobs:
            previous_tool_version: ''
            previous_tool_params: ''
            os: macos-12
-           dotnet_version: 7.0.100-rc.1.22431.12
+           dotnet_version: 7.0.100-rc.2.22477.23
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
@@ -186,7 +186,7 @@ jobs:
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
            os: macos-12
-           dotnet_version: 7.0.100-rc.1.22431.12
+           dotnet_version: 7.0.100-rc.2.22477.23
 
     runs-on: ${{ matrix.os }}
 
