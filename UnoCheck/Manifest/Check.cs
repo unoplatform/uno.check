@@ -37,6 +37,9 @@ namespace DotNetCheck.Manifest
 		[JsonProperty("dotnet")]
 		public DotNet DotNet { get; set; }
 
+		[JsonProperty("gtk")]
+		public Gtk Gtk { get; set; }
+
 		[JsonProperty("filepermissions")]
 		public List<FilePermissions> FilePermissions { get; set; }
 
