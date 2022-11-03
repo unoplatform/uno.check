@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿
+#nullable enable
 
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
@@ -7,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace DotNetCheck.Checkups
 {
-	public class WindowsPhytonInstallationCheckup : Checkup
+	public class WindowsPythonInstallationCheckup : Checkup
 	{
-		public override string Id => "windowsphytonInstallation";
+		public override string Id => "windowspyhtonInstallation";
 
-		public override string Title => "Windows Phyton Installation Checkup";
+		public override string Title => "Windows Python Installation Checkup";
 
 		public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
 
