@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace DotNetCheck.Solutions
 {
-	public class PytonIsInstalledSolution : Solution
+	public class PythonIsInstalledSolution : Solution
 	{
-		public PytonIsInstalledSolution()
+		public PythonIsInstalledSolution()
 		{
 		}
 
