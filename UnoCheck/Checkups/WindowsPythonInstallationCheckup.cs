@@ -27,7 +27,7 @@ namespace DotNetCheck.Checkups
 				Status.Error,
 				this,
 				new Suggestion("In order to build WebAssembly apps using AOT, you will need to install Python from Windows Store, or manually through Python's official site",
-				new PytonIsInstalledSolution())));
+				new PythonIsInstalledSolution())));
 			}
 			else
 			{
