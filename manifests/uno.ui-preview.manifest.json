@@ -3,11 +3,11 @@
     "toolVersion": "1.5.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.10.9",
-      "DOTNET_SDK_VERSION": "7.0.100-rc.2.22477.23",
-      "MACCATALYST_SDK_VERSION": "15.4.1186-rc.2/7.0.100-rc.2",
-      "IOS_SDK_VERSION": "16.0.1271-rc.2-xcode14/7.0.100-rc.2",
-      "MACOS_SDK_VERSION": "12.3.1186-rc.2/7.0.100-rc.2",
-      "ANDROID_SDK_VERSION": "33.0.0-rc.2.202/7.0.100-rc.2"
+      "DOTNET_SDK_VERSION": "7.0.100",
+      "MACCATALYST_SDK_VERSION": "15.4.2372/7.0.100",
+      "IOS_SDK_VERSION": "16.0.1478/7.0.100",
+      "MACOS_SDK_VERSION": "12.3.2372/7.0.100",
+      "ANDROID_SDK_VERSION": "33.0.4/7.0.100"
     },
     "variableMappers": [
     ],
@@ -100,28 +100,28 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-7.0.100-rc.2",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-7.0.100",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-7.0.100-rc.2",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-7.0.100",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-7.0.100-rc.2",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-7.0.100",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-7.0.100-rc.2",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-7.0.100",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
