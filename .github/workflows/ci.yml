@@ -139,7 +139,7 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
            os: macos-11
-           dotnet_version: 6.0.401
+           dotnet_version: 7.0.100
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
@@ -153,7 +153,7 @@ jobs:
            previous_tool_version: 1.4.2
            previous_tool_params: ''
            os: macos-11
-           dotnet_version: 6.0.401
+           dotnet_version: 7.0.100
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
@@ -165,7 +165,7 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
            os: macos-12
-           dotnet_version: 6.0.401
+           dotnet_version: 7.0.100
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
@@ -179,7 +179,7 @@ jobs:
            previous_tool_version: 1.4.2
            previous_tool_params: ''
            os: macos-12
-           dotnet_version: 6.0.401
+           dotnet_version: 7.0.100
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
