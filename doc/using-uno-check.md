@@ -51,6 +51,15 @@ If you run into problems with uno-check, you should generally try the following:
 1. If you still have errors, it may help to run the [Clean-Old-DotNet6-Previews.ps1](https://github.com/unoplatform/uno.check/blob/main/Clean-Old-DotNet6-Previews.ps1) script to remove old SDK Packs, templates, or otherwise old cached preview files that might be causing the problem.  Try running `uno-check --force-dotnet` again after this step.
 1. Finally, if you have other problems, run with `--verbose` flag and capture the output and add it to a new issue.
 
+## Running without elevation on Windows
+
+In restricted environments, it may be required to run uno-check to determine what needs to be installed without privileges elevation.
+
+In order to do so, use the following command:
+```bash
+cmd /c "set __COMPAT_LAYER=RUNASINVOKER && uno-check"
+```
+
 ## Command line arguments
 
 The following command line arguments can be used to customise the tool's behavior.
