@@ -10,6 +10,7 @@
       "ANDROID_SDK_VERSION": "33.0.4/7.0.100"
     },
     "variableMappers": [
+      
     ],
     "openjdk": {
       "version": "11.0",
