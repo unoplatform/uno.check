@@ -2,7 +2,7 @@
   "check": {
     "toolVersion": "1.5.0",
     "variables": {
-      "OPENJDK_VERSION": "11.0.10.9",
+      "OPENJDK_VERSION": "11.0.16",
       "DOTNET_SDK_VERSION": "7.0.100",
       "MACCATALYST_SDK_VERSION": "15.4.2372/7.0.100",
       "IOS_SDK_VERSION": "16.0.1478/7.0.100",

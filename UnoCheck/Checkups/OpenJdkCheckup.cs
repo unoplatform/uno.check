@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xamarin.Android.Tools;
@@ -97,9 +97,13 @@ namespace DotNetCheck.Checkups
 			if (ok)
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
+			var url = Manifest?.Check?.OpenJdk?.Url;
+			if (url is not null && RuntimeInformation.OSArchitecture == Architecture.Arm64) {
+				url = new (url.ToString().Replace("-x64.", "-aarch64."));
+			}
 			return Task.FromResult(new DiagnosticResult(Status.Error, this,
 				new Suggestion("Install OpenJDK11",
-					new BootsSolution(Manifest?.Check?.OpenJdk?.Url, "Download and Install Microsoft OpenJDK 11"))));
+					new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
 		}
 
 		IEnumerable<OpenJdkInfo> FindJdks()
