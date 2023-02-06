@@ -27,15 +27,15 @@ namespace DotNetCheck.Cli
 
 			AnsiConsole.Markup(AsciiAssets.UnoLogo);
 			AnsiConsole.WriteLine();
-			AnsiConsole.Render(
-				new FigletText("uno-check").LeftAligned().Color(new Color(122, 103, 247)));
+			AnsiConsole.Write(
+				new FigletText("uno-check").LeftJustified().Color(new Color(122, 103, 247)));
 
 			AnsiConsole.MarkupLine($"[underline bold green]{Icon.Ambulance} {ToolInfo.ToolName} v{ToolInfo.CurrentVersion} {Icon.Recommend}[/]");
-			AnsiConsole.Render(new Rule());
+			AnsiConsole.Write(new Rule());
 
 			AnsiConsole.MarkupLine("This tool will check your Uno Platform development environment.");
 			AnsiConsole.MarkupLine("If problems are detected, it will offer the option to try and fix them for you, or suggest a way to fix them yourself.");
-			AnsiConsole.Render(new Rule());
+			AnsiConsole.Write(new Rule());
 
 			if (!Util.IsAdmin() && Util.IsWindows)
 			{
@@ -43,7 +43,7 @@ namespace DotNetCheck.Cli
 
 				AnsiConsole.MarkupLine($"[bold red]{Icon.Bell} {suTxt} is required to fix most issues.  Consider exiting and running the tool with {suTxt} permissions.[/]");
 
-				AnsiConsole.Render(new Rule());
+				AnsiConsole.Write(new Rule());
 
 				if (!settings.NonInteractive)
 				{
@@ -188,13 +188,13 @@ namespace DotNetCheck.Cli
 				if (diagnosis.HasSuggestion)
 				{
 					Console.WriteLine();
-					AnsiConsole.Render(new Rule());
+					AnsiConsole.Write(new Rule());
 					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {diagnosis.Suggestion.Name}[/]");
 
 					if (!string.IsNullOrEmpty(diagnosis.Suggestion.Description))
 						AnsiConsole.MarkupLine("" + diagnosis.Suggestion.Description + "");
 
-					AnsiConsole.Render(new Rule());
+					AnsiConsole.Write(new Rule());
 					Console.WriteLine();
 
 					// See if we should fix
@@ -255,7 +255,7 @@ namespace DotNetCheck.Cli
 				checkup.OnStatusUpdated -= checkupStatusUpdated;
 			}
 
-			AnsiConsole.Render(new Rule());
+			AnsiConsole.Write(new Rule());
 			AnsiConsole.WriteLine();
 
 			var erroredChecks = results.Values.Where(d => d.Status == Models.Status.Error && !skippedChecks.Contains(d.Checkup.Id));
