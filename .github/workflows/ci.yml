@@ -293,7 +293,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
-          versionSpec: '5.x'
+          versionSpec: ${{ env.GitVersion_Version }}
     
       - name: GitVersion
         id: gitversion
