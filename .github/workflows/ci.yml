@@ -43,7 +43,7 @@ jobs:
     - name: Setup GitVersion
       uses: gittools/actions/gitversion/setup@v0.9.9
       with:
-        versionSpec: ${{ env.DOTNETSDK_VERSION }}
+        versionSpec: ${{ env.GitVersion_Version }}
 
     - name: GitVersion
       id: gitversion
@@ -103,7 +103,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
-          versionSpec: ${{ env.DOTNETSDK_VERSION }}
+          versionSpec: ${{ env.GitVersion_Version }}
     
       - name: GitVersion
         id: gitversion
@@ -218,7 +218,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
-          versionSpec: ${{ env.DOTNETSDK_VERSION }}
+          versionSpec: ${{ env.GitVersion_Version }}
     
       - name: GitVersion
         id: gitversion
