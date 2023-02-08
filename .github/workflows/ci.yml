@@ -12,6 +12,9 @@ on:
       - main
       - release/**
 
+env:
+  GitVersion_Version: 5.10.3
+
 jobs:
   build_tool:
     name: Build
@@ -40,7 +43,7 @@ jobs:
     - name: Setup GitVersion
       uses: gittools/actions/gitversion/setup@v0.9.9
       with:
-        versionSpec: '5.10.3'
+        versionSpec: ${{ env.DOTNETSDK_VERSION }}
 
     - name: GitVersion
       id: gitversion
@@ -100,7 +103,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
-          versionSpec: '5.x'
+          versionSpec: ${{ env.DOTNETSDK_VERSION }}
     
       - name: GitVersion
         id: gitversion
@@ -215,7 +218,7 @@ jobs:
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
-          versionSpec: '5.x'
+          versionSpec: ${{ env.DOTNETSDK_VERSION }}
     
       - name: GitVersion
         id: gitversion
