@@ -1,10 +1,14 @@
-﻿using NuGet.Versioning;
+﻿using NuGet.Common;
+using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DotNetCheck
@@ -38,8 +42,8 @@ namespace DotNetCheck
 			return await Manifest.Manifest.FromFileOrUrl(f);
 		}
 
-		public static string CurrentVersion
-			=> NuGetVersion.Parse(FileVersionInfo.GetVersionInfo(typeof(ToolInfo).Assembly.Location).FileVersion).ToString();
+		public static NuGetVersion CurrentVersion
+			=> NuGetVersion.Parse(FileVersionInfo.GetVersionInfo(typeof(ToolInfo).Assembly.Location).FileVersion);
 
 		public static bool Validate(Manifest.Manifest manifest)
 		{
@@ -79,6 +83,27 @@ namespace DotNetCheck
 
 			return true;
 		}
+
+        public static async Task<NuGetVersion> GetLatestVersion(bool isPrerelease)
+		{
+            // package name and current version
+            string packageName = "Uno.Check";
+            
+			// create a source repository
+            var source = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+
+            // check for a newer version
+            var packageMetadataResource = await source.GetResourceAsync<PackageMetadataResource>();
+			var packageMetadata = await packageMetadataResource.GetMetadataAsync(
+				packageName,
+				includePrerelease: isPrerelease,
+				includeUnlisted: false,
+				new SourceCacheContext(),
+				NullLogger.Instance,
+				CancellationToken.None);
+			var latestVersion = packageMetadata.Select(p => p.Identity.Version).Max();
+			return latestVersion;
+        }
 
 		public static void ExitPrompt(bool nonInteractive)
 		{
