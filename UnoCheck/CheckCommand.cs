@@ -1,5 +1,6 @@
 ﻿using DotNetCheck.Checkups;
 using DotNetCheck.Models;
+using NuGet.Configuration;
 using NuGet.Versioning;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -36,6 +37,11 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("This tool will check your Uno Platform development environment.");
 			AnsiConsole.MarkupLine("If problems are detected, it will offer the option to try and fix them for you, or suggest a way to fix them yourself.");
 			AnsiConsole.Write(new Rule());
+
+			if (await NeedsToolUpdateAsync(settings))
+			{
+				return 1;
+			}
 
 			if (!Util.IsAdmin() && Util.IsWindows)
 			{
@@ -154,7 +160,7 @@ namespace DotNetCheck.Cli
 					continue;
 				}
 
-				checkup.OnStatusUpdated += checkupStatusUpdated;
+				checkup.OnStatusUpdated += CheckupStatusUpdated;
 
 				AnsiConsole.WriteLine();
 				AnsiConsole.MarkupLine($"[bold]{Icon.Checking} " + checkup.Title + " Checkup[/]...");
@@ -221,7 +227,7 @@ namespace DotNetCheck.Cli
 						{
 							try
 							{
-								remedy.OnStatusUpdated += remedyStatusUpdated;
+								remedy.OnStatusUpdated += RemedyStatusUpdated;
 
 								AnsiConsole.MarkupLine($"{Icon.Thinking} Attempting to fix: " + checkup.Title);
 
@@ -242,7 +248,7 @@ namespace DotNetCheck.Cli
 							}
 							finally
 							{
-								remedy.OnStatusUpdated -= remedyStatusUpdated;
+								remedy.OnStatusUpdated -= RemedyStatusUpdated;
 							}
 						}
 
@@ -252,7 +258,7 @@ namespace DotNetCheck.Cli
 					}
 				}
 
-				checkup.OnStatusUpdated -= checkupStatusUpdated;
+				checkup.OnStatusUpdated -= CheckupStatusUpdated;
 			}
 
 			AnsiConsole.Write(new Rule());
@@ -304,7 +310,47 @@ namespace DotNetCheck.Cli
 			return exitCode;
 		}
 
-		void checkupStatusUpdated(object sender, CheckupStatusEventArgs e)
+		private async Task<bool> NeedsToolUpdateAsync(CheckSettings settings)
+		{
+			if (settings.Manifest is not null && !settings.CI)
+			{
+				return false;
+			}
+
+			bool needsToUpdate = false;
+			var currentVersion = ToolInfo.CurrentVersion;
+			NuGetVersion latestVersion = null;
+			try
+			{
+				latestVersion = await ToolInfo.GetLatestVersion(currentVersion.IsPrerelease);
+			}
+			catch
+			{
+				AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Could not check for latest version of uno-check on NuGet.org. The currently installed version may be out of date.[/]");
+				AnsiConsole.WriteLine();
+				AnsiConsole.Write(new Rule());
+			}
+
+			if (latestVersion is not null && currentVersion < latestVersion)
+			{
+				AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Your uno-check version is not up to date. The latest version is {latestVersion}. You can use the following command to update:[/]");
+				AnsiConsole.WriteLine();
+				AnsiConsole.MarkupLine($"dotnet tool update --global Uno.Check --version {latestVersion}");
+				AnsiConsole.WriteLine();
+
+				AnsiConsole.Write(new Rule());
+			}
+
+			if (latestVersion is null || currentVersion < latestVersion)
+			{
+				var shouldContinue = AnsiConsole.Confirm("Would you still like to continue with the currently installed version?", false);
+				needsToUpdate = !shouldContinue;
+            }
+
+			return needsToUpdate;
+		}
+
+		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
 			var msg = "";
 			if (e.Status == Models.Status.Error)
@@ -319,7 +365,7 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("  " + msg);
 		}
 
-		void remedyStatusUpdated(object sender, RemedyStatusEventArgs e)
+		private void RemedyStatusUpdated(object sender, RemedyStatusEventArgs e)
 		{
 			AnsiConsole.MarkupLine("  " + e.Message);
 		}
