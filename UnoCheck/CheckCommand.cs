@@ -317,6 +317,7 @@ namespace DotNetCheck.Cli
 				return false;
 			}
 
+			bool needsToUpdate = false;
 			var currentVersion = ToolInfo.CurrentVersion;
 			NuGetVersion latestVersion = null;
 			try
@@ -342,10 +343,11 @@ namespace DotNetCheck.Cli
 
 			if (latestVersion is null || currentVersion < latestVersion)
 			{
-				return !AnsiConsole.Confirm("Would you still like to continue with the currently installed version?", false);
-			}
+				var shouldContinue = AnsiConsole.Confirm("Would you still like to continue with the currently installed version?", false);
+				needsToUpdate = !shouldContinue;
+            }
 
-			return false;
+			return needsToUpdate;
 		}
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
