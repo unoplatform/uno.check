@@ -1,4 +1,5 @@
-﻿using NuGet.Common;
+﻿using DotNetCheck.DotNet;
+using NuGet.Common;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
@@ -86,28 +87,10 @@ namespace DotNetCheck
 			return true;
 		}
 
-        public static async Task<NuGetVersion> GetLatestVersion(bool isPrerelease)
-		{
-            // package name and current version
-            string packageName = "Uno.Check";
-            
-			// create a source repository
-            var source = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+		public static Task<NuGetVersion> GetLatestVersion(bool includePrerelease) => 
+			NuGetHelper.GetLatestPackageVersionAsync("Uno.Check", includePrerelease);
 
-            // check for a newer version
-            var packageMetadataResource = await source.GetResourceAsync<PackageMetadataResource>();
-			var packageMetadata = await packageMetadataResource.GetMetadataAsync(
-				packageName,
-				includePrerelease: isPrerelease,
-				includeUnlisted: false,
-				new SourceCacheContext(),
-				NullLogger.Instance,
-				CancellationToken.None);
-			var latestVersion = packageMetadata.Select(p => p.Identity.Version).Max();
-			return latestVersion;
-        }
-
-		public static void ExitPrompt(bool nonInteractive)
+        public static void ExitPrompt(bool nonInteractive)
 		{
 			if (!nonInteractive)
 			{
