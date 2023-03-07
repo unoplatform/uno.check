@@ -58,10 +58,11 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
 	</ItemGroup>
+
 	<ItemGroup>
-		<Reference Include="Microsoft.DotNet.MSBuildSdkResolver">
-			<HintPath>..\libs\Microsoft.DotNet.MSBuildSdkResolver.dll</HintPath>
-		</Reference>
+	  <ProjectReference Include="..\UnoCheck.SdkResolver\Microsoft.DotNet.MSBuildSdkResolver.csproj" />
+	</ItemGroup>
+	<ItemGroup>
 		<Reference Include="Boots.Core">
 			<HintPath>..\libs\Boots.Core.dll</HintPath>
 		</Reference>
