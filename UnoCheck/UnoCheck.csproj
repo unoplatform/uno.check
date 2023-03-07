@@ -34,7 +34,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="NuGet.Packaging" Version="5.10.0" />
-		<PackageReference Include="NuGet.Protocol" Version="5.10.0" />
+		<PackageReference Include="NuGet.Protocol" Version="5.11.3" />
 		<PackageReference Include="NuGet.Versioning" Version="5.10.0" />
 		<PackageReference Include="Microsoft.Build.Framework" Version="16.9.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
