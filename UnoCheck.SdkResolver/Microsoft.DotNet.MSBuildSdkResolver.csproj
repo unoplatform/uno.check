@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net472</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>10.0</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="..\dotnet-sdk\Resolvers\Microsoft.DotNet.NativeWrapper\**\*.cs" LinkBase="Microsoft.DotNet.NativeWrapper" />
+		<Compile Include="..\dotnet-sdk\Resolvers\Microsoft.DotNet.SdkResolver\**\*.cs" LinkBase="Microsoft.DotNet.SdkResolver" />
+		<Compile Include="..\dotnet-sdk\Resolvers\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver\CachingWorkloadResolver.cs" LinkBase="Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver" />
+		<Compile Include="..\dotnet-sdk\Resolvers\Microsoft.NET.Sdk.WorkloadManifestReader\**\*.cs" LinkBase="Microsoft.NET.Sdk.WorkloadManifestReader" />
+		<Compile Include="..\dotnet-sdk\Resolvers\Microsoft.DotNet.MSBuildSdkResolver\**\*.cs" LinkBase="Microsoft.DotNet.MSBuildSdkResolver" />
+		<Compile Remove="..\dotnet-sdk\Resolvers\Microsoft.DotNet.MSBuildSdkResolver\Strings.Designer.cs" />
+
+		<Compile Include="..\dotnet-sdk\Common\EnvironmentVariableNames.cs" LinkBase="Common" />
+		<Compile Include="..\dotnet-sdk\Common\CliFolderPathCalculatorCore.cs" LinkBase="Common" />
+		<Compile Include="..\dotnet-sdk\Common\WorkloadFileBasedInstall.cs" LinkBase="Common" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="Microsoft.VisualStudio.Setup.Configuration.Interop" Version="3.5.2145" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+		<PackageReference Include="Microsoft.Build.Framework" Version="16.9.0" />
+		<PackageReference Include="Microsoft.Deployment.DotNet.Releases" Version="1.0.0-preview4.1.22206.3" />
+		<PackageReference Include="Microsoft.NETCore.DotNetHostResolver" Version="7.0.3" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<EmbeddedResource Update="Strings.resx" Generator="ResXFileCodeGenerator" Namespace="Microsoft.NET.Sdk.Localization" GenerateSource="true" />
+		<EmbeddedResource Update="Strings2.resx" Generator="ResXFileCodeGenerator" Namespace="Microsoft.NET.Sdk.Localization" GenerateSource="true" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Reference Include="System.ComponentModel.DataAnnotations" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Compile Update="Strings.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Strings.resx</DependentUpon>
+	  </Compile>
+	  <Compile Update="Strings2.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>Strings2.resx</DependentUpon>
+	  </Compile>
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <EmbeddedResource Update="Strings.resx">
+	    <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	  <EmbeddedResource Update="Strings2.resx">
+	    <LastGenOutput>Strings2.Designer.cs</LastGenOutput>
+	  </EmbeddedResource>
+	</ItemGroup>
+</Project>

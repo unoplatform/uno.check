@@ -1,0 +1,160 @@
+{
+  "check": {
+    "toolVersion": "1.5.0",
+    "variables": {
+      "OPENJDK_VERSION": "11.0.16",
+      "DOTNET_SDK_VERSION": "8.0.100-preview.1.23115.2",
+      "MACCATALYST_SDK_VERSION": "16.2.235-net8-p1/8.0.100-preview.1",
+      "IOS_SDK_VERSION": "16.2.235-net8-p1/8.0.100-preview.1",
+      "MACOS_SDK_VERSION": "13.1.235-net8-p1/8.0.100-preview.1",
+      "ANDROID_SDK_VERSION": "34.0.0-preview.1.157/8.0.100-preview.1"
+    },
+    "variableMappers": [
+    ],
+    "openjdk": {
+      "version": "11.0",
+      "urls": {
+        "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
+        "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg"
+      }
+    },
+    "xcode": {
+      "exactVersion": "14A400",
+      "exactVersionName": "14.0"
+    },
+    "vswin": {
+      "minimumVersion": "17.6.0-pre.1"
+    },
+    "vsmac": {
+      "minimumVersion": "8.10.0",
+      "optional": "true"
+    },
+    "android": {
+      "packages": [
+        {
+          "path": "emulator",
+          "version": "30.8.4"
+        },
+        {
+          "path": "build-tools;33.0.0",
+          "version": "33.0.0"
+        },
+        {
+          "path": "platforms;android-33",
+          "version": "1"
+        },
+        {
+          "path": "system-images;android-33;google_apis;x86_64",
+          "version": "6",
+          "alternatives": [
+            {
+              "path": "system-images;android-33;google_apis_playstore;x86_64",
+              "version": "6"
+            },
+            {
+              "path": "system-images;android-33;google_apis;arm64-v8a",
+              "version": "6"
+            }
+          ]
+        },
+        {
+          "path": "platform-tools",
+          "version": "31.0.3"
+        },
+        {
+          "path": "cmdline-tools;5.0",
+          "version": "5.0"
+        }
+      ],
+      "emulators": [
+        {
+          "sdkId": "system-images;android-33;google_apis;x86_64",
+          "alternateSdkIds": [
+            "system-images;android-31;google_apis_playstore;x86_64",
+            "system-images;android-30;google_apis;arm64-v8a"
+          ],
+          "desc": "Android Emulator - x86_64 - API33 - Google API's",
+          "apiLevel": 33,
+          "tag": "google_apis",
+          "device": "pixel"
+        }
+      ]
+    },
+    "dotnet": {
+      "sdks": [
+        {
+          "version": "$(DOTNET_SDK_VERSION)",
+          "requireExact": false,
+          "enableWorkloadResolver": true,
+          "urls": {
+            "win64": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x64.exe",
+            "win": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-win-x86.exe",
+            "osx": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-x64.pkg",
+            "osxArm64": "https://dotnetbuilds.azureedge.net/public/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-arm64.pkg"
+          },
+          "packageSources": [
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet8/nuget/v3/index.json",
+            "https://api.nuget.org/v3/index.json"
+          ],
+          "workloads": [
+            {
+              "workloadId": "android",
+              "workloadManifestId": "microsoft.net.sdk.android",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-8.0.100",
+              "version": "$(ANDROID_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              "workloadId": "ios",
+              "workloadManifestId": "microsoft.net.sdk.ios",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-8.0.100",
+              "version": "$(IOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              "workloadId": "maccatalyst",
+              "workloadManifestId": "microsoft.net.sdk.maccatalyst",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-8.0.100",
+              "version": "$(MACCATALYST_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              "workloadId": "macos",
+              "workloadManifestId": "microsoft.net.sdk.macos",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-8.0.100",
+              "version": "$(MACOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            }
+          ],
+          "packs": []
+        }
+      ]
+    },
+    "vswindows": {
+      "workloads": [
+        {
+          "id": "Microsoft.VisualStudio.Workload.Universal",
+          "name": "Universal Windows Platform development",
+          "requiredby": [
+            "uwp"
+          ]
+        },
+        {
+          "id": "Microsoft.VisualStudio.Workload.NetCrossPlat",
+          "name": "Mobile development with .NET",
+          "requiredby": [
+            "ios",
+            "android"
+          ]
+        },
+        {
+          "id": "Microsoft.VisualStudio.Workload.NetWeb",
+          "name": "ASP.NET and web development",
+          "requiredby": [
+            "wasm"
+          ]
+        }
+      ]
+    }
+  }
+}
