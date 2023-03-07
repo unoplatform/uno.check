@@ -33,6 +33,8 @@ namespace DotNetCheck
 			var channel = ManifestChannel.Default;
 			if (settings.Preview)
 				channel = ManifestChannel.Preview;
+			if (settings.PreviewMajor)
+				channel = ManifestChannel.PreviewMajor;
 			if (settings.Main)
 				channel = ManifestChannel.Main;
 

@@ -10,7 +10,10 @@ namespace DotNetCheck
 		[CommandOption("--pre|--preview|-d|--dev")]
 		public bool Preview { get; set; }
 
-		[CommandOption("--main")]
+        [CommandOption("--pre-major|--preview-major")]
+        public bool PreviewMajor { get; set; }
+
+        [CommandOption("--main")]
 		public bool Main { get; set; }
 
 		[CommandOption("-n|--non-interactive")]
