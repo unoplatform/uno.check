@@ -7,10 +7,13 @@ namespace DotNetCheck
 		[CommandOption("-m|--manifest <FILE_OR_URL>")]
 		public string Manifest { get; set; }
 
-		[CommandOption("--pre|--preview|-d|--dev")]
-		public bool Preview { get; set; }
+        [CommandOption("--pre|--preview|-d|--dev")]
+        public bool Preview { get; set; }
 
-		[CommandOption("--main")]
+        [CommandOption("--preview-major")]
+        public bool PreviewMajor { get; set; }
+
+        [CommandOption("--main")]
 		public bool Main { get; set; }
 
 		[CommandOption("-n|--non-interactive")]

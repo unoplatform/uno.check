@@ -16,9 +16,10 @@ namespace DotNetCheck
 	public enum ManifestChannel
 	{
 		Default,
-		Preview,
-		Main
-	}
+        Preview,
+        PreviewMajor,
+        Main
+    }
 
 	public class ToolInfo
 	{
@@ -31,8 +32,9 @@ namespace DotNetCheck
 			var f = fileOrUrl ??
 				channel switch
 				{
-					ManifestChannel.Preview => Manifest.Manifest.PreviewManifestUrl,
-					ManifestChannel.Main => Manifest.Manifest.DefaultManifestUrl,
+                    ManifestChannel.Preview => Manifest.Manifest.PreviewManifestUrl,
+                    ManifestChannel.PreviewMajor => Manifest.Manifest.PreviewMajorManifestUrl,
+                    ManifestChannel.Main => Manifest.Manifest.DefaultManifestUrl,
 					ManifestChannel.Default => Manifest.Manifest.DefaultManifestUrl,
 					_ => Manifest.Manifest.DefaultManifestUrl
 				};

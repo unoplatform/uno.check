@@ -32,9 +32,14 @@ If it finds something missing, out of date, or misconfigured, it will either off
     ~/.dotnet/tools/uno-check
     ```
 
-1. If you are using Visual Studio 2022 17.4 Preview 1 or later, use the following:
+1. If you are using Visual Studio 2022 17.6 Preview 1 or later, use the following:
     ```
     uno-check --pre
+    ```
+
+1. If you intend to use .NET 8 Previews, use the following:
+    ```
+    uno-check --preview-major
     ```
 
 1. If you get any errors or warnings, run the provided fix, or follow the provided instructions. Run `uno-check` again to verify that the fixes worked.
@@ -123,6 +128,16 @@ uno-check --non-interactive
 This uses a more frequently updated manifest with newer versions of things more often. If you use the prerelease versions of Uno.UI NuGet packages, you should use this flag.
 
 The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json
+
+```
+uno-check --pre
+```
+
+### `--pre-major`, `--preview-major`
+
+This generally uses the preview builds of the next major version of .NET available.
+
+The manifest is hosted by default at: https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json
 
 ```
 uno-check --pre
