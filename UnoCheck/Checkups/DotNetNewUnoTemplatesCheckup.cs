@@ -19,9 +19,9 @@ internal class DotNetNewUnoTemplatesCheckup : DotNetNewTemplatesCheckupBase
 
     public override string TemplatesDisplayName => "Uno Platform";
 
-    public override string PackageName => "Uno.ProjectTemplates.Dotnet";
+    public override string PackageName => "Uno.Templates";
 
     public override Regex DotNetNewOutputRegex { get; } = new(
-        pattern: @"Uno\.ProjectTemplates\.Dotnet\s*$\s*Version: (.*)",
+        pattern: @"Uno\.Templates\s*$\s*Version: (.*)",
         options: RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
 }

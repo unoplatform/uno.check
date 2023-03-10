@@ -31,7 +31,6 @@ namespace DotNetCheck
 				new DotNetCheckup(),
 				new DotNetWorkloadDuplicatesCheckup(),
                 new DotNetNewUnoTemplatesCheckup(),
-                new DotNetNewExtensionsTemplatesCheckup(),
                 new EdgeWebView2Checkup());
 
 			CheckupManager.RegisterCheckupContributors(
