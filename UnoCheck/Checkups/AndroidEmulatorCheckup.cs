@@ -14,6 +14,7 @@ namespace DotNetCheck.Checkups
 {
 	public class AndroidEmulatorCheckup : Checkup
 	{
+		const string armArch = "arm64-v8a";
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new [] { new CheckupDependency("androidsdk") };
 
@@ -34,8 +35,8 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
-			if(history.GetEnvironmentVariable("ANDROID_EMULATOR_SKIP") == "true")
-            {
+			if (history.GetEnvironmentVariable("ANDROID_EMULATOR_SKIP") == "true")
+			{
 				return Task.FromResult(
 					new DiagnosticResult(Status.Warning, this, $"Installation skipped for https://github.com/unoplatform/uno.check/issues/48"));
 			}
@@ -114,8 +115,20 @@ namespace DotNetCheck.Checkups
 
 								var installedPackages = sdkInstance.Components.AllInstalled(true);
 
-								var sdkPackage = installedPackages.FirstOrDefault(p => p.Path.Equals(me.SdkId, StringComparison.OrdinalIgnoreCase));
+								var sdkPackage = installedPackages.FirstOrDefault(p =>
+								{
+									// This will be false if the proccess runs on Rosetta emulation
+									// and will install the wrong emulator (x86_64)
+									// https://github.com/dotnet/runtime/issues/42130
+									return Util.IsArm64
 
+									// The Path will be something like:
+									// system-images;android-33;google_apis;arm64-v8a (for arm)
+									// system-images;android-31;google_apis;x86_64 (for x86 or x64)
+
+									? p.Path.Contains(armArch, StringComparison.OrdinalIgnoreCase)
+									: p.Path.Equals(me.SdkId, StringComparison.OrdinalIgnoreCase);
+								});
 								if (sdkPackage == null && (me.AlternateSdkIds?.Any() ?? false))
 									sdkPackage = installedPackages.FirstOrDefault(p => me.AlternateSdkIds.Any(a => a.Equals(p.Path, StringComparison.OrdinalIgnoreCase)));
 
