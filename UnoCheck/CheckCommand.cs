@@ -71,9 +71,11 @@ namespace DotNetCheck.Cli
 			AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Synchronizing configuration...[/]");
 
 			var channel = ManifestChannel.Default;
-			if (settings.Preview)
-				channel = ManifestChannel.Preview;
-			if (settings.Main)
+            if (settings.Preview)
+                channel = ManifestChannel.Preview;
+            if (settings.PreviewMajor)
+                channel = ManifestChannel.PreviewMajor;
+            if (settings.Main)
 				channel = ManifestChannel.Main;
 
 			var manifest = await ToolInfo.LoadManifest(settings.Manifest, channel);
