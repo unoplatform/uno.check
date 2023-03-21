@@ -367,9 +367,8 @@ jobs:
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
   
-
-  publish:
-    name: Publish
+  sign:
+    name: Sign Package
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: windows-latest
     needs:
@@ -397,6 +396,48 @@ jobs:
         shell: pwsh
         run: |
           build\SignClient sign -i artifacts\*.nupkg -c build\SignClient.json -r "${{ secrets.UNO_PLATFORM_CODESIGN_USERNAME }}" -s "${{ secrets.UNO_PLATFORM_CODESIGN_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
+
+      - name: Upload Signed Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: NuGet
+          path: .\artifacts
+
+  publish_dev:
+    name: Publish Dev
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: windows-latest
+
+    needs:
+      - sign
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: NuGet
+          path: artifacts
+
+      - name: NuGet Push
+        shell: pwsh
+        run: |
+          dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k "${{ secrets.NUGET_ORG_API_KEY }}"
+
+  publish_prod:
+    name: Publish Production
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') }}
+    runs-on: windows-latest
+    environment: Production
+
+    needs:
+      - sign
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: NuGet
+          path: artifacts
 
       - name: NuGet Push
         shell: pwsh
