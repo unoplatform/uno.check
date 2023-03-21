@@ -413,6 +413,12 @@ jobs:
       - sign
 
     steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: NuGet
+          path: artifacts
+
       - name: NuGet Push
         shell: pwsh
         run: |
