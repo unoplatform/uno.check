@@ -1,3 +1,7 @@
+---
+uid: UnoCheck.UsingUnoCheck
+---
+
 # Setup your environment with uno check
 
 [`uno-check`](https://github.com/unoplatform/uno.check) is a dotnet command-line tool that runs a suite of automated check-ups on your dev environment, making sure you have all the prerequisites installed to successfully develop an Uno Platform application. The tool is available on Windows, Linux and macOS.
