@@ -16,7 +16,7 @@ namespace DotNetCheck
 		SkiaGtk = 32,
 		SkiaTizen = 64,
 		UWP = 128,
-		Win32Desktop = 256,
+		WinAppSDK = 256,
 
 		All = -1
 	}

@@ -50,9 +50,10 @@ namespace DotNetCheck
 					return TargetPlatform.SkiaTizen;
 				case "uwp":
 					return TargetPlatform.UWP;
+				case "wasdk":
 				case "win32desktop":
 				case "win32":
-					return TargetPlatform.Win32Desktop;
+					return TargetPlatform.WinAppSDK;
 
 				case "skia":
 					return TargetPlatform.SkiaWPF | TargetPlatform.SkiaGtk | TargetPlatform.SkiaTizen;
