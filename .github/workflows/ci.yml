@@ -126,7 +126,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
+          & uno-check --ci --fix --non-interactive --verbose --target webassembly --target ios --target android --target macos --target linux --target win32 --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
           & dotnet tool uninstall --global uno.check
 
       - name: Install and Run Tool
@@ -136,7 +136,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --target webassembly --target ios --target android --target macos --target linux --target win32 --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testmac:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}/${{ matrix.os }}
