@@ -136,7 +136,8 @@
           "id": "Microsoft.VisualStudio.Workload.ManagedDesktop",
           "name": ".NET desktop development",
           "requiredby": [
-            "wasdk"
+            "wasdk",
+            "win32"
           ]
         },
         {

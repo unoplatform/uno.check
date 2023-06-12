@@ -15,7 +15,7 @@ namespace DotNetCheck
 		SkiaWPF = 16,
 		SkiaGtk = 32,
 		SkiaTizen = 64,
-		UWP = 128,
+		Windows = 128,
 		WinAppSDK = 256,
 
 		All = -1

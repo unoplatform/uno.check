@@ -48,13 +48,12 @@ namespace DotNetCheck
 				case "skiatizen":
 				case "skia-tizen":
 					return TargetPlatform.SkiaTizen;
-				case "uwp":
-					return TargetPlatform.UWP;
-				case "wasdk":
-				case "win32desktop":
-				case "win32":
+                case "windows":
+                case "wasdk":
 					return TargetPlatform.WinAppSDK;
-
+                case "win32desktop":
+                case "win32":
+                    return TargetPlatform.Windows;
 				case "skia":
 					return TargetPlatform.SkiaWPF | TargetPlatform.SkiaGtk | TargetPlatform.SkiaTizen;
 				case "linux":
