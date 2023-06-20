@@ -133,10 +133,18 @@
     "vswindows": {
       "workloads": [
         {
-          "id": "Microsoft.VisualStudio.Workload.Universal",
-          "name": "Universal Windows Platform development",
+          "id": "Microsoft.VisualStudio.Workload.ManagedDesktop",
+          "name": ".NET desktop development",
           "requiredby": [
-            "uwp"
+            "wasdk",
+            "win32"
+          ]
+        },
+        {
+          "id": "Microsoft.VisualStudio.ComponentGroup.WindowsAppSDK.Cs",
+          "name": "Windows App SDK C# Templates",
+          "requiredby": [
+            "wasdk"
           ]
         },
         {
