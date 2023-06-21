@@ -3,11 +3,11 @@
     "toolVersion": "1.5.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.16",
-      "DOTNET_SDK_VERSION": "8.0.100-preview.3.23178.7",
-      "MACCATALYST_SDK_VERSION": "16.2.462-net8-p3/8.0.100-preview.3",
-      "IOS_SDK_VERSION": "16.2.462-net8-p3/8.0.100-preview.3",
-      "MACOS_SDK_VERSION": "13.1.462-net8-p3/8.0.100-preview.3",
-      "ANDROID_SDK_VERSION": "34.0.0-preview.3.224/8.0.100-preview.3"
+      "DOTNET_SDK_VERSION": "8.0.100-preview.5.23303.2",
+      "MACCATALYST_SDK_VERSION": "16.4.8528-net8-p5/8.0.100-preview.5",
+      "IOS_SDK_VERSION": "16.4.8528-net8-p5/8.0.100-preview.5",
+      "MACOS_SDK_VERSION": "13.3.8528-net8-p5/8.0.100-preview.5",
+      "ANDROID_SDK_VERSION": "34.0.0-preview.5.315/8.0.100-preview.5"
     },
     "variableMappers": [
     ],
@@ -23,7 +23,7 @@
       "exactVersionName": "14.0"
     },
     "vswin": {
-      "minimumVersion": "17.6.0-pre.1"
+      "minimumVersion": "17.7.0-pre.1"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
