@@ -5,19 +5,24 @@ using DotNetCheck.Models;
 using NuGet.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
-using Xamarin.AndroidTools;
 
 namespace DotNetCheck.Solutions;
 
 internal class DotNetNewTemplatesInstallSolution : Solution
 {
-    private readonly string _packageName;
+    private const string UnoLegacyTemplatesPackageName = "Uno.ProjectTemplates.Dotnet";
+    private const string UnoTemplatesPackageName = "Uno.Templates";
+
+    private readonly bool _uninstallLegacy;
     private readonly bool _uninstallExisting;
     private readonly NuGetVersion? _requestedVersion;
 
-    public DotNetNewTemplatesInstallSolution(string packageName, bool uninstallExisting, NuGetVersion? requestedVersion = null)
+    public DotNetNewTemplatesInstallSolution(
+        bool uninstallLegacy, 
+        bool uninstallExisting, 
+        NuGetVersion? requestedVersion = null)
     {
-        _packageName = packageName;
+        _uninstallLegacy = uninstallLegacy;
         _uninstallExisting = uninstallExisting;
         _requestedVersion = requestedVersion;
     }
@@ -25,15 +30,21 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
     {
         var version = _requestedVersion ??
-            await NuGetHelper.GetLatestPackageVersionAsync(_packageName, ToolInfo.CurrentVersion.IsPrerelease);
+            await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, ToolInfo.CurrentVersion.IsPrerelease);
 
-        if (_uninstallExisting)
+        if (_uninstallLegacy)
         {
-            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {_packageName}"));
+            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {UnoLegacyTemplatesPackageName}"));
             uninstallCli.WaitForExit();
         }
 
-        var cli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new install {_packageName}::{version}") { Verbose = Util.Verbose });
+        if (_uninstallExisting)
+        {
+            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {UnoTemplatesPackageName}"));
+            uninstallCli.WaitForExit();
+        }
+
+        var cli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new install {UnoTemplatesPackageName}::{version}") { Verbose = Util.Verbose });
         cli.WaitForExit();
     }
 }

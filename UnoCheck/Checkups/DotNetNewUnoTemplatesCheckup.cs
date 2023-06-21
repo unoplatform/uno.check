@@ -17,7 +17,11 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
     private const string TemplatesDisplayName = "Uno Platform";
     private const string PackageName = "Uno.Templates";
 
-    private Regex _dotNetNewOutputRegex = new(
+    private Regex _unoLegacyTemplatesOutputRegex = new(
+        pattern: @"Uno\.ProjectTemplates\.Dotnet\s*$\s*Version: (.*)",
+        options: RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
+    private Regex _unoTemplatesOutputRegex = new(
         pattern: @"Uno\.Templates\s*$\s*Version: (.*)",
         options: RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
@@ -28,7 +32,9 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
     public override async Task<DiagnosticResult> Examine(SharedState history)
     {
         var dotnetOutput = GetDotNetNewInstalledList();
-        var version = GetInstalledVersion(dotnetOutput, _dotNetNewOutputRegex);
+
+        var legacyVersion = GetInstalledVersion(dotnetOutput, _unoLegacyTemplatesOutputRegex);
+        var version = GetInstalledVersion(dotnetOutput, _unoTemplatesOutputRegex);
         if (version is null)
         {
             return new(
@@ -36,7 +42,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 this,
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new templates are not installed.",
-                    new DotNetNewTemplatesInstallSolution(PackageName, false)));
+                    new DotNetNewTemplatesInstallSolution(legacyVersion is not null, false)));
         }
 
         var latestVersion = await NuGetHelper.GetLatestPackageVersionAsync(
@@ -51,7 +57,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new templates are not up to date " +
                     $"(installed version {version}, latest available version {latestVersion}.",
-                    new DotNetNewTemplatesInstallSolution(PackageName, true, latestVersion)));
+                    new DotNetNewTemplatesInstallSolution(legacyVersion is not null, true, latestVersion)));
         }
 
         return DiagnosticResult.Ok(this);
