@@ -23,7 +23,7 @@
       "exactVersionName": "14.0"
     },
     "vswin": {
-      "minimumVersion": "17.6.0-pre.1"
+      "minimumVersion": "17.7.0-pre.1"
     },
     "vsmac": {
       "minimumVersion": "8.10.0",
