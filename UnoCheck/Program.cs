@@ -30,7 +30,8 @@ namespace DotNetCheck
 				new XCodeCheckup(),
 				new DotNetCheckup(),
 				new DotNetWorkloadDuplicatesCheckup(),
-				new EdgeWebView2Checkup());
+                new DotNetNewUnoTemplatesCheckup(),
+                new EdgeWebView2Checkup());
 
 			CheckupManager.RegisterCheckupContributors(
 				new DotNetSdkCheckupContributor());
