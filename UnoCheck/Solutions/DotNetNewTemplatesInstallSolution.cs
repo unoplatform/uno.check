@@ -12,11 +12,13 @@ namespace DotNetCheck.Solutions;
 internal class DotNetNewTemplatesInstallSolution : Solution
 {
     private readonly string _packageName;
+    private readonly bool _uninstallExisting;
     private readonly NuGetVersion? _requestedVersion;
 
-    public DotNetNewTemplatesInstallSolution(string packageName, NuGetVersion? requestedVersion = null)
+    public DotNetNewTemplatesInstallSolution(string packageName, bool uninstallExisting, NuGetVersion? requestedVersion = null)
     {
         _packageName = packageName;
+        _uninstallExisting = uninstallExisting;
         _requestedVersion = requestedVersion;
     }
 
@@ -24,6 +26,12 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     {
         var version = _requestedVersion ??
             await NuGetHelper.GetLatestPackageVersionAsync(_packageName, ToolInfo.CurrentVersion.IsPrerelease);
+
+        if (_uninstallExisting)
+        {
+            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {_packageName}"));
+            uninstallCli.WaitForExit();
+        }
 
         var cli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new install {_packageName}::{version}") { Verbose = Util.Verbose });
         cli.WaitForExit();

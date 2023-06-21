@@ -36,7 +36,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 this,
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new templates are not installed.",
-                    new DotNetNewTemplatesInstallSolution(PackageName)));
+                    new DotNetNewTemplatesInstallSolution(PackageName, false)));
         }
 
         var latestVersion = await NuGetHelper.GetLatestPackageVersionAsync(
@@ -51,7 +51,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new templates are not up to date " +
                     $"(installed version {version}, latest available version {latestVersion}.",
-                    new DotNetNewTemplatesInstallSolution(PackageName, latestVersion)));
+                    new DotNetNewTemplatesInstallSolution(PackageName, true, latestVersion)));
         }
 
         return DiagnosticResult.Ok(this);
