@@ -19,8 +19,8 @@
       }
     },
     "xcode": {
-      "exactVersion": "14A400",
-      "exactVersionName": "14.0"
+      "exactVersion": "14E300c",
+      "exactVersionName": "14.3.1"
     },
     "vswin": {
       "minimumVersion": "17.7.0-pre.1"
