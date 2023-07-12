@@ -38,13 +38,15 @@ namespace DotNetCheck.Checkups
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.XCode != null;
 
+		private int install_tries;
+
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
 			try
 			{
 				var selected = GetSelectedXCode();
 
-				if (selected.Version.IsCompatible(MinimumVersion, ExactVersion))
+				if (selected is not null && selected.Version.IsCompatible(MinimumVersion, ExactVersion))
 				{
 					// Selected version is good
 					ReportStatus($"Xcode.app ({VersionName})", Status.Ok);
@@ -90,21 +92,24 @@ namespace DotNetCheck.Checkups
 			}
 			catch(InvalidDataException)
 			{
+				install_tries++;
 				return Task.FromResult(new DiagnosticResult(
 						Status.Error,
 						this,
-						new Suggestion("Run xcode-select --install",
-							new Solutions.ActionSolution((sln, cancelToken) =>
-							{	
-								var result = ShellProcessRunner.Run("xcode-select", "--install");
-
-								if(result.ExitCode == 0)
+						install_tries > 1 ?
+							new Suggestion($"Download XCode {VersionName}") :
+							new Suggestion("Run xcode-select --install",
+								new Solutions.ActionSolution((sln, cancelToken) =>
 								{
-									this.Examine(history);
-								}
+									var result = ShellProcessRunner.Run("xcode-select", "--install");
 
-								return Task.CompletedTask;
-							}))));
+									if(result.ExitCode == 0)
+									{
+										this.Examine(history);
+									}
+
+									return Task.CompletedTask;
+								}))));
 			}
 		}
 
