@@ -4,10 +4,10 @@
     "variables": {
       "OPENJDK_VERSION": "11.0.16",
       "DOTNET_SDK_VERSION": "7.0.306",
-      "MACCATALYST_SDK_VERSION": "16.4.7073/7.0.100",
-      "IOS_SDK_VERSION": "16.4.7073/7.0.100",
-      "MACOS_SDK_VERSION": "13.3.7073/7.0.100",
-      "ANDROID_SDK_VERSION": "33.0.69/7.0.100"
+      "MACCATALYST_SDK_VERSION": "16.4.7054/7.0.100",
+      "IOS_SDK_VERSION": "16.4.7054/7.0.100",
+      "MACOS_SDK_VERSION": "13.3.7054/7.0.100",
+      "ANDROID_SDK_VERSION": "33.0.46/7.0.100"
     },
     "variableMappers": [
     ],
