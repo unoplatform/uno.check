@@ -1,6 +1,6 @@
 {
   "check": {
-    "toolVersion": "1.5.0",
+    "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.16",
       "DOTNET_SDK_VERSION": "8.0.100-preview.7.23376.3",
