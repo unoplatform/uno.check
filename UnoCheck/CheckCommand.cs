@@ -343,7 +343,7 @@ namespace DotNetCheck.Cli
 				AnsiConsole.Write(new Rule());
 			}
 
-			if (latestVersion is null || currentVersion < latestVersion)
+			if (!settings.CI && (latestVersion is null || currentVersion < latestVersion))
 			{
 				var shouldContinue = AnsiConsole.Confirm("Would you still like to continue with the currently installed version?", false);
 				needsToUpdate = !shouldContinue;
