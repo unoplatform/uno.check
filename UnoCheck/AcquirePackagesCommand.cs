@@ -263,7 +263,7 @@ namespace DotNetCheck
 		public readonly NuGetVersion SdkVersion;
 		public readonly string ManifestPath;
 
-		List<(string id, string dir, string file)> manifestDirs = new();
+		List<(string id, string dir, string file, string featureBand)> manifestDirs = new();
 
 		public async Task ParseManifestPackages(string directory, List<Manifest.DotNetWorkload> workloads, CancellationToken cancelToken)
 		{
@@ -301,7 +301,7 @@ namespace DotNetCheck
 							await manifestZipStream.CopyToAsync(manifestFileStream);
 						}
 
-						manifestDirs.Add((workload.Id, manifestDir, workloadFile));
+						manifestDirs.Add((workload.Id, manifestDir, workloadFile, workload.WorkloadManifestId));
 					}
 				}
 			}
@@ -311,7 +311,13 @@ namespace DotNetCheck
 			=> manifestDirs.Select(m => m.dir);
 
 		public IEnumerable<ReadableWorkloadManifest> GetManifests()
-					=> manifestDirs.Select(m => new ReadableWorkloadManifest(m.id, m.dir, new Func<Stream>(() => File.OpenRead(m.file)), new Func<Stream>(() => null)));
+					=> manifestDirs.Select(m => new ReadableWorkloadManifest(
+						m.id,
+						m.dir,
+						m.file,
+						m.featureBand,
+						new Func<Stream>(() => File.OpenRead(m.file)),
+						new Func<Stream?>(() => null)));
 
 		public string GetSdkFeatureBand()
 			=> $"{SdkVersion.Major}.{SdkVersion.Minor}.{SdkVersion.Patch}";
