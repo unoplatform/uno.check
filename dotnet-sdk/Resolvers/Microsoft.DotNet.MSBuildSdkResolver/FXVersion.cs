@@ -1,13 +1,11 @@
-// Copyright (c) .NET Foundation and contributors. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 // dotnet doesn't have nullable enabled
 #pragma warning disable IDE0240 // Remove redundant nullable directive
 #nullable disable
 #pragma warning restore IDE0240 // Remove redundant nullable directive
 
-using System.Text;
-using System;
 
 namespace Microsoft.DotNet.MSBuildSdkResolver
 {
@@ -70,8 +68,8 @@ namespace Microsoft.DotNet.MSBuildSdkResolver
             for (int i = idStart; true; ++i)
             {
                 // C# strings are not null terminated. Pretend to make code similar to fx_ver.cpp
-                char s1char = (s1.Pre.Length  == i) ? '\0' : s1.Pre[i];
-                char s2char = (s2.Pre.Length  == i) ? '\0' : s2.Pre[i];
+                char s1char = (s1.Pre.Length == i) ? '\0' : s1.Pre[i];
+                char s2char = (s2.Pre.Length == i) ? '\0' : s2.Pre[i];
                 if (s1char != s2char)
                 {
                     // Found first character with a difference

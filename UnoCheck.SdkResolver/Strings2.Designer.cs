@@ -169,6 +169,15 @@ namespace Microsoft.DotNet.MSBuildSdkResolver {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Error parsing version &apos;{1}&apos; for workload manifest ID &apos;{0}&apos;.
+        /// </summary>
+        internal static string InvalidVersionForWorkload {
+            get {
+                return ResourceManager.GetString("InvalidVersionForWorkload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Did not find workload manifest dependency &apos;{0}&apos; required by manifest &apos;{1}&apos; [{2}].
         /// </summary>
         internal static string ManifestDependencyMissing {
@@ -183,6 +192,24 @@ namespace Microsoft.DotNet.MSBuildSdkResolver {
         internal static string ManifestDependencyVersionTooLow {
             get {
                 return ResourceManager.GetString("ManifestDependencyVersionTooLow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Workload manifest {0}, which was specified in {1}, was not found. Running &quot;dotnet workload repair&quot; may resolve this..
+        /// </summary>
+        internal static string ManifestFromInstallStateNotFound {
+            get {
+                return ResourceManager.GetString("ManifestFromInstallStateNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Workload manifest {0} from workload version {1} was not installed. Running &quot;dotnet workload repair&quot; may resolve this..
+        /// </summary>
+        internal static string ManifestFromWorkloadSetNotFound {
+            get {
+                return ResourceManager.GetString("ManifestFromWorkloadSetNotFound", resourceCulture);
             }
         }
         
@@ -273,6 +300,24 @@ namespace Microsoft.DotNet.MSBuildSdkResolver {
         internal static string UnresolvedWorkloadRedirect {
             get {
                 return ResourceManager.GetString("UnresolvedWorkloadRedirect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Workload version {0}, which was specified in {1}, was not found. Run &quot;dotnet workload restore&quot; to install this workload version..
+        /// </summary>
+        internal static string WorkloadVersionFromGlobalJsonNotFound {
+            get {
+                return ResourceManager.GetString("WorkloadVersionFromGlobalJsonNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Workload version {0}, which was specified in {1}, was not found..
+        /// </summary>
+        internal static string WorkloadVersionFromInstallStateNotFound {
+            get {
+                return ResourceManager.GetString("WorkloadVersionFromInstallStateNotFound", resourceCulture);
             }
         }
     }
