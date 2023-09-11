@@ -36,23 +36,23 @@
           "version": "30.8.4"
         },
         {
-          "path": "build-tools;33.0.0",
-          "version": "33.0.0"
+          "path": "build-tools;34.0.0",
+          "version": "34.0.0"
         },
         {
-          "path": "platforms;android-33",
+          "path": "platforms;android-34",
           "version": "1"
         },
         {
-          "path": "system-images;android-33;google_apis;x86_64",
+          "path": "system-images;android-34;google_apis;x86_64",
           "version": "6",
           "alternatives": [
             {
-              "path": "system-images;android-33;google_apis_playstore;x86_64",
+              "path": "system-images;android-34;google_apis_playstore;x86_64",
               "version": "6"
             },
             {
-              "path": "system-images;android-33;google_apis;arm64-v8a",
+              "path": "system-images;android-34;google_apis;arm64-v8a",
               "version": "6"
             }
           ]
