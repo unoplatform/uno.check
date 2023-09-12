@@ -7,7 +7,8 @@
       "MACCATALYST_SDK_VERSION": "16.4.7054/7.0.100",
       "IOS_SDK_VERSION": "16.4.7054/7.0.100",
       "MACOS_SDK_VERSION": "13.3.7054/7.0.100",
-      "ANDROID_SDK_VERSION": "33.0.46/7.0.100"
+      "ANDROID_SDK_VERSION": "33.0.46/7.0.100",
+      "MAUI_VERSION": "7.0.86/7.0.100"
     },
     "variableMappers": [
     ],
@@ -123,6 +124,13 @@
               "workloadManifestId": "microsoft.net.sdk.macos",
               "packageId": "Microsoft.NET.Sdk.macOS.Manifest-7.0.100",
               "version": "$(MACOS_SDK_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              "workloadId": "maui",
+              "workloadManifestId": "microsoft.net.sdk.maui",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-7.0.100",
+              "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             }
           ],
