@@ -102,13 +102,8 @@ namespace DotNetCheck.Solutions
 					// Newer version already installed
 					if (logText.Contains("0x80070666"))
 					{
-						var existsMsg = $"Installation failed for {Title ?? Url.ToString()}."
-							+ Environment.NewLine + "A newer version of dotnet SDK is already installed"
-							+ Environment.NewLine + $"See log file for more details: {logFile}";
-
-						ReportStatus(existsMsg);
-
-						throw new Exception(existsMsg);
+						ReportStatus($"Installation skipped as a more recent version is installed {Title ?? Url.ToString()}. (See log file for more details: {logFile})");
+						return;
 					}
 				}
 
