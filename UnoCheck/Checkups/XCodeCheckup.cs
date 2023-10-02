@@ -48,6 +48,24 @@ namespace DotNetCheck.Checkups
 
 				if (selected is not null && selected.Version.IsCompatible(MinimumVersion, ExactVersion))
 				{
+					// customize runner options so the license can be displayed
+					var options = new ShellProcessRunnerOptions("xcodebuild", "")
+					{
+						RedirectOutput = Util.CI
+					};
+					var runner = new ShellProcessRunner(options);
+					var result = runner.WaitForExit();
+					// Check if user requires EULA to be accepted
+					if (result.ExitCode == 69)
+					{
+						Spectre.Console.AnsiConsole.MarkupLine("[bold red]By fixing this you are accepting the license agreement.[/]");
+						return Task.FromResult(new DiagnosticResult(
+							Status.Error,
+							this,
+							new Suggestion("Run `sudo xcodebuild -license accept`",
+								new Solutions.XcodeEulaSolution())));
+					}
+
 					// Selected version is good
 					ReportStatus($"Xcode.app ({VersionName})", Status.Ok);
 					return Task.FromResult(DiagnosticResult.Ok(this));
