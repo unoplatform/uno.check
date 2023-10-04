@@ -16,7 +16,8 @@
       "version": "11.0",
       "urls": {
         "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
-        "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg"
+        "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg",
+        "osxArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-aarch64.pkg"
       }
     },
     "xcode": {
