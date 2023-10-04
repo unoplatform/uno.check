@@ -202,7 +202,7 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 							{
 									// Provide a default timeout value of 7 minutes if a value is not provided.
 								httpClient.Timeout = TimeSpan.FromMinutes(120);
-								await Task.WhenAll(downloads.Select(d => Download(httpClient, d)));
+								await Task.WhenAll(downloads.Where(d => (d.HostArch == null) || (d.HostArch == (Util.IsArm64 ? "aarch64" : "x64"))).Select(d => Download(httpClient, d)));
 							}
 
 							installer.Install(sdkInstance, installationSet);
