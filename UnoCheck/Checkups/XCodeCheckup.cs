@@ -28,6 +28,9 @@ namespace DotNetCheck.Checkups
 		public string ExactVersionName
 			=> Manifest?.Check?.XCode?.ExactVersionName;
 
+		public NuGetVersion Version
+			=> ExactVersion ?? MinimumVersion;
+
 		public string VersionName
 			=> ExactVersionName ?? MinimumVersionName ?? ExactVersion?.ToString() ?? MinimumVersion?.ToString();
 
@@ -67,7 +70,7 @@ namespace DotNetCheck.Checkups
 					}
 
 					// Selected version is good
-					ReportStatus($"Xcode.app ({VersionName})", Status.Ok);
+					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
 					return Task.FromResult(DiagnosticResult.Ok(this));
 				}
 
@@ -101,12 +104,12 @@ namespace DotNetCheck.Checkups
 				}
 
 
-				ReportStatus($"Xcode.app ({VersionName}) not installed.", Status.Error);
+				ReportStatus($"Xcode.app ({Version} {VersionName}) not installed.", Status.Error);
 
 				return Task.FromResult(new DiagnosticResult(
 					Status.Error,
 					this,
-					new Suggestion($"Download XCode {VersionName}")));
+					new Suggestion($"Download XCode {Version} {VersionName}")));
 			}
 			catch(InvalidDataException)
 			{
@@ -177,11 +180,10 @@ namespace DotNetCheck.Checkups
 			if (File.Exists(versionPlist))
 			{
 				NSDictionary rootDict = (NSDictionary)PropertyListParser.Parse(versionPlist);
-				string cfBundleVersion = rootDict.ObjectForKey("CFBundleVersion")?.ToString();
 				string cfBundleShortVersion = rootDict.ObjectForKey("CFBundleShortVersionString")?.ToString();
 				string productBuildVersion = rootDict.ObjectForKey("ProductBuildVersion")?.ToString();
 
-				if (NuGetVersion.TryParse(cfBundleVersion, out var v))
+				if (NuGetVersion.TryParse(cfBundleShortVersion, out var v))
 					return new XCodeInfo(v, cfBundleShortVersion, productBuildVersion, path, selected);
 			}
 			else
