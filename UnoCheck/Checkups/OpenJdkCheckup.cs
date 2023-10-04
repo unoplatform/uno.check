@@ -98,9 +98,6 @@ namespace DotNetCheck.Checkups
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
 			var url = Manifest?.Check?.OpenJdk?.Url;
-			if (url is not null && RuntimeInformation.OSArchitecture == Architecture.Arm64) {
-				url = new (url.ToString().Replace("-x64.", "-aarch64."));
-			}
 			return Task.FromResult(new DiagnosticResult(Status.Error, this,
 				new Suggestion("Install OpenJDK11",
 					new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));

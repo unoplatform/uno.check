@@ -2,7 +2,7 @@
   "check": {
     "toolVersion": "1.5.0",
     "variables": {
-      "OPENJDK_VERSION": "11.0.16",
+      "OPENJDK_VERSION": "11.0.20.1",
       "DOTNET_SDK_VERSION": "7.0.401",
       "MACCATALYST_SDK_VERSION": "16.4.7054/7.0.100",
       "IOS_SDK_VERSION": "16.4.7054/7.0.100",
@@ -16,7 +16,9 @@
       "version": "11.0",
       "urls": {
         "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
-        "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg"
+        "winArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-aarch64.msi",
+        "osx": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-x64.pkg",
+        "osxArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-macos-aarch64.pkg"
       }
     },
     "xcode": {
