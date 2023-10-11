@@ -3,12 +3,12 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "8.0.100-rc.1.23455.8",
-      "MACCATALYST_SDK_VERSION": "16.4.8825-net8-rc1/8.0.100-rc.1",
-      "IOS_SDK_VERSION": "16.4.8825-net8-rc1/8.0.100-rc.1",
+      "DOTNET_SDK_VERSION": "8.0.100-rc.2.23502.2",
+      "MACCATALYST_SDK_VERSION": "16.4.8968-net8-rc2/8.0.100-rc.2",
+      "IOS_SDK_VERSION": "16.4.8968-net8-rc2/8.0.100-rc.2",
       "MACOS_SDK_VERSION": "13.3.8825-net8-rc1/8.0.100-rc.1",
-      "ANDROID_SDK_VERSION": "34.0.0-rc.1.432/8.0.100-rc.1",
-      "MAUI_VERSION": "8.0.0-preview.7.8922/8.0.100-preview.7"
+      "ANDROID_SDK_VERSION": "34.0.0-rc.2.468/8.0.100-rc.2",
+      "MAUI_VERSION": "8.0.0-rc.2.9373/8.0.100-rc.2"
     },
     "variableMappers": [
     ],
