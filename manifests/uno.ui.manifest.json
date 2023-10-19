@@ -3,12 +3,12 @@
     "toolVersion": "1.5.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "7.0.401",
+      "DOTNET_SDK_VERSION": "7.0.402",
       "MACCATALYST_SDK_VERSION": "16.4.7099/7.0.100",
       "IOS_SDK_VERSION": "16.4.7099/7.0.100",
       "MACOS_SDK_VERSION": "13.3.7099/7.0.100",
-      "ANDROID_SDK_VERSION": "33.0.46/7.0.100",
-      "MAUI_VERSION": "7.0.86/7.0.100"
+      "ANDROID_SDK_VERSION": "33.0.68/7.0.100",
+      "MAUI_VERSION": "7.0.92/7.0.100"
     },
     "variableMappers": [
     ],
@@ -96,8 +96,7 @@
             "osxArm64": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-arm64.pkg"
           },
           "packageSources": [
-            "https://api.nuget.org/v3/index.json",
-            "https://aka.ms/dotnet6/nuget/index.json"
+            "https://api.nuget.org/v3/index.json"
           ],
           "workloads": [
             {
