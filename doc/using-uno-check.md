@@ -55,6 +55,12 @@ If it finds something missing, out of date, or misconfigured, it will either off
 If you run into problems with uno-check, you should generally try the following:
 
 1. Update the tool to the latest version: `dotnet tool update -g uno.check --add-source https://api.nuget.org/v3/index.json`
+1. If you are running with .NET 8 installed (RC 2 or later), and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
+  ```bash
+  dotnet workload clean -all
+  ```
+  This command will clean all workloads for all installed .NET versions. This will allow `uno-check` to reinstall them properly.
+  If the `dotnet workload clean` tells that some workloads can't be removed, try using the `repair` command in the Visual Studio installer as well. 
 1. Run with `uno-check --force-dotnet` to ensure the workload repair/update/install commands run regardless of if uno-check thinks the workload versions look good
 1. If you encounter the error `Unable to load the service index` when installing `uno-check` for an host name not ending by `nuget.org`, try using the `--ignore-failed-sources` parameter
 1. If you still have errors, it may help to run the [Clean-Old-DotNet6-Previews.ps1](https://github.com/unoplatform/uno.check/blob/main/Clean-Old-DotNet6-Previews.ps1) script to remove old SDK Packs, templates, or otherwise old cached preview files that might be causing the problem.  Try running `uno-check --force-dotnet` again after this step.
