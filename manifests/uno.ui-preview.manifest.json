@@ -151,13 +151,6 @@
           ]
         },
         {
-          "id": "Microsoft.VisualStudio.ComponentGroup.WindowsAppSDK.Cs",
-          "name": "Windows App SDK C# Templates",
-          "requiredby": [
-            "wasdk"
-          ]
-        },
-        {
           "id": "Microsoft.VisualStudio.Workload.NetCrossPlat",
           "name": "Mobile development with .NET",
           "requiredby": [
