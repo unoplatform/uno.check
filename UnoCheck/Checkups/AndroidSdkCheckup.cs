@@ -159,11 +159,24 @@ namespace DotNetCheck.Checkups
 
 				if (installedPkg == null)
 				{
+					var packagePath = package.Path.Trim();
+					var packageVersion = package.Version;
+
+					if(packagePath.EndsWith("x86_64") && Util.IsArm64)
+					{
+						// On arm64 devices, use arm64 emulators
+						if(package.Alternatives.FirstOrDefault(a => a.Path.EndsWith("arm64-v8a")) is { } alternative)
+						{
+							packagePath = alternative.Path;
+							packageVersion = alternative.Version;
+						}
+					}
+
 					var pkgToInstall = sdkInstance?.Components?.AllNotInstalled()?
-						.FirstOrDefault(p => p.Path.Equals(package.Path.Trim(), StringComparison.OrdinalIgnoreCase)
+						.FirstOrDefault(p => p.Path.Equals(packagePath, StringComparison.OrdinalIgnoreCase)
 							&& p.Revision >= (v ?? p.Revision));
 
-					ReportStatus($"{package.Path} ({package.Version}) missing.", Status.Error);
+					ReportStatus($"{packagePath} ({packageVersion}) missing.", Status.Error);
 
 					if (pkgToInstall != null)
 						missingPackages.Add(pkgToInstall);
