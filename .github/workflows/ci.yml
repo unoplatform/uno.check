@@ -25,20 +25,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '3.1.x'
-      
-    - name: Setup .NET Core v5
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '5.0.x'
-    
     - name: Setup .NET Core v6
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.100'
+        dotnet-version: '8.0.100'
 
     - name: Setup GitVersion
       uses: gittools/actions/gitversion/setup@v0.9.9
@@ -148,7 +138,7 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
            os: macos-11
-           dotnet_version: 7.0.102
+           dotnet_version: 7.0.403
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
@@ -157,12 +147,12 @@ jobs:
            os: macos-11
            dotnet_version: 7.0.403
 
-         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Preview net8
-           previous_tool_version: ''
-           previous_tool_params: ''
-           os: macos-11
-           dotnet_version: 8.0.100-preview.1.23115.2
+        #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+        #    manifest_name: Preview net8
+        #    previous_tool_version: ''
+        #    previous_tool_params: ''
+        #    os: macos-11
+        #    dotnet_version: 8.0.100
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
@@ -178,12 +168,12 @@ jobs:
            os: macos-11
            dotnet_version: 7.0.403
 
-         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Preview Upgrade net8
-           previous_tool_version: 1.4.2
-           previous_tool_params: '--pre'
-           os: macos-11
-           dotnet_version: 8.0.100-preview.1.23115.2
+        #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+        #    manifest_name: Preview Upgrade net8
+        #    previous_tool_version: 1.4.2
+        #    previous_tool_params: '--pre'
+        #    os: macos-11
+        #    dotnet_version: 8.0.100
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
@@ -197,12 +187,12 @@ jobs:
            os: macos-12
            dotnet_version: 7.0.403
 
-         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Preview net8
-           previous_tool_version: ''
-           previous_tool_params: ''
-           os: macos-12
-           dotnet_version: 8.0.100-preview.1.23115.2
+        #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+        #    manifest_name: Preview net8
+        #    previous_tool_version: ''
+        #    previous_tool_params: ''
+        #    os: macos-12
+        #    dotnet_version: 8.0.100
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
@@ -218,12 +208,12 @@ jobs:
            os: macos-12
            dotnet_version: 7.0.403
 
-         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Preview Upgrade net8
-           previous_tool_version: 1.4.2
-           previous_tool_params: '--pre'
-           os: macos-12
-           dotnet_version: 8.0.100-preview.1.23115.2
+        #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+        #    manifest_name: Preview Upgrade net8
+        #    previous_tool_version: 1.4.2
+        #    previous_tool_params: '--pre'
+        #    os: macos-12
+        #    dotnet_version: 8.0.100
 
     runs-on: ${{ matrix.os }}
 
@@ -248,6 +238,11 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '${{ matrix.dotnet_version }}'
+
+      # - name: MANUAL WORKLOAD INSTALL
+      #   shell: pwsh
+      #   run: |
+      #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
 
       - name: Setup GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.9

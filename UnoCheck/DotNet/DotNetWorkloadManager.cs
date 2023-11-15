@@ -32,8 +32,6 @@ namespace DotNetCheck.DotNet
 			SdkVersion = sdkVersion;
 			NuGetPackageSources = nugetPackageSources;
 
-			CleanEmptyWorkloadDirectories(sdkRoot, sdkVersion);
-
 			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "maui-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
 			Directory.CreateDirectory(DotNetCliWorkingDir);
 
@@ -230,30 +228,6 @@ namespace DotNetCheck.DotNet
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
 				throw new Exception("Workload Repair failed: `dotnet " + string.Join(' ', args) + "`");
-		}
-
-		void CleanEmptyWorkloadDirectories(string sdkRoot, string sdkVersion)
-		{
-			if (NuGetVersion.TryParse(sdkVersion, out var v))
-			{
-				var sdkBand = $"{v.Major}.{v.Minor}.{v.Patch}";
-
-				var manifestsDir = Path.Combine(sdkRoot, "sdk-manifests", sdkBand);
-
-				if (Directory.Exists(manifestsDir))
-				{
-					foreach (var dir in Directory.GetDirectories(manifestsDir))
-					{
-						var manifestFile = Path.Combine(dir, "WorkloadManifest.json");
-
-						if (!File.Exists(manifestFile))
-						{
-							try { Util.Delete(dir, false); }
-							catch { }
-						}
-					}
-				}
-			}
 		}
 
 		string GetInstalledWorkloadMetadataDir()
