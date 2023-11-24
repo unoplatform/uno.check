@@ -67,10 +67,10 @@ namespace DotNetCheck.DotNet
 
 		string WriteRollbackFile(Manifest.DotNetWorkload[] workloads)
 		{
-			var workloadRolback = GetInstalledWorkloadManifestIdsAndVersions();
+			var workloadRollback = GetInstalledWorkloadManifestIdsAndVersions();
 
 			foreach (var workload in workloads)
-				workloadRolback[workload.WorkloadManifestId] = workload.Version;
+				workloadRollback[workload.WorkloadManifestId] = workload.Version;
 
 			var json = new StringBuilder();
 			json.AppendLine("{");

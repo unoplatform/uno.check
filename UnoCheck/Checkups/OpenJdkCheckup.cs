@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Policy;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xamarin.Android.Tools;
@@ -43,7 +44,7 @@ namespace DotNetCheck.Checkups
 		static string PlatformJavaCExtension => Util.IsWindows ? ".exe" : string.Empty;
 
 		public override bool IsPlatformSupported(Platform platform)
-			=> platform == Platform.OSX || platform == Platform.Windows;
+			=> platform == Platform.OSX || platform == Platform.Windows || platform == Platform.Linux;
 
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.OpenJdk != null;
@@ -87,7 +88,8 @@ namespace DotNetCheck.Checkups
 						{
 							Environment.SetEnvironmentVariable("JAVA_HOME", jdk.Directory.FullName, EnvironmentVariableTarget.Machine);
 							ReportStatus($"Set Environment Variable: JAVA_HOME={jdk.Directory.FullName}", Status.Ok);
-						} catch { }
+						}
+						catch { }
 					}
 				}
 				else
@@ -97,10 +99,18 @@ namespace DotNetCheck.Checkups
 			if (ok)
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
-			var url = Manifest?.Check?.OpenJdk?.Url;
-			return Task.FromResult(new DiagnosticResult(Status.Error, this,
-				new Suggestion("Install OpenJDK11",
-					new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
+			if (Util.IsLinux)
+			{
+				return Task.FromResult(new DiagnosticResult(Status.Error, this,
+					new Suggestion("Install OpenJDK11", "OpenJDK 11 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
+			}
+			else
+			{
+				var url = Manifest?.Check?.OpenJdk?.Url;
+				return Task.FromResult(new DiagnosticResult(Status.Error, this,
+					new Suggestion("Install OpenJDK11",
+						new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
+			}
 		}
 
 		IEnumerable<OpenJdkInfo> FindJdks()
@@ -130,7 +140,8 @@ namespace DotNetCheck.Checkups
 
 				SearchDirectoryForJdks(paths,
 					Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft", "Jdk"), true);
-			} else if (Util.IsMac)
+			}
+			else if (Util.IsMac)
 			{
 				var ms11Dir = Path.Combine("/Library", "Java", "JavaVirtualMachines", "microsoft-11.jdk", "Contents", "Home");
 				SearchDirectoryForJdks(paths, ms11Dir, true);
@@ -163,12 +174,35 @@ namespace DotNetCheck.Checkups
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JAVA_HOME") ?? string.Empty, true);
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JDK_HOME") ?? string.Empty, true);
 
-			var environmentPaths = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? Array.Empty<string>();
+			var environmentPaths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
 
 			foreach (var envPath in environmentPaths)
 			{
 				if (envPath.Contains("java", StringComparison.OrdinalIgnoreCase) || envPath.Contains("jdk", StringComparison.OrdinalIgnoreCase))
 					SearchDirectoryForJdks(paths, envPath, true);
+			}
+
+			if (Util.IsLinux)
+			{
+				var r = ShellProcessRunner.Run("whereis", "-b javac");
+
+				if (
+					r.Success
+					&& r.StandardOutput.Count > 0
+					&& r.StandardOutput[0].Split(" ").Skip(1).FirstOrDefault() is { } javacBinPath)
+				{
+					var readlinkResult = ShellProcessRunner.Run("readlink", "-f " + javacBinPath);
+
+					if (
+						readlinkResult.Success
+						&& r.StandardOutput.Count > 0)
+					{
+						if (TryGetJavaJdkInfo(readlinkResult.StandardOutput[0], out var jdkInfo))
+						{
+							paths.Add(jdkInfo);
+						}
+					}
+				}
 			}
 
 			return paths

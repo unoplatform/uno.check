@@ -23,6 +23,9 @@ namespace DotNetCheck.Manifest
 		[JsonProperty("linux", NullValueHandling = NullValueHandling.Ignore)]
 		public Uri Linux { get; set; }
 
+		[JsonProperty("linuxArm64", NullValueHandling = NullValueHandling.Ignore)]
+		public Uri LinuxArm64 { get; set; }
+
 		public Uri Get(string version, Platform? platform = default)
 		{
 			var uri = For(platform ?? Util.Platform)?.ToString();
@@ -49,7 +52,9 @@ namespace DotNetCheck.Manifest
 						: (Util.Is64
 							? Win64 ?? Win
 							: Win),
-				Platform.Linux => Linux,
+				Platform.Linux => Util.IsArm64
+                        ? (LinuxArm64 ?? Linux)
+                        : Linux,
 				_ => Win
 			};
 	}
