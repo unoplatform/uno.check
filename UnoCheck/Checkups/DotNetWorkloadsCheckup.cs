@@ -24,7 +24,7 @@ namespace DotNetCheck.Checkups
 
 			SdkRoot = dotnet.DotNetSdkLocation.FullName;
 			SdkVersion = sdkVersion;
-			RequiredWorkloads = requiredWorkloads;
+			RequiredWorkloads = requiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false).ToArray();
 			NuGetPackageSources = nugetPackageSources;
 		}
 
@@ -68,7 +68,7 @@ namespace DotNetCheck.Checkups
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
 
-			foreach (var rp in RequiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false))
+			foreach (var rp in RequiredWorkloads)
 			{
 				var versionParts = rp.Version.Split("/", StringSplitOptions.None);
 				var workloadVersion = versionParts.First();

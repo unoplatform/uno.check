@@ -156,14 +156,14 @@ jobs:
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
-           previous_tool_version: 1.4.2
+           previous_tool_version: 1.17.0
            previous_tool_params: ''
            os: macos-11
            dotnet_version: 7.0.403
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
-           previous_tool_version: 1.4.2
+           previous_tool_version: 1.17.0
            previous_tool_params: '--pre'
            os: macos-11
            dotnet_version: 7.0.403
@@ -196,14 +196,14 @@ jobs:
            
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
-           previous_tool_version: 1.4.2
+           previous_tool_version: 1.17.0
            previous_tool_params: ''
            os: macos-12
            dotnet_version: 7.0.403
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
-           previous_tool_version: 1.4.2
+           previous_tool_version: 1.17.0
            previous_tool_params: '--pre'
            os: macos-12
            dotnet_version: 7.0.403
@@ -214,6 +214,12 @@ jobs:
         #    previous_tool_params: '--pre'
         #    os: macos-12
         #    dotnet_version: 8.0.100
+
+        # Disabled for android emulator setup issues
+        # - manifest: 'manifests/uno.ui.manifest.json'
+        #   manifest_name: Stable
+        #   os: macos-13
+        #   dotnet_version: 7.0.403
 
     runs-on: ${{ matrix.os }}
 
@@ -336,6 +342,11 @@ jobs:
         with:
           useConfigFile: true
           configFilePath: gitversion.yml
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'microsoft' # See 'Supported distributions' for available options
+          java-version: '11'
 
       - name: Install GTK+3
         shell: pwsh
