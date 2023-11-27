@@ -22,7 +22,7 @@ namespace DotNetCheck.Checkups
 			=> Manifest?.Check?.Android?.Emulators;
 
 		public override bool IsPlatformSupported(Platform platform)
-			=> platform == Platform.OSX || platform == Platform.Windows;
+			=> platform == Platform.OSX || platform == Platform.Windows || platform == Platform.Linux;
 			
 		public override string Id => "androidemulator";
 
@@ -57,6 +57,11 @@ namespace DotNetCheck.Checkups
 					history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME"));
 				avds.AddRange(avdManager.ListAvds());
 			}
+			else
+			{
+				return Task.FromResult(
+					new DiagnosticResult(Status.Error, this, $"Unable to find Java {java}"));
+			}
 
 			// Fallback to manually reading the avd files
 			if (!avds.Any())
@@ -86,6 +91,10 @@ namespace DotNetCheck.Checkups
 					var devices = avdManager.ListDevices();
 
 					preferredDevice = devices.FirstOrDefault(d => d.Name.Contains("pixel", StringComparison.OrdinalIgnoreCase));
+				}
+				else
+				{
+					ReportStatus($"Unable to find AVD manager", Status.Ok);
 				}
 			}
 			catch (Exception ex)
