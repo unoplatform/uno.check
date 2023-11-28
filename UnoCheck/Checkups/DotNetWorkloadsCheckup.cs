@@ -65,7 +65,6 @@ namespace DotNetCheck.Checkups
 
 
 			var validWorkloads = RequiredWorkloads
-				.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false)
 				.ToArray();
 
 			var workloadManagers = validWorkloads
