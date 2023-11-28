@@ -108,7 +108,7 @@
               "workloadManifestId": "microsoft.net.sdk.android",
               "packageId": "Microsoft.NET.Sdk.Android.Manifest-8.0.100",
               "version": "$(ANDROID_SDK_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX", "Linux" ]
+              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",

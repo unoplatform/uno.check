@@ -24,8 +24,16 @@ namespace DotNetCheck.Checkups
 
 			SdkRoot = dotnet.DotNetSdkLocation.FullName;
 			SdkVersion = sdkVersion;
-			RequiredWorkloads = requiredWorkloads.Where(w => w.SupportedPlatforms?.Contains(Util.Platform) ?? false).ToArray();
+			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
+		}
+
+		private static bool FilterPlatform(Manifest.DotNetWorkload w)
+		{
+			var arch = Util.IsArm64 ? "arm64" : "x64";
+			var targetPlatform = Util.Platform + "/" + arch;
+
+			return w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? Util.Platform.ToString() : targetPlatform)) ?? false;
 		}
 
 		public readonly string SdkRoot;
@@ -79,16 +87,16 @@ namespace DotNetCheck.Checkups
 					throw new Exception($"Unable to find workload manager for version [{rp.Id}: {rp.Version}]");
 				}
 
-                var installedPackageWorkloads = workloadManager.GetInstalledWorkloads();
+				var installedPackageWorkloads = workloadManager.GetInstalledWorkloads();
 
-                if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
+				if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
 
 #if DEBUG
-				foreach(var installedWorload in installedPackageWorkloads)
-                {
-                    ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
-                }
+				foreach (var installedWorload in installedPackageWorkloads)
+				{
+					ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
+				}
 #endif
 
 				// TODO: Eventually check actual workload resolver api for installed workloads and
@@ -109,7 +117,7 @@ namespace DotNetCheck.Checkups
 
 			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
 
-            return new DiagnosticResult(
+			return new DiagnosticResult(
 				Status.Error,
 				this,
 				new Suggestion("Install or Update SDK Workloads",
