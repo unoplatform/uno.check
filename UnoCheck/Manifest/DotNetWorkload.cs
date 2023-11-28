@@ -28,6 +28,6 @@ namespace DotNetCheck.Manifest
 		public List<string> IgnoredPackIds { get; set; }
 
 		[JsonProperty("supportedPlatforms")]
-		public List<Platform> SupportedPlatforms { get; set; }
+		public List<string> SupportedPlatforms { get; set; }
 	}
 }
