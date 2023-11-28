@@ -33,7 +33,7 @@ namespace DotNetCheck.Checkups
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
-			return w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? Util.Platform.ToString() : targetPlatform)) ?? false;
+			return w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false;
 		}
 
 		public readonly string SdkRoot;
