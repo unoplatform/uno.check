@@ -20,16 +20,16 @@ namespace DotNetCheck.Checkups
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
 			var shellHasNinjaRunnerResult = ShellProcessRunner.Run("ninja", "--version");
+			// TODO: add auto-installation for other distros or build from source
 			var shellRunnerAptResult = ShellProcessRunner.Run("apt", "--version");
 
-			var ninjaVersionExitCode = shellHasNinjaRunnerResult.ExitCode;
 			var output = shellHasNinjaRunnerResult.GetOutput().Trim();
 
 			var shellRunnerAboutLinuxResult = ShellProcessRunner.Run("lsb_release", "-a");
 
 			var linuxRelease = shellRunnerAboutLinuxResult.GetOutput().Trim();
 
-			var hasNinja = ninjaVersionExitCode == 0;
+			var hasNinja = shellHasNinjaRunnerResult.ExitCode == 0;
 			var hasApt = shellRunnerAptResult.ExitCode == 0;
 			var isDebianBased = linuxRelease.Contains(Ubuntu) || linuxRelease.Contains(Debian);
 
@@ -40,6 +40,15 @@ namespace DotNetCheck.Checkups
 						Status.Error,
 						this,
 						new Suggestion(InstallMessage, new LinuxNinjaSolution())));
+			}
+			
+			if (!hasNinja)
+			{
+				return await Task.FromResult(
+					new DiagnosticResult(
+						Status.Error,
+						this,
+						new Suggestion(InstallMessage, "Ninja-build is missing, follow the installation instructions here: https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages")));
 			}
 
 			ReportStatus($"Ninja Build Version: {output}", Status.Ok);
