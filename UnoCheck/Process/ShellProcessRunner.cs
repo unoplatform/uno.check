@@ -48,8 +48,8 @@ namespace DotNetCheck
 
 	public class ShellProcessRunner
 	{
-		public static string MacOSShell
-			=> File.Exists("/bin/zsh") ? "/bin/zsh" : "/bin/bash";
+		// sh should be available for all POSIX
+		public static string UnixShell => Environment.GetEnvironmentVariable("SHELL") ?? "sh";
 
 		public static ShellProcessResult Run(string executable, string args)
 		{
@@ -85,7 +85,7 @@ namespace DotNetCheck
 
 				// process.StartInfo.FileName = Util.IsWindows ? "cmd.exe" : (File.Exists("/bin/zsh") ? "/bin/zsh" : "/bin/bash");
 				// process.StartInfo.Arguments = Util.IsWindows ? $"/c \"{executable} {args}\"" : $"-c \"{executable} {args}\"";
-				process.StartInfo.FileName = Util.IsWindows ? Options.Executable : MacOSShell;
+				process.StartInfo.FileName = Util.IsWindows ? Options.Executable : UnixShell;
 				process.StartInfo.Arguments = Util.IsWindows ? Options.Args : tmpFile;
 			}
 			else

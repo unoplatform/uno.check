@@ -47,12 +47,16 @@ namespace DotNetCheck.DotNet
 				},
 				Platform.Linux => new string[]
 				{
-					// /home/user/share/dotnet/dotnet
+					// /usr/share/dotnet/dotnet
+					Path.Combine(
+						Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+						"dotnet",
+						DotNetExeName),
+					// ~/.dotnet/dotnet
 					Path.Combine(
 						Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-						"share",
-						"dotnet",
-						DotNetExeName)
+						".dotnet",
+						DotNetExeName),
 				},
 				_ => new string[] { }
 			};

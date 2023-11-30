@@ -156,9 +156,9 @@ namespace DotNetCheck
 				var args = $"-c 'sudo rm -rf \"{path}\"'";
 
 				if (Verbose)
-					Console.WriteLine($"{ShellProcessRunner.MacOSShell} {args}");
+					Console.WriteLine($"{ShellProcessRunner.UnixShell} {args}");
 
-				var p = new ShellProcessRunner(new ShellProcessRunnerOptions(ShellProcessRunner.MacOSShell, args)
+				var p = new ShellProcessRunner(new ShellProcessRunnerOptions(ShellProcessRunner.UnixShell, args)
 				{
 					RedirectOutput = Verbose
 				});
@@ -197,8 +197,8 @@ namespace DotNetCheck
 
 			if (!Util.IsWindows)
 			{
-				actualCmd = ShellProcessRunner.MacOSShell;
-				actualArgs = $"-c 'sudo {cmd} {actualArgs}'"; 
+				actualCmd = ShellProcessRunner.UnixShell;
+				actualArgs = $"-c 'sudo {cmd} {actualArgs}'";
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs) { WorkingDirectory = workingDir, Verbose = verbose } );
@@ -244,9 +244,9 @@ namespace DotNetCheck
 					: $"-c 'sudo mkdir -p \"{destDir}\" && sudo cp -pPR \"{intermediate}/\" \"{destination}\"'"; // note the / at the end of the dir
 
 				if (Verbose)
-					Console.WriteLine($"{ShellProcessRunner.MacOSShell} {args}");
+					Console.WriteLine($"{ShellProcessRunner.UnixShell} {args}");
 
-				var p = new ShellProcessRunner(new ShellProcessRunnerOptions(ShellProcessRunner.MacOSShell, args)
+				var p = new ShellProcessRunner(new ShellProcessRunnerOptions(ShellProcessRunner.UnixShell, args)
 				{
 					RedirectOutput = Verbose
 				});
