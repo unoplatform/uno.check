@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace DotNetCheck.Solutions
 {
-	public class DotNetSdkScriptInstallSolution : Solution
+	public class DotNetSdkPackageManagerOrScriptInstallSolution : Solution
 	{
 		const string installScriptBash = "https://dot.net/v1/dotnet-install.sh";
 		const string installScriptPwsh = "https://dot.net/v1/dotnet-install.ps1";
@@ -34,7 +34,7 @@ namespace DotNetCheck.Solutions
 			// (LinuxPackageManagerWrapper.OpenSUSE, "dotnet-sdk-7.0") // not in the standard repos, must add Microsoft's repo
 		};
 
-		public DotNetSdkScriptInstallSolution(string version)
+		public DotNetSdkPackageManagerOrScriptInstallSolution(string version)
 		{
 			Version = version;
 		}
@@ -78,13 +78,13 @@ namespace DotNetCheck.Solutions
 						if (installedPackage)
 						{
 							ReportStatus($"SUCCESS: a .NET {Version.Split(".")[0]} version was installed successfully using a package manager.");
+					
 							return;
 						}
 						else
 						{
 							ReportStatus($"FAIL: installing a .NET {Version.Split(".")[0]} version failed using a package manager.");
 						}
-
 					}
 				}
 				
@@ -97,6 +97,12 @@ namespace DotNetCheck.Solutions
 				
 				return;
 			}
+			
+			if (!Util.IsWindows && !ShellProcessRunner.Run("command", $"-v bash").Success)
+			{
+				// the script specifically requires bash in the shebang and also has some bashisms
+				ReportStatus($"FAIL: bash was not found. Installing using the script from {installScriptBash} requires bash.");
+			}
 
 			var scriptUrl = Util.IsWindows ? installScriptPwsh : installScriptBash;
 			var scriptPath = Path.Combine(Path.GetTempPath(), Util.IsWindows ? "dotnet-install.ps1" : "dotnet-install.sh");
@@ -107,12 +113,7 @@ namespace DotNetCheck.Solutions
 			var data = await http.GetStringAsync(scriptUrl);
 			File.WriteAllText(scriptPath, data);
 
-			var exe = Util.Platform switch
-			{
-				Platform.Linux or Platform.OSX => ShellProcessRunner.UnixShell,
-				Platform.Windows => "powershell",
-				_ => throw new NotSupportedException($"Unsupported platform {Util.Platform}")
-			};
+			var exe = Util.IsWindows ? "powershell" : "bash";
 
 			var args = Util.IsWindows
 					? $"\"{scriptPath}\" -InstallDir \"{sdkRoot}\" -Version \"{Version}\""
