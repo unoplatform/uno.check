@@ -116,8 +116,8 @@ namespace DotNetCheck.Solutions
 			var exe = Util.IsWindows ? "powershell" : "bash";
 
 			var args = Util.IsWindows
-					? $"\"{scriptPath}\" -InstallDir \"{sdkRoot}\" -Version \"{Version}\""
-					: $"\"{scriptPath}\" --install-dir \"{sdkRoot}\" --version \"{Version}\"";
+					? $"\"{scriptPath}\" -InstallDir '{sdkRoot}' -Version {Version}"
+					: $"\"{scriptPath}\" --install-dir '{sdkRoot}' --version {Version}";
 
 			Util.Log($"Executing dotnet-install script...");
 			Util.Log($"\t{exe} {args}");
