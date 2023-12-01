@@ -68,12 +68,13 @@ namespace DotNetCheck.DotNet
 				if (Directory.Exists(envSdkRoot))
 					sdkRoot = envSdkRoot;
 			}
-
-			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			
+			string environmentOverride = Environment.GetEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR");
+			if (!string.IsNullOrEmpty(environmentOverride))
 			{
-				sdkRoot = Microsoft.DotNet.NativeWrapper.EnvironmentProvider.GetDotnetExeDirectory();
+				sdkRoot = environmentOverride;
 			}
-
+			
 			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
 			{
 				var l = FindDotNetLocations();
@@ -81,6 +82,11 @@ namespace DotNetCheck.DotNet
 				{
 					sdkRoot = l.sdkDir.FullName;
 				}
+			}
+
+			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			{
+				sdkRoot = Microsoft.DotNet.NativeWrapper.EnvironmentProvider.GetDotnetExeDirectory(log: (s) => Util.Log(s.ToString()));
 			}
 
 			sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
