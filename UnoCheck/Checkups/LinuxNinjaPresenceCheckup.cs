@@ -40,7 +40,7 @@ namespace DotNetCheck.Checkups
 						new Suggestion(InstallMessage, new LinuxNinjaSolution())
 					));
 			}
-			
+
 			return await Task.FromResult(
 				new DiagnosticResult(
 					Status.Error,

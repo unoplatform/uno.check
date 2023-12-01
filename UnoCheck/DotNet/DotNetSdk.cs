@@ -20,11 +20,13 @@ namespace DotNetCheck.DotNet
 	{
 		public readonly string[] KnownDotnetLocations;
 
-		public readonly FileInfo DotNetExeLocation;
+		private readonly FileInfo DotNetExeLocation;
 		public readonly DirectoryInfo DotNetSdkLocation;
 
 		public static string DotNetExeName
 			=> Util.IsWindows ? "dotnet.exe" : "dotnet";
+
+		public string DotNetExecutable => Exists ? DotNetExeLocation.FullName : "dotnet";
 
 		public DotNetSdk(SharedState sharedState)
 		{
