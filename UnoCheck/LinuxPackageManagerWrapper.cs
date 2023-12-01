@@ -237,8 +237,9 @@ public class LinuxPackageManagerWrapper
 
     private static bool IsCorrectWrapper(LinuxPackageManagerWrapper wrapper)
     {
-        return ShellProcessRunner.Run("which", wrapper.SearchExecutable).Success &&
-               ShellProcessRunner.Run("which", wrapper.UpdateExecutable).Success &&
-               ShellProcessRunner.Run("which", wrapper.InstallExecutable).Success;
+        // `which` is not POSIX
+        return ShellProcessRunner.Run("command", $"-v {wrapper.SearchExecutable}").Success &&
+               ShellProcessRunner.Run("command", $"-v {wrapper.UpdateExecutable}").Success &&
+               ShellProcessRunner.Run("command", $"-v {wrapper.InstallExecutable}").Success;
     }
 }
