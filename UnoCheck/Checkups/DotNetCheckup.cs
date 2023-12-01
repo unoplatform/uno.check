@@ -97,10 +97,10 @@ namespace DotNetCheck.Checkups
 
 				var remedies = new List<Solution>();
 
-				if (Util.CI || Util.IsLinux)
+				if (Util.CI || !Util.IsWindows)
 				{
 					remedies.AddRange(missingSdks
-						.Select(ms => new DotNetSdkScriptInstallSolution(ms.Version)));
+						.Select(ms => new DotNetSdkPackageManagerOrScriptInstallSolution(ms.Version)));
 				}
 				else
 				{
