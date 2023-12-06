@@ -40,13 +40,18 @@ namespace DotNetCheck.Checkups
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Android", "android-sdk-macosx"),
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "Android", "sdk"),
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "android-sdk-macosx"),
+			Environment.GetEnvironmentVariable("ANDROID_HOME")
 		};
 
-		string[] unixSdkLocations = new string[] { };
+		string[] unixSdkLocations = new string[] 
+		{
+			Environment.GetEnvironmentVariable("ANDROID_HOME")
+		};
 
 		string[] winSdkLocations = new string[]
 		{
-			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Android", "android-sdk")
+			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Android", "android-sdk"),
+			Environment.GetEnvironmentVariable("ANDROID_HOME")
 		};
 
 		public string FindBestSdkLocation()
