@@ -70,6 +70,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
         var processInfo = new ProcessStartInfo("dotnet", "new uninstall");
         processInfo.RedirectStandardOutput = true;
         processInfo.UseShellExecute = false;
+        processInfo.EnvironmentVariables["DOTNET_CLI_UI_LANGUAGE"] = "en-US";
 
         var process = Process.Start(processInfo);
         string output = process.StandardOutput.ReadToEnd();
