@@ -60,17 +60,18 @@ namespace DotNetCheck
 
 			if (string.IsNullOrEmpty(toolVersion) || !NuGetVersion.TryParse(toolVersion, out var toolVer) || fileVersion < toolVer)
 			{
-				Console.WriteLine();
-				AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Updating to version {toolVersion} or newer is required:[/]");
-				AnsiConsole.MarkupLine($"[blue]  dotnet tool update --global {ToolPackageId}[/]");
+				return true;
+				// Console.WriteLine();
+				// AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Updating to version {toolVersion} or newer is required:[/]");
+				// AnsiConsole.MarkupLine($"[blue]  dotnet tool update --global {ToolPackageId}[/]");
 
-				if (Debugger.IsAttached)
-				{
-					if (AnsiConsole.Confirm("Mismatched version, continue debugging anyway?"))
-						return true;
-				}
+				// if (Debugger.IsAttached)
+				// {
+				// 	if (AnsiConsole.Confirm("Mismatched version, continue debugging anyway?"))
+				// 		return true;
+				// }
 
-				return false;
+				// return false;
 			}
 
 			var minSupportedDotNetSdkVersion = Manifest.DotNetSdk.Version6Preview7;
