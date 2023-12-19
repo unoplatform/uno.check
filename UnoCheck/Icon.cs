@@ -3,7 +3,7 @@
 	public static class Icon
 	{
 		public static string PrettyBoring(string pretty, string boring)
-			=> Util.IsWindows ? boring : pretty;
+			=> (Util.IsWindows || Util.IsLinux) ? boring : pretty;
 
 		public static string Error
 			=> PrettyBoring(":cross_mark:", "×");
