@@ -8,9 +8,9 @@ namespace DotNetCheck.Manifest
 {
 	public partial class Manifest
 	{
-		public const string DefaultManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/cf0141ad351d96d3f1773b634ed74523b6ee26d0/manifests/uno.ui.manifest.json";
-        public const string PreviewManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/cf0141ad351d96d3f1773b634ed74523b6ee26d0/manifests/uno.ui-preview.manifest.json";
-        public const string PreviewMajorManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/cf0141ad351d96d3f1773b634ed74523b6ee26d0/manifests/uno.ui-preview-major.manifest.json";
+		public const string DefaultManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/9c9b7412dc4643d905808643fca44269e6abe5a1/manifests/uno.ui.manifest.json";
+        public const string PreviewManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/9c9b7412dc4643d905808643fca44269e6abe5a1/manifests/uno.ui-preview.manifest.json";
+        public const string PreviewMajorManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/9c9b7412dc4643d905808643fca44269e6abe5a1/manifests/uno.ui-preview-major.manifest.json";
 
         public static Task<Manifest> FromFileOrUrl(string fileOrUrl)
 		{
