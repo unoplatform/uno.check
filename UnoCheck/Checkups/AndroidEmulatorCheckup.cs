@@ -118,9 +118,11 @@ namespace DotNetCheck.Checkups
 							try
 							{
 								var installer = new AndroidSDKInstaller(new Helper(), AndroidManifestType.GoogleV2);
-								installer.Discover();
 
-								var sdkInstance = installer.FindInstance(null);
+								var androidSdkPath = history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME");
+								installer.Discover(new List<string> { androidSdkPath});
+
+								var sdkInstance = installer.FindInstance(androidSdkPath);
 
 								var installedPackages = sdkInstance.Components.AllInstalled(true);
 
