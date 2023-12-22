@@ -12,50 +12,93 @@ If it finds something missing, out of date, or misconfigured, it will either off
 
 ## Install and run uno-check
 
+
+# [**Windows**](#tab/windows)
+
 1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/download).
+1. Open a command-line prompt, Windows Terminal if you have it installed, or else Command Prompt or Windows Powershell from the Start menu.
+1. Setup uno.check by:
+    - Installing the tool:
+        ```bash
+        dotnet tool install -g uno.check
+        ```
 
-1. Open a command-line prompt. If you're on Windows, you can run Windows Terminal if you have it installed, or else Command Prompt or Windows Powershell from the Start menu. If you're on Mac, you can run the Terminal.
+    - Updating the tool, if you previously installed it:
+        ```bash
+        dotnet tool update -g uno.check
+        ```
+1. Run the tool from the command prompt with the following command:
 
-1. Install the tool by running the following command from the command prompt:
+    ```bash
+    uno-check
     ```
-    dotnet tool install -g uno.check
-    ```
-    To update the tool, if you already have an existing one:
-    ```
-    dotnet tool update -g uno.check
-    ```
+1. Follow the instructions indicated by the tool.
+1. If you get any errors or warnings, run the provided fix, or follow the provided instructions. Run `uno-check` again to verify that the fixes worked.
+1. Once `uno-check` gives you the green light, you can [get started](https://platform.uno/docs/articles/get-started.html)!
 
+# [**Linux**](#tab/linux)
+
+1. Open a Terminal
+1. If `dotnet --version` returns `command not found`:
+    - Follow the [official directions](https://learn.microsoft.com/en-us/dotnet/core/install/linux?WT.mc_id=dotnet-35129-website#packages) for installing .NET.
+      > [!IMPORTANT]
+      > If your distribution is Ubuntu and you want to develop for Android, make sure to use the directions to install the Microsoft feed and not the Ubuntu official feed. The latter does not contain Android workloads.
+1. Then, setup uno.check by:
+    - Installing the tool:
+        ```bash
+        dotnet tool install -g uno.check
+        ```
+
+    - Updating the tool, if you previously installed it:
+        ```bash
+        dotnet tool update -g uno.check
+        ```
 1. Run the tool from the command prompt with the following command:
     ```
     uno-check
     ```
-    For additional options, see below.
-
-    On a mac, you may need to run the command this way:
+    If the above command fails, use the following:
     ```
     ~/.dotnet/tools/uno-check
     ```
-
-1. If you are using Visual Studio 2022 17.6 Preview 1 or later, use the following:
-    ```
-    uno-check --pre
-    ```
-
-1. If you intend to use .NET 8 Previews, use the following:
-    ```
-    uno-check --preview-major
-    ```
-
+1. Follow the instructions indicated by the tool
 1. If you get any errors or warnings, run the provided fix, or follow the provided instructions. Run `uno-check` again to verify that the fixes worked.
-
 1. Once `uno-check` gives you the green light, you can [get started](https://platform.uno/docs/articles/get-started.html)!
+
+# [**macOS**](#tab/macos)
+
+1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/download).
+1. Open a Terminal.
+1. Setup uno.check by:
+    - Installing the tool:
+        ```bash
+        dotnet tool install -g uno.check
+        ```
+
+    - Updating the tool, if you previously installed it:
+        ```bash
+        dotnet tool update -g uno.check
+        ```
+1. Run the tool from the command prompt with the following command:
+    ```
+    uno-check
+    ```
+    If the above command fails, use the following:
+    ```
+    ~/.dotnet/tools/uno-check
+    ```
+1. Follow the instructions indicated by the tool
+1. If you get any errors or warnings, run the provided fix, or follow the provided instructions. Run `uno-check` again to verify that the fixes worked.
+1. Once `uno-check` gives you the green light, you can [get started](https://platform.uno/docs/articles/get-started.html)!
+
+***
 
 ## Troubleshooting
 
 If you run into problems with uno-check, you should generally try the following:
 
 1. Update the tool to the latest version: `dotnet tool update -g uno.check --add-source https://api.nuget.org/v3/index.json`
-1. If you are running with .NET 8 installed (RC 2 or later), and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
+1. If you are running with .NET 8, and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
   ```bash
   dotnet workload clean -all
   ```
@@ -101,7 +144,6 @@ The following argument values for `--target` are supported:
 | skiagtk   |                   |
 | linux     | Alias for skiagtk |
 | skiawpf   |                   |
-| skiatizen |                   |
 | uwp       |                   |
 | win32     |                   |
 | all       | All platforms     |
