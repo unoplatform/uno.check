@@ -23,7 +23,6 @@ namespace DotNetCheck
 			CheckupManager.RegisterCheckups(
 				new OpenJdkCheckup(),
 				new AndroidEmulatorCheckup(),
-				new VisualStudioMacCheckup(),
 				new VisualStudioWindowsCheckup(),
 				new VSWinWorkloadsCheckup(),
 				new AndroidSdkPackagesCheckup(),

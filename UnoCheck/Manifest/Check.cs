@@ -28,9 +28,6 @@ namespace DotNetCheck.Manifest
 		[JsonProperty("vswin")]
 		public MinExactVersion VSWin { get; set; }
 
-		[JsonProperty("vsmac")]
-		public MinExactVersion VSMac { get; set; }
-
 		[JsonProperty("android")]
 		public Android Android { get; set; }
 

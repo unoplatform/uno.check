@@ -30,10 +30,6 @@
     "vswin": {
       "minimumVersion": "17.8.0"
     },
-    "vsmac": {
-      "minimumVersion": "8.10.0",
-      "optional": "true"
-    },
     "android": {
       "packages": [
         {
