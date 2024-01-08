@@ -35,7 +35,6 @@ namespace DotNetCheck
 				new DotNetSdkCheckupContributor());
 
 			CheckupManager.RegisterCheckups(
-				new WSLCheckup(),
 				new GTK3Checkup(),
 				new WindowsPythonInstallationCheckup(),
 				new WindowsLongPathCheckup(),
