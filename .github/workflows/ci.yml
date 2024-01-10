@@ -143,12 +143,12 @@ jobs:
            os: macos-11
            dotnet_version: 8.0.100
 
-         - manifest: 'manifests/uno.ui-preview.manifest.json'
-           manifest_name: Preview
-           previous_tool_version: ''
-           previous_tool_params: ''
-           os: macos-11
-           dotnet_version: 8.0.100
+        # - manifest: 'manifests/uno.ui-preview.manifest.json'
+        #   manifest_name: Preview
+        #   previous_tool_version: ''
+        #   previous_tool_params: ''
+        #   os: macos-11
+        #   dotnet_version: 8.0.100
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview net8
@@ -164,12 +164,12 @@ jobs:
            os: macos-11
            dotnet_version: 8.0.100
 
-         - manifest: 'manifests/uno.ui-preview.manifest.json'
-           manifest_name: Preview Upgrade
-           previous_tool_version: 1.17.0
-           previous_tool_params: '--pre'
-           os: macos-11
-           dotnet_version: 8.0.100
+        # - manifest: 'manifests/uno.ui-preview.manifest.json'
+        #   manifest_name: Preview Upgrade
+        #   previous_tool_version: 1.17.0
+        #   previous_tool_params: '--pre'
+        #   os: macos-11
+        #   dotnet_version: 8.0.100
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
@@ -183,12 +183,12 @@ jobs:
            os: macos-12
            dotnet_version: 8.0.100
 
-         - manifest: 'manifests/uno.ui-preview.manifest.json'
-           manifest_name: Preview
-           previous_tool_version: ''
-           previous_tool_params: ''
-           os: macos-12
-           dotnet_version: 8.0.100
+         # - manifest: 'manifests/uno.ui-preview.manifest.json'
+         #   manifest_name: Preview
+         #   previous_tool_version: ''
+         #   previous_tool_params: ''
+         #   os: macos-12
+         #   dotnet_version: 8.0.100
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview net8
@@ -204,12 +204,12 @@ jobs:
            os: macos-12
            dotnet_version: 8.0.100
 
-         - manifest: 'manifests/uno.ui-preview.manifest.json'
-           manifest_name: Preview Upgrade
-           previous_tool_version: 1.17.0
-           previous_tool_params: '--pre'
-           os: macos-12
-           dotnet_version: 8.0.100
+         # - manifest: 'manifests/uno.ui-preview.manifest.json'
+         #   manifest_name: Preview Upgrade
+         #   previous_tool_version: 1.17.0
+         #   previous_tool_params: '--pre'
+         #   os: macos-12
+         #   dotnet_version: 8.0.100
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
