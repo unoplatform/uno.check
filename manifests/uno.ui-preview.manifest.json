@@ -3,11 +3,11 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "8.0.100",
-      "MACCATALYST_SDK_VERSION": "17.0.8478/8.0.100",
-      "IOS_SDK_VERSION": "17.0.8478/8.0.100",
-      "MACOS_SDK_VERSION": "14.0.8478/8.0.100",
-      "ANDROID_SDK_VERSION": "34.0.43/8.0.100",
+      "DOTNET_SDK_VERSION": "8.0.200-preview.23624.5",
+      "MACCATALYST_SDK_VERSION": "17.2.8004/8.0.100",
+      "IOS_SDK_VERSION": "17.2.8004/8.0.100",
+      "MACOS_SDK_VERSION": "14.2.8004/8.0.100",
+      "ANDROID_SDK_VERSION": "34.0.52/8.0.100",
       "MAUI_VERSION": "8.0.3/8.0.100"
     },
     "variableMappers": [
@@ -26,7 +26,7 @@
       "exactVersionName": "15A240d"
     },
     "vswin": {
-      "minimumVersion": "17.8.0-pre.1"
+      "minimumVersion": "17.9.0-pre.3"
     },
     "android": {
       "packages": [
@@ -93,7 +93,6 @@
             "osxArm64": "https://dotnetcli.azureedge.net/dotnet/Sdk/$(DOTNET_SDK_VERSION)/dotnet-sdk-$(DOTNET_SDK_VERSION)-osx-arm64.pkg"
           },
           "packageSources": [
-            "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet8/nuget/v3/index.json",
             "https://api.nuget.org/v3/index.json"
           ],
           "workloads": [
