@@ -314,7 +314,7 @@ namespace DotNetCheck.Cli
 
 		private async Task<bool> NeedsToolUpdateAsync(CheckSettings settings)
 		{
-			if (settings.Manifest is not null && !settings.CI)
+			if (settings.Manifest is not null && !settings.CI || settings.DisableSelfVersionCheck)
 			{
 				return false;
 			}
