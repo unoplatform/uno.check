@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json.Linq;
 using DotNetCheck.Models;
+using Microsoft.Deployment.DotNet.Releases;
 
 namespace DotNetCheck.DotNet
 {
@@ -105,57 +106,93 @@ namespace DotNetCheck.DotNet
 		}
 
 		public IEnumerable<(string id, string version)> GetInstalledWorkloads()
-		{
-			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion, null, null);
+        {
+			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion, null, SdkDirectoryWorkloadManifestProvider.GetGlobalJsonPath(Environment.CurrentDirectory));
 
-			var workloadResolver = WorkloadResolver.Create(manifestProvider, SdkRoot, SdkVersion, null);
+            var workloadResolver = WorkloadResolver.Create(manifestProvider, SdkRoot, SdkVersion, null);
 
-			foreach (var manifestInfo in manifestProvider.GetManifests())
+            foreach (var manifestInfo in GetAllManifests(manifestProvider))
+            {
+                using (var manifestStream = manifestInfo.OpenManifestStream())
+                {
+                    var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.ManifestId, manifestStream, manifestInfo.ManifestPath);
+
+                    // Each workload manifest can have one or more workloads defined
+                    foreach (var wl in m.Workloads)
+                    {
+                        if (wl.Value is WorkloadDefinition wd && !AreWorkloadPacksInstalled(wd, workloadResolver))
+                        {
+                            continue;
+                        }
+
+                        yield return (wl.Key.ToString(), m.Version);
+                    }
+                }
+            }
+
+            bool AreWorkloadPacksInstalled(WorkloadDefinition workload, WorkloadResolver workloadResolver)
+            {
+                foreach (var packId in workload.Packs ?? Enumerable.Empty<WorkloadPackId>())
+                {
+                    var pack = workloadResolver.TryGetPackInfo(packId);
+
+                    if (pack != null)
+                    {
+                        var packInstalled =
+                            pack.Kind switch
+                            {
+                                WorkloadPackKind.Library or WorkloadPackKind.Template => File.Exists(pack.Path),
+                                _ => Directory.Exists(pack.Path)
+                            };
+
+                        if (!packInstalled)
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        private static IEnumerable<ReadableWorkloadManifest> GetAllManifests(SdkDirectoryWorkloadManifestProvider manifestProvider)
+        {
+            // Enumerate all workload versions, including those not latest for the current band
+            // as they may have been pinned in 8.0.101 and later. https://github.com/dotnet/sdk/issues/37958
+            foreach (var manifest in manifestProvider.GetManifests())
 			{
-				using (var manifestStream = manifestInfo.OpenManifestStream())
-				{
-					var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.ManifestId, manifestStream, manifestInfo.ManifestPath);
+				var parentDirectory = Path.GetDirectoryName(manifest.ManifestDirectory);
 
-					// Each workload manifest can have one or more workloads defined
-					foreach (var wl in m.Workloads)
+				var manifestVersionDirectories = Directory.GetDirectories(parentDirectory)
+					.Where(dir => File.Exists(Path.Combine(dir, "WorkloadManifest.json")))
+					.Select(dir =>
 					{
-						if (wl.Value is WorkloadDefinition wd && !AreWorkloadPacksInstalled(wd, workloadResolver))
-						{
-							continue;
-						}
-
-						yield return (wl.Key.ToString(), m.Version);
-					}
-				}
-			}
-
-			bool AreWorkloadPacksInstalled(WorkloadDefinition workload, WorkloadResolver workloadResolver)
-			{
-				foreach (var packId in workload.Packs ?? Enumerable.Empty<WorkloadPackId>())
+						ReleaseVersion.TryParse(Path.GetFileName(dir), out var releaseVersion);
+						return (directory: dir, version: releaseVersion);
+					})
+					.Where(t => t.version != null)
+					.OrderByDescending(t => t.version)
+					.ToList();
+		
+				foreach(var otherManifest in manifestVersionDirectories)
 				{
-					var pack = workloadResolver.TryGetPackInfo(packId);
+                    var workloadManifestPath = Path.Combine(otherManifest.directory, "WorkloadManifest.json");
 
-					if (pack != null)
-					{
-						var packInstalled =
-							pack.Kind switch
-							{
-								WorkloadPackKind.Library or WorkloadPackKind.Template => File.Exists(pack.Path),
-								_ => Directory.Exists(pack.Path)
-							};
+                    var readableManifest = new ReadableWorkloadManifest(
+                        manifest.ManifestId,
+                        otherManifest.directory,
+                        workloadManifestPath,
+                        manifestProvider.GetSdkFeatureBand(),
+                        () => File.OpenRead(workloadManifestPath),
+                        () => WorkloadManifestReader.TryOpenLocalizationCatalogForManifest(workloadManifestPath));
 
-						if (!packInstalled)
-						{
-							return false;
-						}
-					}
-				}
-
-				return true;
+					yield return readableManifest;
+                }
 			}
-		}
+        }
 
-		void RemoveOldMetadata()
+        void RemoveOldMetadata()
 		{
 			var dir = GetInstalledWorkloadMetadataDir();
 
