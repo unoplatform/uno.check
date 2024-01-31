@@ -15,6 +15,7 @@ namespace DotNetCheck.Solutions
 	{
 		const string installScriptBash = "https://dot.net/v1/dotnet-install.sh";
 		const string installScriptPwsh = "https://dot.net/v1/dotnet-install.ps1";
+		const string environmentInstructionsUrl = "https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script#set-environment-variables";
 		
 		private readonly (LinuxPackageManagerWrapper, string)[] LinuxDotNet8PackageNames = new[]
 		{
@@ -126,6 +127,8 @@ namespace DotNetCheck.Solutions
 			var p = new ShellProcessRunner(new ShellProcessRunnerOptions(exe, args));
 
 			p.WaitForExit();
+
+			ReportStatus($"WARNING: dotnet was installed from {scriptUrl}, but the script doesn't add the install location to the user's PATH environment variable, you must manually add it. To learn more, visit {environmentInstructionsUrl}");
 		}
 	}
 }
