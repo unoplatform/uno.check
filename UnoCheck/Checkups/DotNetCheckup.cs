@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
-using Microsoft.NET.Sdk.WorkloadManifestReader;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
