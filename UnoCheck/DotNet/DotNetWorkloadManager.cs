@@ -86,7 +86,6 @@ namespace DotNetCheck.DotNet
 
         public async Task<(string id, string version, string sdkVersion)[]> GetInstalledWorkloads()
         {
-            // dotnet workload install id --skip-manifest-update --add-source x
             var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
             var args = new List<string>
@@ -102,7 +101,7 @@ namespace DotNetCheck.DotNet
             if (r.ExitCode != 0)
                 throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
 
-			var output = string.Join("", r.StandardOutput);
+			var output = string.Join(" ", r.StandardOutput);
 			var startIndex = output.IndexOf(RollbackOutputBeginMarker);
 			var endIndex = output.IndexOf(RollbackOutputEndMarker);
 
