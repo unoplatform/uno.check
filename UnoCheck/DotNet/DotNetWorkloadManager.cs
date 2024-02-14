@@ -84,49 +84,48 @@ namespace DotNetCheck.DotNet
         const string RollbackOutputBeginMarker = "==workloadRollbackDefinitionJsonOutputStart==";
         const string RollbackOutputEndMarker = "==workloadRollbackDefinitionJsonOutputEnd==";
 
-        public async Task<(string id, string version, string sdkVersion)[]> GetInstalledWorkloads()
-        {
-            var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
+		public async Task<(string id, string version, string sdkVersion)[]> GetInstalledWorkloads()
+		{
+			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-            var args = new List<string>
-            {
-                "workload",
-                "update",
-                "--print-rollback"
-            };
+			var args = new List<string>
+			{
+				"workload",
+				"update",
+				"--print-rollback"
+			};
 
-            var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
 
-            // Throw if this failed with a bad exit code
-            if (r.ExitCode != 0)
-                throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+			// Throw if this failed with a bad exit code
+			if (r.ExitCode != 0)
+				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
 
 			var output = string.Join(" ", r.StandardOutput);
+
 			var startIndex = output.IndexOf(RollbackOutputBeginMarker);
 			var endIndex = output.IndexOf(RollbackOutputEndMarker);
 
-			if(startIndex >= 0 && endIndex >= 0)
+			if (startIndex >= 0 && endIndex >= 0)
 			{
+				// net8 and earlier use markers
 				var start = startIndex + RollbackOutputBeginMarker.Length;
-				var json = output.Substring(start, endIndex - start);
-
-                var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-
-				return workloads
-					.Select(p => {
-                        var versionParts = p.Value.Split("/", StringSplitOptions.None);
-                        var workloadVersion = versionParts.First();
-						var workloadSdkVersion = versionParts.ElementAtOrDefault(1) is { Length: > 0 } v ? v : "";
-
-                        return (p.Key, workloadVersion, workloadSdkVersion);
-					})
-					.ToArray();
+				output = output.Substring(start, endIndex - start);
 			}
-			else
-			{
-                throw new Exception("Workload command output cannot be parsed: `dotnet " + string.Join(' ', args) + "`");
-            }
-        }
+
+			var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(output);
+
+			return workloads
+				.Select(p =>
+				{
+					var versionParts = p.Value.Split("/", StringSplitOptions.None);
+					var workloadVersion = versionParts.First();
+					var workloadSdkVersion = versionParts.ElementAtOrDefault(1) is { Length: > 0 } v ? v : "";
+
+					return (p.Key, workloadVersion, workloadSdkVersion);
+				})
+				.ToArray();
+		}
 
 		async Task CliInstallWithRollback(string rollbackFile, IEnumerable<string> workloadIds)
 		{
