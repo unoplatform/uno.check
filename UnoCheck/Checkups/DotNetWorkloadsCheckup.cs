@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
-using Microsoft.NET.Sdk.WorkloadManifestReader;
 using NuGet.Versioning;
 
 namespace DotNetCheck.Checkups
@@ -67,13 +66,10 @@ namespace DotNetCheck.Checkups
 			var validWorkloads = RequiredWorkloads
 				.ToArray();
 
-			var workloadManagers = validWorkloads
-				.Select(w => w.Version.Split("/", StringSplitOptions.None).LastOrDefault() is { Length: > 0 } workloadSdkVersion ? workloadSdkVersion : sdkVersion)
-				.Concat(new[] { sdkVersion })
-				.Distinct()
-				.ToDictionary(v => v, v => new DotNetWorkloadManager(SdkRoot, v, NuGetPackageSources));
+			var manager = new DotNetWorkloadManager(SdkRoot, SdkVersion, NuGetPackageSources);
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
+			var installedPackageWorkloads = await manager.GetInstalledWorkloads();
 
 			foreach (var rp in RequiredWorkloads)
 			{
@@ -81,12 +77,6 @@ namespace DotNetCheck.Checkups
 				var workloadVersion = versionParts.First();
 				var workloadSdkVersion = versionParts.ElementAtOrDefault(1) is { Length: > 0 } v ? v : sdkVersion;
 
-				if (!workloadManagers.TryGetValue(workloadSdkVersion, out var workloadManager))
-				{
-					throw new Exception($"Unable to find workload manager for version [{rp.Id}: {rp.Version}]");
-				}
-
-				var installedPackageWorkloads = workloadManager.GetInstalledWorkloads();
 
 				if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
@@ -98,16 +88,14 @@ namespace DotNetCheck.Checkups
 				}
 #endif
 
-				// TODO: Eventually check actual workload resolver api for installed workloads and
-				// compare the manifest version once it has a string in it
-				if (!installedPackageWorkloads.Any(ip => ip.id.Equals(rp.Id, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion == rpVersion))
+				if (installedPackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } installed)
 				{
-					ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) not installed.", Status.Error);
-					missingWorkloads.Add(rp);
+                    ReportStatus($"{installed.id} ({installed.version}/{installed.sdkVersion}) installed.", Status.Ok);
 				}
 				else
 				{
-					ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) installed.", Status.Ok);
+                    ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) not installed.", Status.Error);
+                    missingWorkloads.Add(rp);
 				}
 			}
 

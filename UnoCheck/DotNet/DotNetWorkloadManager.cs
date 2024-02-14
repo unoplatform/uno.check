@@ -1,6 +1,4 @@
-﻿using Microsoft.DotNet.MSBuildSdkResolver;
-using Microsoft.NET.Sdk.WorkloadManifestReader;
-using NuGet.Common;
+﻿using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Core;
 using NuGet.Packaging.Signing;
@@ -21,7 +19,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Newtonsoft.Json.Linq;
 using DotNetCheck.Models;
-using Microsoft.Deployment.DotNet.Releases;
+using System.Text.Json;
 
 namespace DotNetCheck.DotNet
 {
@@ -33,7 +31,7 @@ namespace DotNetCheck.DotNet
 			SdkVersion = sdkVersion;
 			NuGetPackageSources = nugetPackageSources;
 
-			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "maui-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
+			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "uno-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
 			Directory.CreateDirectory(DotNetCliWorkingDir);
 
 			var globalJson = new DotNetGlobalJson();
@@ -52,8 +50,6 @@ namespace DotNetCheck.DotNet
 
 		public async Task Repair()
 		{
-			RemoveOldMetadata();
-
 			await CliRepair();
 		}
 
@@ -61,14 +57,12 @@ namespace DotNetCheck.DotNet
 		{
 			var rollbackFile = WriteRollbackFile(workloads);
 
-			RemoveOldMetadata();
-
 			await CliInstallWithRollback(rollbackFile, workloads.Where(w => !w.Abstract).Select(w => w.Id));
 		}
 
 		string WriteRollbackFile(Manifest.DotNetWorkload[] workloads)
 		{
-			var workloadRollback = GetInstalledWorkloadManifestIdsAndVersions();
+			var workloadRollback = new Dictionary<string, string>();
 
 			foreach (var workload in workloads)
 				workloadRollback[workload.WorkloadManifestId] = workload.Version;
@@ -87,134 +81,52 @@ namespace DotNetCheck.DotNet
 			return rollbackFile;
 		}
 
-		Dictionary<string, string> GetInstalledWorkloadManifestIdsAndVersions()
-		{
-			var items = new Dictionary<string, string>();
+        const string RollbackOutputBeginMarker = "==workloadRollbackDefinitionJsonOutputStart==";
+        const string RollbackOutputEndMarker = "==workloadRollbackDefinitionJsonOutputEnd==";
 
-			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion, null, null);
-
-			foreach (var manifestInfo in manifestProvider.GetManifests())
-			{
-				using (var manifestStream = manifestInfo.OpenManifestStream())
-				{
-					var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.ManifestId, manifestStream, manifestInfo.ManifestPath);
-					items[manifestInfo.ManifestId] = m.Version;
-				}
-			}
-
-			return items;
-		}
-
-		public IEnumerable<(string id, string version)> GetInstalledWorkloads()
+        public async Task<(string id, string version, string sdkVersion)[]> GetInstalledWorkloads()
         {
-			var manifestProvider = new SdkDirectoryWorkloadManifestProvider(SdkRoot, SdkVersion, null, SdkDirectoryWorkloadManifestProvider.GetGlobalJsonPath(Environment.CurrentDirectory));
+            var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-            var workloadResolver = WorkloadResolver.Create(manifestProvider, SdkRoot, SdkVersion, null);
-
-            foreach (var manifestInfo in GetAllManifests(manifestProvider))
+            var args = new List<string>
             {
-                using (var manifestStream = manifestInfo.OpenManifestStream())
-                {
-                    var m = WorkloadManifestReader.ReadWorkloadManifest(manifestInfo.ManifestId, manifestStream, manifestInfo.ManifestPath);
+                "workload",
+                "update",
+                "--print-rollback"
+            };
 
-                    // Each workload manifest can have one or more workloads defined
-                    foreach (var wl in m.Workloads)
-                    {
-                        if (wl.Value is WorkloadDefinition wd && !AreWorkloadPacksInstalled(wd, workloadResolver))
-                        {
-                            continue;
-                        }
+            var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
 
-                        yield return (wl.Key.ToString(), m.Version);
-                    }
-                }
-            }
+            // Throw if this failed with a bad exit code
+            if (r.ExitCode != 0)
+                throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
 
-            bool AreWorkloadPacksInstalled(WorkloadDefinition workload, WorkloadResolver workloadResolver)
-            {
-                foreach (var packId in workload.Packs ?? Enumerable.Empty<WorkloadPackId>())
-                {
-                    var pack = workloadResolver.TryGetPackInfo(packId);
+			var output = string.Join(" ", r.StandardOutput);
+			var startIndex = output.IndexOf(RollbackOutputBeginMarker);
+			var endIndex = output.IndexOf(RollbackOutputEndMarker);
 
-                    if (pack != null)
-                    {
-                        var packInstalled =
-                            pack.Kind switch
-                            {
-                                WorkloadPackKind.Library or WorkloadPackKind.Template => File.Exists(pack.Path),
-                                _ => Directory.Exists(pack.Path)
-                            };
-
-                        if (!packInstalled)
-                        {
-                            return false;
-                        }
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        private static IEnumerable<ReadableWorkloadManifest> GetAllManifests(SdkDirectoryWorkloadManifestProvider manifestProvider)
-        {
-            // Enumerate all workload versions, including those not latest for the current band
-            // as they may have been pinned in 8.0.101 and later. https://github.com/dotnet/sdk/issues/37958
-            foreach (var manifest in manifestProvider.GetManifests())
+			if(startIndex >= 0 && endIndex >= 0)
 			{
-				var parentDirectory = Path.GetDirectoryName(manifest.ManifestDirectory);
+				var start = startIndex + RollbackOutputBeginMarker.Length;
+				var json = output.Substring(start, endIndex - start);
 
-				var manifestVersionDirectories = Directory.GetDirectories(parentDirectory)
-					.Where(dir => File.Exists(Path.Combine(dir, "WorkloadManifest.json")))
-					.Select(dir =>
-					{
-						ReleaseVersion.TryParse(Path.GetFileName(dir), out var releaseVersion);
-						return (directory: dir, version: releaseVersion);
+                var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+
+				return workloads
+					.Select(p => {
+                        var versionParts = p.Value.Split("/", StringSplitOptions.None);
+                        var workloadVersion = versionParts.First();
+						var workloadSdkVersion = versionParts.ElementAtOrDefault(1) is { Length: > 0 } v ? v : "";
+
+                        return (p.Key, workloadVersion, workloadSdkVersion);
 					})
-					.Where(t => t.version != null)
-					.OrderByDescending(t => t.version)
-					.ToList();
-		
-				foreach(var otherManifest in manifestVersionDirectories)
-				{
-                    var workloadManifestPath = Path.Combine(otherManifest.directory, "WorkloadManifest.json");
-
-                    var readableManifest = new ReadableWorkloadManifest(
-                        manifest.ManifestId,
-                        otherManifest.directory,
-                        workloadManifestPath,
-                        manifestProvider.GetSdkFeatureBand(),
-                        () => File.OpenRead(workloadManifestPath),
-                        () => WorkloadManifestReader.TryOpenLocalizationCatalogForManifest(workloadManifestPath));
-
-					yield return readableManifest;
-                }
+					.ToArray();
 			}
-        }
-
-        void RemoveOldMetadata()
-		{
-			var dir = GetInstalledWorkloadMetadataDir();
-
-			var oldWorkloadIds = new [] {
-				"microsoft-android-sdk-full",
-				"microsoft-ios-sdk-full",
-				"microsoft-maccatalyst-sdk-full",
-				"microsoft-macos-sdk-full",
-				"microsoft-tvos-sdk-full"
-			};
-
-			foreach (var owid in oldWorkloadIds)
+			else
 			{
-				try
-				{
-					var f = Path.Combine(dir, owid);
-					if (File.Exists(f))
-						File.Delete(f);
-				}
-				catch { }
-			}
-		}
+                throw new Exception("Workload command output cannot be parsed: `dotnet " + string.Join(' ', args) + "`");
+            }
+        }
 
 		async Task CliInstallWithRollback(string rollbackFile, IEnumerable<string> workloadIds)
 		{

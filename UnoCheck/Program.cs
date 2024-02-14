@@ -50,7 +50,6 @@ namespace DotNetCheck
 				config.AddCommand<CheckCommand>("check");
 				config.AddCommand<ListCheckupCommand>("list");
 				config.AddCommand<ConfigCommand>("config");
-				config.AddCommand<AcquirePackagesCommand>("acquirepackages");
 			});
 
 			var finalArgs = new List<string>();
