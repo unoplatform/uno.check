@@ -110,6 +110,39 @@ If it finds something missing, out of date, or misconfigured, it will either off
 
 ***
 
+## Running Uno.Check in a CI environment
+
+It is possible to run Uno.Check to setup your build environment in a repeatable way by using the following commands:
+
+# [**Windows**](#tab/windows)
+
+```bash
+dotnet tool install --global Uno.Check --version 1.20.0
+uno-check -v --ci --non-interactive --fix --skip vswin --skip androidemulator --skip androidsdk
+```
+
+# [**macOS**](#tab/macos)
+
+```bash
+dotnet tool install --global Uno.Check --version 1.20.0
+uno-check -v --ci --non-interactive --fix --skip xcode --skip androidemulator --skip androidsdk
+```
+
+
+# [**Linux**](#tab/linux)
+
+```bash
+dotnet tool install --global Uno.Check --version 1.20.0
+uno-check -v --ci --non-interactive --fix --skip androidemulator
+```
+
+***
+
+Pinning uno.check to a specific version will allow to keep a repeatable build over time, regardless of the updates done to Uno Platform or .NET. Make sure to regularly update to a more recent version of Uno.Check.
+
+> [!TIP]
+> You can use `dotnet package search uno.check` to search for the latest version of uno.check.
+
 ## Troubleshooting
 
 If you run into problems with uno-check, you should generally try the following:
