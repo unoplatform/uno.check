@@ -110,7 +110,7 @@ namespace DotNetCheck.DotNet
 				var start = startIndex + RollbackOutputBeginMarker.Length;
 				var json = output.Substring(start, endIndex - start);
 
-				var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
 
 				return workloads
 					.Select(p => {

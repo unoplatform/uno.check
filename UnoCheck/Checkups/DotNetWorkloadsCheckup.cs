@@ -88,7 +88,7 @@ namespace DotNetCheck.Checkups
 				}
 #endif
 
-				if (installedPackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { } installed)
+				if (installedPackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } installed)
 				{
                     ReportStatus($"{installed.id} ({installed.version}/{installed.sdkVersion}) installed.", Status.Ok);
 				}
