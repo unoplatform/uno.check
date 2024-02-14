@@ -3,12 +3,12 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "8.0.100",
-      "MACCATALYST_SDK_VERSION": "17.0.8478/8.0.100",
-      "IOS_SDK_VERSION": "17.0.8478/8.0.100",
-      "MACOS_SDK_VERSION": "14.0.8478/8.0.100",
-      "ANDROID_SDK_VERSION": "34.0.43/8.0.100",
-      "MAUI_VERSION": "8.0.3/8.0.100"
+      "DOTNET_SDK_VERSION": "8.0.200",
+      "MACCATALYST_SDK_VERSION": "17.2.8022/8.0.100",
+      "IOS_SDK_VERSION": "17.2.8022/8.0.100",
+      "MACOS_SDK_VERSION": "14.2.8022/8.0.100",
+      "ANDROID_SDK_VERSION": "34.0.79/8.0.100",
+      "MAUI_VERSION": "8.0.6/8.0.100"
     },
     "variableMappers": [
     ],
@@ -26,7 +26,7 @@
       "exactVersionName": "15A240d"
     },
     "vswin": {
-      "minimumVersion": "17.8.0-pre.1"
+      "minimumVersion": "17.10.0-pre.1"
     },
     "android": {
       "packages": [
