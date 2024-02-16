@@ -19,11 +19,13 @@ namespace DotNetCheck.DotNet
 	{
 		public readonly string[] KnownDotnetLocations;
 
-		public readonly FileInfo DotNetExeLocation;
+		private readonly FileInfo DotNetExeLocation;
 		public readonly DirectoryInfo DotNetSdkLocation;
 
 		public static string DotNetExeName
 			=> Util.IsWindows ? "dotnet.exe" : "dotnet";
+
+		public string DotNetExecutable => Exists ? DotNetExeLocation.FullName : "dotnet";
 
 		public DotNetSdk(SharedState sharedState)
 		{
@@ -46,12 +48,16 @@ namespace DotNetCheck.DotNet
 				},
 				Platform.Linux => new string[]
 				{
-					// /home/user/share/dotnet/dotnet
+					// /usr/share/dotnet/dotnet
+					Path.Combine(
+						Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+						"dotnet",
+						DotNetExeName),
+					// ~/.dotnet/dotnet
 					Path.Combine(
 						Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-						"share",
-						"dotnet",
-						DotNetExeName)
+						".dotnet",
+						DotNetExeName),
 				},
 				_ => new string[] { }
 			};
@@ -63,12 +69,13 @@ namespace DotNetCheck.DotNet
 				if (Directory.Exists(envSdkRoot))
 					sdkRoot = envSdkRoot;
 			}
-
-			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			
+			string environmentOverride = Environment.GetEnvironmentVariable("DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR");
+			if (!string.IsNullOrEmpty(environmentOverride))
 			{
-				sdkRoot = Microsoft.DotNet.NativeWrapper.EnvironmentProvider.GetDotnetExeDirectory();
+				sdkRoot = environmentOverride;
 			}
-
+			
 			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
 			{
 				var l = FindDotNetLocations();
@@ -76,6 +83,11 @@ namespace DotNetCheck.DotNet
 				{
 					sdkRoot = l.sdkDir.FullName;
 				}
+			}
+
+			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			{
+				sdkRoot = Microsoft.DotNet.NativeWrapper.EnvironmentProvider.GetDotnetExeDirectory(log: (s) => Util.Log(s.ToString()));
 			}
 
 			sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
