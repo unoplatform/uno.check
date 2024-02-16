@@ -36,7 +36,7 @@ namespace DotNetCheck.DotNet
 
 			var globalJson = new DotNetGlobalJson();
 			globalJson.Sdk.Version = sdkVersion;
-			globalJson.Sdk.RollForward = "disable";
+			globalJson.Sdk.RollForward = "latestFeature";
 			globalJson.Sdk.AllowPrerelease = true;
 			File.WriteAllText(Path.Combine(DotNetCliWorkingDir, "global.json"), globalJson.ToJson());
 		}
