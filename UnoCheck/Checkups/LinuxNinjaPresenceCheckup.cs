@@ -15,7 +15,7 @@ namespace DotNetCheck.Checkups
 
 		public override string Title => "Linux Ninja Build";
 
-		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.SkiaGtk;
+		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) => TargetPlatform.SkiaDesktop;
 
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
