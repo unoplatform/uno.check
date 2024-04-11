@@ -39,15 +39,8 @@ namespace DotNetCheck
 					return TargetPlatform.Android;
 				case "macos":
 					return TargetPlatform.macOS;
-				case "skiawpf":
-				case "skia-wpf":
-					return TargetPlatform.SkiaWPF;
-				case "skiagtk":
-				case "skia-gtk":
-					return TargetPlatform.SkiaGtk;
-				case "skiatizen":
-				case "skia-tizen":
-					return TargetPlatform.SkiaTizen;
+				case "skiadesktop":
+					return TargetPlatform.SkiaDesktop;
                 case "windows":
                 case "wasdk":
 					return TargetPlatform.WinAppSDK;
@@ -55,9 +48,9 @@ namespace DotNetCheck
                 case "win32":
                     return TargetPlatform.Windows;
 				case "skia":
-					return TargetPlatform.SkiaWPF | TargetPlatform.SkiaGtk | TargetPlatform.SkiaTizen;
+					return TargetPlatform.SkiaDesktop;
 				case "linux":
-					return TargetPlatform.SkiaGtk;
+					return TargetPlatform.SkiaDesktop;
 				case "web":
 					return TargetPlatform.WebAssembly;
 

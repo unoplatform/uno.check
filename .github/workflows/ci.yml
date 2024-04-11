@@ -265,11 +265,6 @@ jobs:
           useConfigFile: true
           configFilePath: gitversion.yml
 
-      - name: Install GTK+3
-        shell: pwsh
-        run: |
-          brew install gtk+3
-
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
         shell: pwsh
@@ -288,7 +283,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip gtk3 --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
@@ -350,12 +345,6 @@ jobs:
         with:
           distribution: 'microsoft' # See 'Supported distributions' for available options
           java-version: '11'
-
-      - name: Install GTK+3
-        shell: pwsh
-        run: |
-          sudo apt update
-          sudo apt install libgtk-3-dev
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
