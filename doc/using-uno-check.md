@@ -194,8 +194,7 @@ The following argument values for `--target` are supported:
 | ios       |                   |
 | android   |                   |
 | macos     |                   |
-| skiagtk   |                   |
-| linux     | Alias for skiagtk |
+| linux     |                   |
 | skiawpf   |                   |
 | uwp       |                   |
 | win32     |                   |

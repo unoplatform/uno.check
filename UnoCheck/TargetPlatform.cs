@@ -12,9 +12,7 @@ namespace DotNetCheck
 		iOS = 2,
 		Android = 4,
 		macOS = 8,
-		SkiaWPF = 16,
-		SkiaGtk = 32,
-		SkiaTizen = 64,
+		SkiaDesktop = 16,
 		Windows = 128,
 		WinAppSDK = 256,
 
