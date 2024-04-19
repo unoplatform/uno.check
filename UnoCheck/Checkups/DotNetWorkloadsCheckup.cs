@@ -81,7 +81,7 @@ namespace DotNetCheck.Checkups
 				if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
 
-#if DEBUG
+#if false // DEBUG
 				foreach (var installedWorload in installedPackageWorkloads)
 				{
 					ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);

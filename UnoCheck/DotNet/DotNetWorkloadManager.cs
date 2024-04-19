@@ -95,7 +95,7 @@ namespace DotNetCheck.DotNet
 				"--print-rollback"
 			};
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
@@ -105,8 +105,9 @@ namespace DotNetCheck.DotNet
 
 			var startIndex = output.IndexOf(RollbackOutputBeginMarker);
 			var endIndex = output.IndexOf(RollbackOutputEndMarker);
+			var generatesOutputMarkers = NuGetVersion.Parse(SdkVersion) < DotNetCheck.Manifest.DotNetSdk.Version9Preview3;
 
-			if (startIndex >= 0 && endIndex >= 0)
+			if (generatesOutputMarkers && startIndex >= 0 && endIndex >= 0)
 			{
 				// net8 and earlier use markers
 				var start = startIndex + RollbackOutputBeginMarker.Length;
@@ -147,7 +148,7 @@ namespace DotNetCheck.DotNet
 			args.AddRange(workloadIds);
 			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
@@ -171,7 +172,7 @@ namespace DotNetCheck.DotNet
 			};
 			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)

@@ -123,7 +123,7 @@ namespace DotNetCheck.Checkups
 			{
 				try
 				{
-					var data = new System.Net.WebClient().DownloadData("https://dl.google.com/android/repository/sys-img/android-desktop/sys-img2-3.xml");
+					var data = new System.Net.WebClient().DownloadData("https://dl.google.com/android/repository/sys-img/android-desktop/sys-img2-4.xml");
 				}
 				catch(System.Net.WebException ex)
                 {

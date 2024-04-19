@@ -8,6 +8,7 @@ namespace DotNetCheck.Manifest
 		public static readonly NuGet.Versioning.NuGetVersion Version6Preview7 = new NuGet.Versioning.NuGetVersion("6.0.100-preview.7");
 		public static readonly NuGet.Versioning.NuGetVersion Version6Preview6 = new NuGet.Versioning.NuGetVersion("6.0.100-preview.6");
 		public static readonly NuGet.Versioning.NuGetVersion Version6Preview5 = new NuGet.Versioning.NuGetVersion("6.0.100-preview.5");
+		public static readonly NuGet.Versioning.NuGetVersion Version9Preview3 = new NuGet.Versioning.NuGetVersion("9.0.100-preview.3");
 
 		[JsonProperty("urls")]
 		public Urls Urls { get; set; }
