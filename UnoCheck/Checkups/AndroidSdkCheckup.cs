@@ -178,6 +178,7 @@ namespace DotNetCheck.Checkups
 					}
 
 					var pkgToInstall = sdkInstance?.Components?.AllNotInstalled()?
+						.OrderBy(p => p.Revision)
 						.FirstOrDefault(p => p.Path.Equals(packagePath, StringComparison.OrdinalIgnoreCase)
 							&& p.Revision >= (v ?? p.Revision));
 
@@ -255,7 +256,9 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 				{
 					var v = !string.IsNullOrWhiteSpace(p.Version) ? new AndroidRevision(p.Version) : null;
 
-					var installedPkg = installed.FirstOrDefault(
+					var installedPkg = installed
+						.OrderBy(p => p.Revision)
+						.FirstOrDefault(
 						i => i.Path.Equals(p.Path.Trim(), StringComparison.OrdinalIgnoreCase)
 							&& (i.Revision >= (v ?? i.Revision) || i.InstalledRevision >= (v ?? i.Revision)));
 
