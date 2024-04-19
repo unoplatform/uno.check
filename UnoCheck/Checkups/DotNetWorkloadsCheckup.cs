@@ -81,12 +81,13 @@ namespace DotNetCheck.Checkups
 				if (!NuGetVersion.TryParse(workloadVersion, out var rpVersion))
 					rpVersion = new NuGetVersion(0, 0, 0);
 
-#if DEBUG
-				foreach (var installedWorload in installedPackageWorkloads)
+				if (Util.Verbose)
 				{
-					ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
+					foreach (var installedWorload in installedPackageWorkloads)
+					{
+						ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
+					}
 				}
-#endif
 
 				if (installedPackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } installed)
 				{

@@ -32,7 +32,7 @@
       "packages": [
         {
           "path": "emulator",
-          "version": "30.8.4"
+          "version": "34.1.19"
         },
         {
           "path": "build-tools;34.0.0",
@@ -58,7 +58,7 @@
         },
         {
           "path": "platform-tools",
-          "version": "31.0.3"
+          "version": "34.0.5"
         },
         {
           "path": "cmdline-tools;5.0",
@@ -102,7 +102,7 @@
               "workloadManifestId": "microsoft.net.sdk.android",
               "packageId": "Microsoft.NET.Sdk.Android.Manifest-8.0.100",
               "version": "$(ANDROID_SDK_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
+              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",

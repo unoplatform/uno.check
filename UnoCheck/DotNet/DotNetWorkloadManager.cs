@@ -95,7 +95,7 @@ namespace DotNetCheck.DotNet
 				"--print-rollback"
 			};
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
@@ -103,14 +103,30 @@ namespace DotNetCheck.DotNet
 
 			var output = string.Join(" ", r.StandardOutput);
 
-			var startIndex = output.IndexOf(RollbackOutputBeginMarker);
-			var endIndex = output.IndexOf(RollbackOutputEndMarker);
+			var isNet8OrBelow = NuGetVersion.Parse(SdkVersion) < DotNetCheck.Manifest.DotNetSdk.Version9Preview3;
 
-			if (startIndex >= 0 && endIndex >= 0)
+			if(isNet8OrBelow)
 			{
-				// net8 and earlier use markers
-				var start = startIndex + RollbackOutputBeginMarker.Length;
-				output = output.Substring(start, endIndex - start);
+				var startIndex = output.IndexOf(RollbackOutputBeginMarker);
+				var endIndex = output.IndexOf(RollbackOutputEndMarker);
+				
+				if (startIndex >= 0 && endIndex >= 0)
+				{
+					// net8 and earlier use markers
+					var start = startIndex + RollbackOutputBeginMarker.Length;
+					output = output.Substring(start, endIndex - start);
+				}
+			}
+			else
+			{
+				// This is needed to match the output of 
+				// https://github.com/dotnet/sdk/blob/9a965db906ca70f57c4d44df1e0da09a5b662441/src/Cli/dotnet/commands/dotnet-workload/WorkloadIntegrityChecker.cs#L43
+				var startIndex = output.IndexOf("{");
+
+				if (startIndex >= 0)
+				{
+					output = output.Substring(startIndex);
+				}
 			}
 
 			var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(output);
@@ -147,7 +163,7 @@ namespace DotNetCheck.DotNet
 			args.AddRange(workloadIds);
 			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
@@ -171,7 +187,7 @@ namespace DotNetCheck.DotNet
 			};
 			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, true, args.ToArray());
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)

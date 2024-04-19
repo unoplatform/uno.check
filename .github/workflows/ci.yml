@@ -363,7 +363,7 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --verbose --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
   
   sign:
     name: Sign Package
