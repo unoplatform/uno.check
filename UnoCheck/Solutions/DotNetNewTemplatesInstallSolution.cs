@@ -29,22 +29,24 @@ internal class DotNetNewTemplatesInstallSolution : Solution
 
     public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
     {
+        var dotnetCommand = new DotNetSdk(sharedState).DotNetExecutable;
+
         var version = _requestedVersion ??
             await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, ToolInfo.CurrentVersion.IsPrerelease);
 
         if (_uninstallLegacy)
         {
-            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {UnoLegacyTemplatesPackageName}"));
+            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions(dotnetCommand, $"new uninstall {UnoLegacyTemplatesPackageName}"));
             uninstallCli.WaitForExit();
         }
 
         if (_uninstallExisting)
         {
-            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {UnoTemplatesPackageName}"));
+            var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions(dotnetCommand, $"new uninstall {UnoTemplatesPackageName}"));
             uninstallCli.WaitForExit();
         }
 
-        var cli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new install {UnoTemplatesPackageName}::{version}") { Verbose = Util.Verbose });
+        var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(dotnetCommand, $"new install {UnoTemplatesPackageName}::{version}") { Verbose = Util.Verbose });
         cli.WaitForExit();
     }
 }

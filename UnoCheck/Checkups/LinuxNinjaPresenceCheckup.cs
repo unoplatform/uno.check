@@ -20,35 +20,34 @@ namespace DotNetCheck.Checkups
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
 			var shellHasNinjaRunnerResult = ShellProcessRunner.Run("ninja", "--version");
-			var shellRunnerAptResult = ShellProcessRunner.Run("apt", "--version");
-
-			var ninjaVersionExitCode = shellHasNinjaRunnerResult.ExitCode;
 			var output = shellHasNinjaRunnerResult.GetOutput().Trim();
 
-			var shellRunnerAboutLinuxResult = ShellProcessRunner.Run("lsb_release", "-a");
+			var hasNinja = shellHasNinjaRunnerResult.Success;
+			if (hasNinja)
+			{
+				ReportStatus($"Ninja Build Version: {output}", Status.Ok);
 
-			var linuxRelease = shellRunnerAboutLinuxResult.GetOutput().Trim();
+				return await Task.FromResult(DiagnosticResult.Ok(this));
+			};
 
-			var hasNinja = ninjaVersionExitCode == 0;
-			var hasApt = shellRunnerAptResult.ExitCode == 0;
-			var isDebianBased = linuxRelease.Contains(Ubuntu) || linuxRelease.Contains(Debian);
-
-			if (!hasNinja && (isDebianBased || hasApt))
+			var foundPackage = await LinuxPackageManagerWrapper.SearchForPackage(LinuxNinjaSolution.NinjaPackageNamesWithWrappers, true);
+			if (foundPackage)
 			{
 				return await Task.FromResult(
 					new DiagnosticResult(
 						Status.Error,
 						this,
-						new Suggestion(InstallMessage, new LinuxNinjaSolution())));
+						new Suggestion(InstallMessage, new LinuxNinjaSolution())
+					));
 			}
 
-			ReportStatus($"Ninja Build Version: {output}", Status.Ok);
-
-			return await Task.FromResult(DiagnosticResult.Ok(this));
+			return await Task.FromResult(
+				new DiagnosticResult(
+					Status.Error,
+					this,
+					new Suggestion(InstallMessage, "Ninja-build is missing, follow the installation instructions here: https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages")));
 		}
 
-		private const string Ubuntu = "Ubuntu";
-		private const string Debian = "Debian";
 		private const string InstallMessage = "Install Ninja Build";
 	}
 }
