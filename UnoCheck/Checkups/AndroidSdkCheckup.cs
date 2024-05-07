@@ -179,7 +179,8 @@ namespace DotNetCheck.Checkups
 
 					var pkgToInstall = sdkInstance?.Components?.AllNotInstalled()?
 						.OrderBy(p => p.Revision)
-						.FirstOrDefault(p => p.Path.Equals(packagePath, StringComparison.OrdinalIgnoreCase)
+						.FirstOrDefault(p => p.Channel.ID == "channel-0"
+							&& p.Path.Equals(packagePath, StringComparison.OrdinalIgnoreCase)
 							&& p.Revision >= (v ?? p.Revision));
 
 					ReportStatus($"{packagePath} ({packageVersion}) missing.", Status.Error);
