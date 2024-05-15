@@ -18,6 +18,10 @@ on:
 env:
   GitVersion_Version: 5.10.3
 
+concurrency: 
+  group: ${{github.workflow}} - ${{github.ref}}
+  cancel-in-progress: true
+  
 jobs:
   build_tool:
     name: Build
