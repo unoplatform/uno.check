@@ -3,12 +3,12 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "9.0.100-preview.3.24204.13",
-      "MACCATALYST_SDK_VERSION": "17.2.9433-net9-p3/9.0.100-preview.3",
-      "IOS_SDK_VERSION": "17.2.9433-net9-p3/9.0.100-preview.3",
-      "MACOS_SDK_VERSION": "14.2.9433-net9-p3/9.0.100-preview.3",
-      "ANDROID_SDK_VERSION": "34.99.0-preview.3.231/9.0.100-preview.3",
-      "MAUI_VERSION": "9.0.0-preview.3.10457/9.0.100-preview.3"
+      "DOTNET_SDK_VERSION": "9.0.100-preview.4.24267.66",
+      "MACCATALYST_SDK_VERSION": "17.2.9523-net9-p4/9.0.100-preview.4",
+      "IOS_SDK_VERSION": "17.2.9523-net9-p4/9.0.100-preview.4",
+      "MACOS_SDK_VERSION": "14.2.9523-net9-p4/9.0.100-preview.4",
+      "ANDROID_SDK_VERSION": "34.99.0-preview.4.272/9.0.100-preview.4",
+      "MAUI_VERSION": "9.0.0-preview.4.10690/9.0.100-preview.4"
     },
     "variableMappers": [
     ],
@@ -26,7 +26,7 @@
       "exactVersionName": "15A240d"
     },
     "vswin": {
-      "minimumVersion": "17.10.0-pre.4"
+      "minimumVersion": "17.11.0-pre.1"
     },
     "android": {
       "packages": [
@@ -100,42 +100,42 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-9.0.100-preview.4",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-9.0.100-preview.4",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-9.0.100-preview.4",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-9.0.100-preview.4",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.4",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui-android",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.3",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.4",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Linux/x64" ]
             }
