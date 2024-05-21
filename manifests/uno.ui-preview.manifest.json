@@ -130,7 +130,7 @@
               "workloadManifestId": "microsoft.net.sdk.maui",
               "packageId": "Microsoft.NET.Sdk.Maui.Manifest-8.0.100",
               "version": "$(MAUI_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
+              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             }
           ],
           "packs": []
