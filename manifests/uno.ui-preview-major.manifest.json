@@ -131,6 +131,13 @@
               "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.3",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
+            },
+            {
+              "workloadId": "maui-android",
+              "workloadManifestId": "microsoft.net.sdk.maui",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-preview.3",
+              "version": "$(MAUI_VERSION)",
+              "supportedPlatforms": [ "Linux/x64" ]
             }
           ],
           "packs": []
