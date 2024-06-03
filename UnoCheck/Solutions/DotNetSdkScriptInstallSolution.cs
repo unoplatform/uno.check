@@ -64,9 +64,7 @@ namespace DotNetCheck.Solutions
 			Util.Log($"\t{exe} {args}");
 
 			// Launch the process
-			var p = new ShellProcessRunner(new ShellProcessRunnerOptions(exe, args));
-
-			p.WaitForExit();
+			await Util.WrapShellCommandWithSudo(exe, [args]);
 		}
 	}
 }
