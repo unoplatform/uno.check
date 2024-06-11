@@ -150,7 +150,7 @@
         },
         {
           "id": "Microsoft.VisualStudio.Workload.NetCrossPlat",
-          "name": "Mobile development with .NET",
+          "name": ".NET Multi-platform App UI development",
           "requiredby": [
             "ios",
             "android"
