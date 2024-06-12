@@ -151,7 +151,7 @@ If you run into problems with uno-check, you should generally try the following:
 1. If you are running with .NET 8, and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
 
   ```dotnetcli
-  dotnet workload clean -all
+  dotnet workload clean --all
   ```
 
   This command will clean all workloads for all installed .NET versions. This will allow `uno-check` to reinstall them properly.
