@@ -27,7 +27,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
 
     public override string Id => "dotnetnewunotemplates";
 
-    public override string Title => "dotnet new Uno Project Templates";
+    public override string Title => "dotnet new Uno Project Command Line Templates";
 
     public override async Task<DiagnosticResult> Examine(SharedState history)
     {
@@ -41,7 +41,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 Status.Error,
                 this,
                 new Suggestion(
-                    $"The {TemplatesDisplayName} dotnet new templates are not installed.",
+                    $"The {TemplatesDisplayName} dotnet new command line templates are not installed.",
                     new DotNetNewTemplatesInstallSolution(legacyVersion is not null, false)));
         }
 
@@ -55,7 +55,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 Status.Error,
                 this,
                 new Suggestion(
-                    $"The {TemplatesDisplayName} dotnet new templates are not up to date " +
+                    $"The {TemplatesDisplayName} dotnet new command line templates are not up to date " +
                     $"(installed version {version}, latest available version {latestVersion}.",
                     new DotNetNewTemplatesInstallSolution(legacyVersion is not null, true, latestVersion)));
         }
