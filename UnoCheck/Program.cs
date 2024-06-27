@@ -36,6 +36,7 @@ namespace DotNetCheck
 			CheckupManager.RegisterCheckups(
 				new WindowsPythonInstallationCheckup(),
 				new WindowsLongPathCheckup(),
+				new GitCheckup(),
 				new LinuxNinjaPresenceCheckup(),
 				new HyperVCheckup(),
 				new DotNetNewUnoTemplatesCheckup(),
