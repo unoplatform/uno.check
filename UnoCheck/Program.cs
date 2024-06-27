@@ -38,8 +38,9 @@ namespace DotNetCheck
 				new WindowsLongPathCheckup(),
 				new LinuxNinjaPresenceCheckup(),
 				new HyperVCheckup(),
-                new DotNetNewUnoTemplatesCheckup(),
-                new EdgeWebView2Checkup()
+				new DotNetNewUnoTemplatesCheckup(),
+				new UnoSdkCheckup(),
+				new EdgeWebView2Checkup()
 			);
 
 			var app = new CommandApp();
