@@ -117,7 +117,7 @@ jobs:
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
@@ -127,7 +127,7 @@ jobs:
           & dotnet tool uninstall --global uno.check
 
       - name: Install and Run Tool
-        shell: pwsh
+        shell: powershell
         run: |
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
