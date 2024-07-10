@@ -13,7 +13,7 @@ namespace DotNetCheck.Checkups
     {
         public override string Id => "windowspyhtonInstallation";
 
-        public override string Title => "Windows Python Installation Checkup";
+        public override string Title => "Windows Python Installation";
 
         public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
 
