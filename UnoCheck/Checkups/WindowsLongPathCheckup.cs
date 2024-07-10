@@ -11,7 +11,7 @@ namespace DotNetCheck.Checkups
 	{
 		public override string Id => "windowslongpath";
 
-		public override string Title => "Windows Long Path Checkup";
+		public override string Title => "Windows Long Path";
 
 		public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
 

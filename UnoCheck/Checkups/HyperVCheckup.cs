@@ -13,7 +13,7 @@ namespace DotNetCheck.Checkups
 	{
 		public override string Id => "windowshyperv";
 
-		public override string Title => $"Windows Hyper-V Checkup";
+		public override string Title => $"Windows Hyper-V";
 
 		public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
 
