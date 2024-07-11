@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
@@ -15,6 +16,9 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState state)
 		{
+			// See: https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
+			Environment.SetEnvironmentVariable("PSModulePath", string.Empty);
+
 			var result = ShellProcessRunner.Run("powershell", "-Command Get-ExecutionPolicy -Scope CurrentUser");
 
 			if (result.Success)
