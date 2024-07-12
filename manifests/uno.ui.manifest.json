@@ -28,7 +28,7 @@
       "minimumVersion": "15.0.1"
     },
     "vswin": {
-      "minimumVersion": "17.9.0"
+      "minimumVersion": "17.10.4"
     },
     "android": {
       "packages": [
