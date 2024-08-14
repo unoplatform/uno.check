@@ -32,33 +32,33 @@
       "packages": [
         {
           "path": "emulator",
-          "version": "34.1.19"
+          "version": "35.2.5"
         },
         {
-          "path": "build-tools;34.0.0",
-          "version": "34.0.0"
+          "path": "build-tools;35.0.0",
+          "version": "35.0.0"
         },
         {
-          "path": "platforms;android-34",
+          "path": "platforms;android-35",
           "version": "1"
         },
         {
-          "path": "system-images;android-34;google_apis;x86_64",
-          "version": "6",
+          "path": "system-images;android-35;google_apis;x86_64",
+          "version": "7",
           "alternatives": [
             {
-              "path": "system-images;android-34;google_apis_playstore;x86_64",
-              "version": "6"
+              "path": "system-images;android-35;google_apis_playstore;x86_64",
+              "version": "7"
             },
             {
-              "path": "system-images;android-34;google_apis;arm64-v8a",
-              "version": "6"
+              "path": "system-images;android-35;google_apis;arm64-v8a",
+              "version": "7"
             }
           ]
         },
         {
           "path": "platform-tools",
-          "version": "34.0.5"
+          "version": "35.0.2"
         },
         {
           "path": "cmdline-tools;5.0",
