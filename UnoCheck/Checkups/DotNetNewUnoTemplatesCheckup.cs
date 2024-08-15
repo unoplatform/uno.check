@@ -56,7 +56,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 this,
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new command line templates are not up to date " +
-                    $"(installed version {version}, latest available version {latestVersion}.",
+                    $"(installed version {version}, latest available version {latestVersion}).",
                     new DotNetNewTemplatesInstallSolution(legacyVersion is not null, true, latestVersion)));
         }
 
@@ -84,7 +84,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
         if (match.Success)
         {
             var version = match.Groups.Values.Last();
-            if (NuGetVersion.TryParse(version.Value, out var parsedVersion))
+            if (NuGetVersion.TryParse(version.Value.Trim(), out var parsedVersion))
             {
                 return parsedVersion;
             }
