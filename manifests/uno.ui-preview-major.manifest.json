@@ -32,7 +32,7 @@
       "packages": [
         {
           "path": "emulator",
-          "version": "35.2.5"
+          "version": "34.2.16"
         },
         {
           "path": "build-tools;35.0.0",
@@ -67,13 +67,13 @@
       ],
       "emulators": [
         {
-          "sdkId": "system-images;android-34;google_apis;x86_64",
+          "sdkId": "system-images;android-35;google_apis;x86_64",
           "alternateSdkIds": [
             "system-images;android-31;google_apis_playstore;x86_64",
             "system-images;android-30;google_apis;arm64-v8a"
           ],
-          "desc": "Android Emulator - x86_64 - API34 - Google API's",
-          "apiLevel": 34,
+          "desc": "Android Emulator - x86_64 - API35 - Google API's",
+          "apiLevel": 35,
           "tag": "google_apis",
           "device": "pixel"
         }
