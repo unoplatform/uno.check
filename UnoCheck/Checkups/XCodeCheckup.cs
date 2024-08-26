@@ -52,10 +52,7 @@ namespace DotNetCheck.Checkups
 				if (selected is not null && selected.Version.IsCompatible(MinimumVersion, ExactVersion))
 				{
 					// customize runner options so the license can be displayed
-					var options = new ShellProcessRunnerOptions("xcodebuild", "")
-					{
-						RedirectOutput = Util.CI
-					};
+					var options = new ShellProcessRunnerOptions("xcodebuild", "");
 					var runner = new ShellProcessRunner(options);
 					var result = runner.WaitForExit();
 					// Check if user requires EULA to be accepted
