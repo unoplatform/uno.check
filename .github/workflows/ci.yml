@@ -55,7 +55,7 @@ jobs:
         dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: NuGet
         path: .\artifacts
@@ -94,9 +94,11 @@ jobs:
           fetch-depth: 0
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}\NuGet
+
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -197,9 +199,10 @@ jobs:
           fetch-depth: 0
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -284,9 +287,10 @@ jobs:
           fetch-depth: 0
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -340,10 +344,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -360,10 +364,10 @@ jobs:
           build\SignClient sign -i artifacts\*.nupkg -c build\SignClient.json -r "${{ secrets.UNO_PLATFORM_CODESIGN_USERNAME }}" -s "${{ secrets.UNO_PLATFORM_CODESIGN_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
 
       - name: Upload Signed Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: NuGet
-          path: .\artifacts
+          path: .\artifacts\NuGet
 
   publish_dev:
     name: Publish Dev
@@ -375,10 +379,10 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: NuGet Push
         shell: pwsh
@@ -396,10 +400,10 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: NuGet Push
         shell: pwsh
