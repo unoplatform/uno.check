@@ -16,5 +16,10 @@ namespace DotNetCheck
 Targets: webassembly ios android macos linux windows"
 			)]
 		public string[]? TargetPlatforms { get; set; }
+        
+        [CommandOption("--tfm <TARGET_FRAMEWORK>")]
+        [Description(
+            @"Run checks for a specific TFM. Use the --framework option multiple times to run checks for multiple TFM's, or omit it to run checks for all supported platforms.")]
+        public string[]? Frameworks { get; set; }
 	}
 }

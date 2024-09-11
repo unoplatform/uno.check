@@ -7,10 +7,9 @@ using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using NuGet.Frameworks;
 
 namespace DotNetCheck.Cli
 {
@@ -98,7 +97,9 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("DOTNET_FORCE", "true");
 			if (settings.CI)
 				sharedState.SetEnvironmentVariable("CI", "true");
-
+            if (settings.Frameworks is { Length: > 0 })
+                settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
+            
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
 			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);
@@ -367,6 +368,48 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("  " + msg);
 		}
 
+        private string[] ParseTfmsToTargetPlatforms(CheckSettings settings)
+        {
+            var targetPlatforms = new List<string>();
+            foreach (var tfm in settings.Frameworks!)
+            {
+                var parsedTfm = NuGetFramework.ParseFolder(tfm);
+
+                if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
+                {
+                    // Returning empty list which means that we will target all platforms.
+                    return [];
+                } 
+                if (parsedTfm.HasPlatform)
+                {
+                    switch (parsedTfm.Platform)
+                    {
+                        case "windows":
+                            targetPlatforms.Add("windows");
+                            break;
+                        case "desktop":
+                            targetPlatforms.Add("win32");
+                            break;
+                        case "ios":
+                            targetPlatforms.Add("ios");
+                            break;
+                        case "android":
+                            targetPlatforms.Add("android");
+                            break;
+                        case "macos":
+                        case "maccatalyst":
+                            targetPlatforms.Add("macos");
+                            break;
+                        case "browserwasm":
+                            targetPlatforms.Add("web");
+                            break;
+                    }
+                }
+                
+            }
+            return targetPlatforms.ToArray();
+        }
+        
 		private void RemedyStatusUpdated(object sender, RemedyStatusEventArgs e)
 		{
 			AnsiConsole.MarkupLine("  " + e.Message);
