@@ -97,6 +97,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}\NuGet
+
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -200,6 +202,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -287,6 +290,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
+          path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -343,7 +347,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
@@ -363,7 +367,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NuGet
-          path: .\artifacts
+          path: .\artifacts\NuGet
 
   publish_dev:
     name: Publish Dev
@@ -378,7 +382,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: NuGet Push
         shell: pwsh
@@ -399,7 +403,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NuGet
-          path: artifacts
+          path: artifacts\NuGet
 
       - name: NuGet Push
         shell: pwsh
