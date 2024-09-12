@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NuGet.Frameworks;
 
@@ -388,7 +389,18 @@ namespace DotNetCheck.Cli
                             targetPlatforms.Add("windows");
                             break;
                         case "desktop":
-                            targetPlatforms.Add("win32");
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                targetPlatforms.Add("win32");   
+                            }
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                            {
+                                targetPlatforms.Add("macos");
+                            }
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                            {
+                                targetPlatforms.Add("linux");
+                            }
                             break;
                         case "ios":
                             targetPlatforms.Add("ios");
