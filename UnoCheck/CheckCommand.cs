@@ -1,6 +1,4 @@
-﻿using DotNetCheck.Checkups;
-using DotNetCheck.Models;
-using NuGet.Configuration;
+﻿using DotNetCheck.Models;
 using NuGet.Versioning;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -8,9 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NuGet.Frameworks;
+
+[assembly: InternalsVisibleTo("UnoCheck.Tests")]
 
 namespace DotNetCheck.Cli
 {
@@ -313,6 +314,59 @@ namespace DotNetCheck.Cli
 
 			return exitCode;
 		}
+        
+        internal static string[] ParseTfmsToTargetPlatforms(CheckSettings settings)
+        {
+            var targetPlatforms = new List<string>();
+            foreach (var tfm in settings.Frameworks!)
+            {
+                var parsedTfm = NuGetFramework.ParseFolder(tfm);
+
+                if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
+                {
+                    // Returning empty list which means that we will target all platforms.
+                    return [];
+                } 
+                if (parsedTfm.HasPlatform)
+                {
+                    switch (parsedTfm.Platform)
+                    {
+                        case "windows":
+                            targetPlatforms.Add("windows");
+                            break;
+                        case "desktop":
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            {
+                                targetPlatforms.Add("win32");   
+                            }
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                            {
+                                targetPlatforms.Add("macos");
+                            }
+                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                            {
+                                targetPlatforms.Add("linux");
+                            }
+                            break;
+                        case "ios":
+                            targetPlatforms.Add("ios");
+                            break;
+                        case "android":
+                            targetPlatforms.Add("android");
+                            break;
+                        case "macos":
+                        case "maccatalyst":
+                            targetPlatforms.Add("macos");
+                            break;
+                        case "browserwasm":
+                            targetPlatforms.Add("web");
+                            break;
+                    }
+                }
+                
+            }
+            return targetPlatforms.ToArray();
+        }
 
 		private async Task<bool> NeedsToolUpdateAsync(CheckSettings settings)
 		{
@@ -368,59 +422,6 @@ namespace DotNetCheck.Cli
 
 			AnsiConsole.MarkupLine("  " + msg);
 		}
-
-        private string[] ParseTfmsToTargetPlatforms(CheckSettings settings)
-        {
-            var targetPlatforms = new List<string>();
-            foreach (var tfm in settings.Frameworks!)
-            {
-                var parsedTfm = NuGetFramework.ParseFolder(tfm);
-
-                if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
-                {
-                    // Returning empty list which means that we will target all platforms.
-                    return [];
-                } 
-                if (parsedTfm.HasPlatform)
-                {
-                    switch (parsedTfm.Platform)
-                    {
-                        case "windows":
-                            targetPlatforms.Add("windows");
-                            break;
-                        case "desktop":
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                            {
-                                targetPlatforms.Add("win32");   
-                            }
-                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                            {
-                                targetPlatforms.Add("macos");
-                            }
-                            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                            {
-                                targetPlatforms.Add("linux");
-                            }
-                            break;
-                        case "ios":
-                            targetPlatforms.Add("ios");
-                            break;
-                        case "android":
-                            targetPlatforms.Add("android");
-                            break;
-                        case "macos":
-                        case "maccatalyst":
-                            targetPlatforms.Add("macos");
-                            break;
-                        case "browserwasm":
-                            targetPlatforms.Add("web");
-                            break;
-                    }
-                }
-                
-            }
-            return targetPlatforms.ToArray();
-        }
         
 		private void RemedyStatusUpdated(object sender, RemedyStatusEventArgs e)
 		{

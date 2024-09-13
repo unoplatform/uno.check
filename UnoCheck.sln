@@ -14,6 +14,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnoCheck", "UnoCheck\UnoChe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.MSBuildSdkResolver", "UnoCheck.SdkResolver\Microsoft.DotNet.MSBuildSdkResolver.csproj", "{DD9F230A-D328-4F90-B030-D27035D365DA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnoCheck.Tests", "UnoCheck.Tests\UnoCheck.Tests.csproj", "{3A9041CD-1B60-4BA1-8C45-2F031845D587}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +30,10 @@ Global
 		{DD9F230A-D328-4F90-B030-D27035D365DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD9F230A-D328-4F90-B030-D27035D365DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD9F230A-D328-4F90-B030-D27035D365DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A9041CD-1B60-4BA1-8C45-2F031845D587}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A9041CD-1B60-4BA1-8C45-2F031845D587}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A9041CD-1B60-4BA1-8C45-2F031845D587}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A9041CD-1B60-4BA1-8C45-2F031845D587}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
