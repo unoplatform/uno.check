@@ -1,6 +1,6 @@
 name: CI
 
-on: 
+on:
   push:
     branches:
       - main
@@ -18,10 +18,10 @@ on:
 env:
   GitVersion_Version: 5.10.3
 
-concurrency: 
+concurrency:
   group: ${{github.workflow}} - ${{github.ref}}
   cancel-in-progress: true
-  
+
 jobs:
   build_tool:
     name: Build
@@ -59,6 +59,25 @@ jobs:
       with:
         name: NuGet
         path: .\artifacts
+
+  run_tests:
+    name: Run Unit Tests
+    needs: build_tool
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.100'
+
+      - name: Run Tests
+        run: |
+          dotnet test UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --no-restore --verbosity normal
 
   testwin:
     name: Validate Tool - Windows - ${{ matrix.manifest_name }}
@@ -109,7 +128,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -162,7 +181,7 @@ jobs:
         #    previous_tool_params: ''
         #    os: macos-12
         #    dotnet_version: 8.0.100
-           
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.17.0
@@ -208,7 +227,7 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '3.1.x'
-    
+
       # Preinstall .NET as it may fail on some build agents
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
         uses: actions/setup-dotnet@v1
@@ -224,7 +243,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -266,7 +285,7 @@ jobs:
            manifest_name: Preview
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Preview net9
-           
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
@@ -301,7 +320,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -332,7 +351,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --verbose --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
-  
+
   sign:
     name: Sign Package
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
