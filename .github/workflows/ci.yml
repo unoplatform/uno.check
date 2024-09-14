@@ -77,7 +77,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          dotnet test UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --no-restore --verbosity normal
+          dotnet test UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --verbosity normal
 
   testwin:
     name: Validate Tool - Windows - ${{ matrix.manifest_name }}
