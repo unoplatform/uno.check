@@ -182,7 +182,6 @@ jobs:
            manifest_name: Stable
            os: macos-12
            dotnet_version: 8.0.300
-           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
@@ -190,7 +189,6 @@ jobs:
            previous_tool_params: ''
            os: macos-12
            dotnet_version: 8.0.300
-           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview net9
@@ -205,7 +203,6 @@ jobs:
            previous_tool_params: ''
            os: macos-12
            dotnet_version: 8.0.300
-           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
@@ -213,7 +210,6 @@ jobs:
            previous_tool_params: '--pre'
            os: macos-12
            dotnet_version: 8.0.300
-           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            os: macos-12
@@ -302,7 +298,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
