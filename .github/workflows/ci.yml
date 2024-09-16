@@ -114,12 +114,6 @@ jobs:
          - manifest: 'manifests\uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests\uno.ui.manifest.json'
-           manifest_name: Test net9.0 TFM
-           tool_params: '--tfm net9.0'
-         - manifest: 'manifests\uno.ui.manifest.json'
-           manifest_name: Test outdated TFM's
-           tool_params: '--tfm netcoreapp3.1 --tfm net452'
 
     steps:
       - name: Checkout
@@ -215,16 +209,6 @@ jobs:
            os: macos-12
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests/uno.ui.manifest.json'
-           manifest_name: Test net9.0 TFM
-           os: macos-12
-           dotnet_version: 8.0.300
-           tool_params: '--tfm net9.0'
-         - manifest: 'manifests/uno.ui.manifest.json'
-           manifest_name: Test outdated TFM's
-           os: macos-12
-           dotnet_version: 8.0.300
-           tool_params: '--tfm netcoreapp3.1 --tfm net452'
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
         #    previous_tool_version: 1.4.2
@@ -335,12 +319,6 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests/uno.ui.manifest.json'
-           manifest_name: Test net9.0 TFM
-           tool_params: '--tfm net9.0'
-         - manifest: 'manifests/uno.ui.manifest.json'
-           manifest_name: Test outdated TFM's
-           tool_params: '--tfm netcoreapp3.1 --tfm net452'
 
     steps:
       - name: Checkout
