@@ -336,13 +336,13 @@ jobs:
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
            tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net9.0 TFM
            tool_params: '--tfm net9.0'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test outdated TFM's
            tool_params: '--tfm netcoreapp3.1 --tfm net452'
 
