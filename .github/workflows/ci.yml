@@ -182,6 +182,7 @@ jobs:
            manifest_name: Stable
            os: macos-12
            dotnet_version: 8.0.300
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
@@ -189,6 +190,7 @@ jobs:
            previous_tool_params: ''
            os: macos-12
            dotnet_version: 8.0.300
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview net9
@@ -203,6 +205,7 @@ jobs:
            previous_tool_params: ''
            os: macos-12
            dotnet_version: 8.0.300
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
@@ -210,7 +213,22 @@ jobs:
            previous_tool_params: '--pre'
            os: macos-12
            dotnet_version: 8.0.300
-
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test default Uno template TFM's
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test net9.0 TFM
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm net9.0'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test outdated TFM's
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm netcoreapp3.1 --tfm net452'
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
         #    previous_tool_version: 1.4.2
@@ -284,7 +302,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
@@ -296,23 +314,37 @@ jobs:
        include:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Preview net9
-
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: ''
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Preview Upgrade net8
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+           tool_params: '--skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test default Uno template TFM's
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test net9.0 TFM
+           tool_params: '--tfm net9.0'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test outdated TFM's
+           tool_params: '--tfm netcoreapp3.1 --tfm net452'
 
     steps:
       - name: Checkout
@@ -365,7 +397,7 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --verbose --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --verbose --non-interactive --verbose --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   sign:
     name: Sign Package
