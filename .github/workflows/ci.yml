@@ -215,12 +215,12 @@ jobs:
            os: macos-12
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-android\ios TFM's
            os: macos-12
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-browserwasm TFM
            os: macos-12
            dotnet_version: 8.0.300
@@ -329,10 +329,10 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-android\ios TFM's
            tool_params: '--tfm net8.0-android --tfm net8.0-ios'
-         - manifest: 'manifests\uno.ui.manifest.json'
+         - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-browserwasm TFM
            tool_params: '--tfm net8.0-browserwasm'
 
