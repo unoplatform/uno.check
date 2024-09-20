@@ -8,7 +8,8 @@
       "IOS_SDK_VERSION": "17.5.9270-net9-rc1/9.0.100-rc.1",
       "MACOS_SDK_VERSION": "14.5.9270-net9-rc1/9.0.100-rc.1",
       "ANDROID_SDK_VERSION": "35.0.0-rc.1.80/9.0.100-rc.1",
-      "MAUI_VERSION": "9.0.0-rc.1.24453.9/9.0.100-rc.1"
+      "MAUI_VERSION": "9.0.0-rc.1.24453.9/9.0.100-rc.1",
+      "WASMTOOLS_VERSION": "9.0.0-rc.1.24431.7/9.0.100-rc.1"
     },
     "variableMappers": [
     ],
@@ -138,6 +139,13 @@
               "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100-rc.1",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Linux/x64" ]
+            },
+            {
+             "workloadId": "wasm-tools",
+             "workloadManifestId": "microsoft.net.workload.mono.toolchain",
+             "packageId": "microsoft.net.workload.mono.toolchain.manifest-9.0.100-rc.1",
+             "version": "$(WASMTOOLS_VERSION)",
+             "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
           ],
           "packs": []
