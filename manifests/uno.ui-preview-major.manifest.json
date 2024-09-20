@@ -143,7 +143,7 @@
             {
              "workloadId": "wasm-tools",
              "workloadManifestId": "microsoft.net.workload.mono.toolchain",
-             "packageId": "microsoft.net.workload.mono.toolchain.manifest-9.0.100-rc.1",
+             "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Manifest-9.0.100-rc.1",
              "version": "$(WASMTOOLS_VERSION)",
              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
