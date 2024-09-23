@@ -23,22 +23,40 @@ namespace DotNetCheck.Checkups
 
 			SdkRoot = dotnet.DotNetSdkLocation.FullName;
 			SdkVersion = sdkVersion;
+            if (sharedState.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var activeTargetPlatforms))
+            {
+                TargetPlatforms = activeTargetPlatforms;   
+            }
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
 		}
 
-		private static bool FilterPlatform(Manifest.DotNetWorkload w)
+		private bool FilterPlatform(Manifest.DotNetWorkload w)
 		{
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
-			return w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false;
-		}
+            if (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
+            {
+                switch (w.Id)
+                {
+                    case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
+                    case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
+                    case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+                    case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+                        return true;
+                }
+                
+            }
+
+            return false;
+        }
 
 		public readonly string SdkRoot;
 		public readonly string SdkVersion;
 		public readonly string[] NuGetPackageSources;
 		public readonly Manifest.DotNetWorkload[] RequiredWorkloads;
+        public readonly TargetPlatform TargetPlatforms;
 
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new[] { new CheckupDependency("dotnet") };
