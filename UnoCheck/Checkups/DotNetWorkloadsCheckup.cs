@@ -44,6 +44,7 @@ namespace DotNetCheck.Checkups
                     case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
                     case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
                     case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+                    case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
                         return true;
                 }
                 
