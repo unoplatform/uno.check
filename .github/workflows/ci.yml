@@ -1,6 +1,6 @@
 name: CI
 
-on: 
+on:
   push:
     branches:
       - main
@@ -18,10 +18,10 @@ on:
 env:
   GitVersion_Version: 5.10.3
 
-concurrency: 
+concurrency:
   group: ${{github.workflow}} - ${{github.ref}}
   cancel-in-progress: true
-  
+
 jobs:
   build_tool:
     name: Build
@@ -60,6 +60,25 @@ jobs:
         name: NuGet
         path: .\artifacts
 
+  run_tests:
+    name: Run Unit Tests
+    needs: build_tool
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.100'
+
+      - name: Run Tests
+        run: |
+          dotnet test UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --verbosity normal
+
   testwin:
     name: Validate Tool - Windows - ${{ matrix.manifest_name }}
     needs: build_tool
@@ -70,22 +89,46 @@ jobs:
        include:
          - manifest: 'manifests\uno.ui.manifest.json'
            manifest_name: Stable
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
          - manifest: 'manifests\uno.ui-preview.manifest.json'
            manifest_name: Preview
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
            manifest_name: Preview net9
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
          - manifest: 'manifests\uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: ''
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
          - manifest: 'manifests\uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
            manifest_name: Preview Upgrade net8
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+           tool_params: '--target webassembly --target ios --target android --target macos --target linux --target win32'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test default Uno template TFM's
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test net8.0-android\ios TFM's
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios'
+         - manifest: 'manifests\uno.ui.manifest.json'
+           manifest_name: Test net8.0-browserwasm TFM
+           tool_params: '--tfm net8.0-browserwasm'
+         - manifest: 'manifests\uno.ui-preview-major.manifest.json'
+           manifest_name: Test default Uno template TFM's with net9
+           tool_params: '--tfm net9.0-android --tfm net9.0-ios --tfm net9.0-maccatalyst --tfm net9.0-windows10.0.19041 --tfm net9.0-browserwasm --tfm net9.0-desktop'
+         - manifest: 'manifests\uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-android\ios TFM's
+           tool_params: '--tfm net9.0-android --tfm net9.0-ios'
+         - manifest: 'manifests\uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-browserwasm TFM
+           tool_params: '--tfm net9.0-browserwasm'
 
     steps:
       - name: Checkout
@@ -109,7 +152,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -135,7 +178,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --target webassembly --target ios --target android --target macos --target linux --target win32 --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --manifest ${{ matrix.manifest }} --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 ${{ matrix.tool_params }}
 
   testmac:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}/${{ matrix.os }}
@@ -162,7 +205,7 @@ jobs:
         #    previous_tool_params: ''
         #    os: macos-12
         #    dotnet_version: 8.0.100
-           
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.17.0
@@ -176,7 +219,21 @@ jobs:
            previous_tool_params: '--pre'
            os: macos-12
            dotnet_version: 8.0.300
-
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test default Uno template TFM's
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test net8.0-android\ios TFM's
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test net8.0-browserwasm TFM
+           os: macos-12
+           dotnet_version: 8.0.300
+           tool_params: '--tfm net8.0-browserwasm'
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
         #    previous_tool_version: 1.4.2
@@ -208,7 +265,7 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '3.1.x'
-    
+
       # Preinstall .NET as it may fail on some build agents
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
         uses: actions/setup-dotnet@v1
@@ -224,7 +281,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -250,7 +307,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
@@ -266,7 +323,6 @@ jobs:
            manifest_name: Preview
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Preview net9
-           
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.4.2
@@ -279,6 +335,24 @@ jobs:
            manifest_name: Preview Upgrade net8
            previous_tool_version: 1.4.2
            previous_tool_params: '--pre'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test default Uno template TFM's
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test net8.0-android\ios TFM's
+           tool_params: '--tfm net8.0-android --tfm net8.0-ios'
+         - manifest: 'manifests/uno.ui.manifest.json'
+           manifest_name: Test net8.0-browserwasm TFM
+           tool_params: '--tfm net8.0-browserwasm'
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Test default Uno template TFM's with net9
+           tool_params: '--tfm net9.0-android --tfm net9.0-ios --tfm net9.0-maccatalyst --tfm net9.0-windows10.0.19041 --tfm net9.0-browserwasm --tfm net9.0-desktop'
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-android\ios TFM's
+           tool_params: '--tfm net9.0-android --tfm net9.0-ios'
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-browserwasm TFM
+           tool_params: '--tfm net9.0-browserwasm'
 
     steps:
       - name: Checkout
@@ -301,7 +375,7 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0.9.9
         with:
           versionSpec: ${{ env.GitVersion_Version }}
-    
+
       - name: GitVersion
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.9
@@ -331,8 +405,8 @@ jobs:
           Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --verbose --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }}
-  
+          & uno-check --ci --fix --verbose --non-interactive --verbose --manifest ${{ matrix.manifest }} --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 ${{ matrix.tool_params }}
+
   sign:
     name: Sign Package
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
