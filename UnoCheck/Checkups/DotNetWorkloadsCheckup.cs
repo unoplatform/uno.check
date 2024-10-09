@@ -41,6 +41,10 @@ namespace DotNetCheck.Checkups
                 switch (w.Id)
                 {
                     case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
+                    case "maui-android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
+                    case "maui" when (TargetPlatforms.HasFlag(TargetPlatform.Android)
+									|| TargetPlatforms.HasFlag(TargetPlatform.iOS)
+									|| TargetPlatforms.HasFlag(TargetPlatform.macOS)):
                     case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
                     case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
                     case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
