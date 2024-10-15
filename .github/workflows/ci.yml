@@ -314,6 +314,10 @@ jobs:
     needs: build_tool
     runs-on: ubuntu-latest
 
+    env:
+      # required for october 2024 agents update
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
+
     strategy:
       matrix:
        include:
