@@ -23,10 +23,10 @@ namespace DotNetCheck.Checkups
 
 			SdkRoot = dotnet.DotNetSdkLocation.FullName;
 			SdkVersion = sdkVersion;
-            if (sharedState.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var activeTargetPlatforms))
-            {
-                TargetPlatforms = activeTargetPlatforms;   
-            }
+			if (sharedState.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var activeTargetPlatforms))
+			{
+				TargetPlatforms = activeTargetPlatforms;
+			}
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
 		}
@@ -36,32 +36,32 @@ namespace DotNetCheck.Checkups
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
-            if (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
-            {
-                switch (w.Id)
-                {
-                    case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
-                    case "maui-android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
-                    case "maui" when (TargetPlatforms.HasFlag(TargetPlatform.Android)
+			if (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
+			{
+				switch (w.Id)
+				{
+					case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
+					case "maui-android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
+					case "maui" when (TargetPlatforms.HasFlag(TargetPlatform.Android)
 									|| TargetPlatforms.HasFlag(TargetPlatform.iOS)
 									|| TargetPlatforms.HasFlag(TargetPlatform.macOS)):
-                    case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
-                    case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
-                    case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
-                    case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
-                        return true;
-                }
-                
-            }
+					case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
+					case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+					case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+					case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
+						return true;
+				}
 
-            return false;
-        }
+			}
+
+			return false;
+		}
 
 		public readonly string SdkRoot;
 		public readonly string SdkVersion;
 		public readonly string[] NuGetPackageSources;
 		public readonly Manifest.DotNetWorkload[] RequiredWorkloads;
-        public readonly TargetPlatform TargetPlatforms;
+		public readonly TargetPlatform TargetPlatforms;
 
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new[] { new CheckupDependency("dotnet") };
@@ -92,7 +92,8 @@ namespace DotNetCheck.Checkups
 			var manager = new DotNetWorkloadManager(SdkRoot, SdkVersion, NuGetPackageSources);
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
-			var installedPackageWorkloads = await manager.GetInstalledWorkloads();
+			var installedWorkloads = await manager.GetInstalledWorkloads();
+			var availablePackageWorkloads = await manager.GetAvailableWorkloads();
 
 			foreach (var rp in RequiredWorkloads)
 			{
@@ -106,20 +107,23 @@ namespace DotNetCheck.Checkups
 
 				if (Util.Verbose)
 				{
-					foreach (var installedWorload in installedPackageWorkloads)
+					foreach (var installedWorload in availablePackageWorkloads)
 					{
-						ReportStatus($"Reported installed: {installedWorload.id}: {installedWorload.version}", null);
+						ReportStatus($"Available workload: {installedWorload.id}: {installedWorload.version}", null);
 					}
 				}
 
-				if (installedPackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } installed)
+				if (
+					availablePackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } available
+					&& installedWorkloads.Contains(rp.Id)
+				)
 				{
-                    ReportStatus($"{installed.id} ({installed.version}/{installed.sdkVersion}) installed.", Status.Ok);
+					ReportStatus($"{available.id} ({available.version}/{available.sdkVersion}) is installed.", Status.Ok);
 				}
 				else
 				{
-                    ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) not installed.", Status.Error);
-                    missingWorkloads.Add(rp);
+					ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) is not installed.", Status.Error);
+					missingWorkloads.Add(rp);
 				}
 			}
 

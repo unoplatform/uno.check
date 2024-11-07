@@ -25,6 +25,8 @@ namespace DotNetCheck.DotNet
 {
 	public class DotNetWorkloadManager
 	{
+		private record WorkloadListResult(string[] installed);
+
 		public DotNetWorkloadManager(string sdkRoot, string sdkVersion, params string[] nugetPackageSources)
 		{
 			SdkRoot = sdkRoot;
@@ -81,10 +83,40 @@ namespace DotNetCheck.DotNet
 			return rollbackFile;
 		}
 
-        const string RollbackOutputBeginMarker = "==workloadRollbackDefinitionJsonOutputStart==";
-        const string RollbackOutputEndMarker = "==workloadRollbackDefinitionJsonOutputEnd==";
+		private (string begin, string end) RollbackOutputMarker = (
+			"==workloadRollbackDefinitionJsonOutputStart==",
+			"==workloadRollbackDefinitionJsonOutputEnd==");
 
-		public async Task<(string id, string version, string sdkVersion)[]> GetInstalledWorkloads()
+		private (string begin, string end) ListOutputMarker = (
+			"==workloadListJsonOutputStart==",
+			"==workloadListJsonOutputEnd==");
+
+		public async Task<string[]> GetInstalledWorkloads()
+		{
+			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
+
+			var args = new List<string>
+			{
+				"workload",
+				"list",
+				"--machine-readable"
+			};
+
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+
+			// Throw if this failed with a bad exit code
+			if (r.ExitCode != 0)
+				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+
+			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
+
+			// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
+			var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
+
+			return workloads.installed;
+		}
+
+		public async Task<(string id, string version, string sdkVersion)[]> GetAvailableWorkloads()
 		{
 			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
@@ -101,33 +133,7 @@ namespace DotNetCheck.DotNet
 			if (r.ExitCode != 0)
 				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
 
-			var output = string.Join(" ", r.StandardOutput);
-
-			var isNet8OrBelow = NuGetVersion.Parse(SdkVersion) < DotNetCheck.Manifest.DotNetSdk.Version9Preview3;
-
-			if(isNet8OrBelow)
-			{
-				var startIndex = output.IndexOf(RollbackOutputBeginMarker);
-				var endIndex = output.IndexOf(RollbackOutputEndMarker);
-				
-				if (startIndex >= 0 && endIndex >= 0)
-				{
-					// net8 and earlier use markers
-					var start = startIndex + RollbackOutputBeginMarker.Length;
-					output = output.Substring(start, endIndex - start);
-				}
-			}
-			else
-			{
-				// This is needed to match the output of 
-				// https://github.com/dotnet/sdk/blob/9a965db906ca70f57c4d44df1e0da09a5b662441/src/Cli/dotnet/commands/dotnet-workload/WorkloadIntegrityChecker.cs#L43
-				var startIndex = output.IndexOf("{");
-
-				if (startIndex >= 0)
-				{
-					output = output.Substring(startIndex);
-				}
-			}
+			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), RollbackOutputMarker);
 
 			var workloads = JsonSerializer.Deserialize<Dictionary<string, string>>(output);
 
@@ -194,17 +200,36 @@ namespace DotNetCheck.DotNet
 				throw new Exception("Workload Repair failed: `dotnet " + string.Join(' ', args) + "`");
 		}
 
-		string GetInstalledWorkloadMetadataDir()
+		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)
 		{
-			int last2DigitsTo0(int versionBuild)
-				=> versionBuild / 100 * 100;
+			var isNet8OrBelow = NuGetVersion.Parse(SdkVersion) < DotNetCheck.Manifest.DotNetSdk.Version9Preview3;
 
-			if (!Version.TryParse(SdkVersion.Split('-')[0], out var result))
-				throw new ArgumentException("Invalid 'SdkVersion' version: " + SdkVersion);
+			if (isNet8OrBelow)
+			{
+				var startIndex = output.IndexOf(marker.begin);
+				var endIndex = output.IndexOf(marker.end);
 
-			var sdkVersionBand = $"{result.Major}.{result.Minor}.{last2DigitsTo0(result.Build)}";
-			
-			return Path.Combine(SdkRoot, "metadata", "workloads", sdkVersionBand, "InstalledWorkloads");
+				if (startIndex >= 0 && endIndex >= 0)
+				{
+					// net8 and earlier use markers
+					var start = startIndex + marker.begin.Length;
+					output = output.Substring(start, endIndex - start);
+				}
+			}
+			else
+			{
+				// This is needed to match the output of 
+				// https://github.com/dotnet/sdk/blob/9a965db906ca70f57c4d44df1e0da09a5b662441/src/Cli/dotnet/commands/dotnet-workload/WorkloadIntegrityChecker.cs#L43
+				var startIndex = output.IndexOf("{");
+
+				if (startIndex >= 0)
+				{
+					output = output.Substring(startIndex);
+				}
+			}
+
+			return output;
 		}
+
 	}
 }
