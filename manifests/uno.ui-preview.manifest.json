@@ -3,12 +3,13 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "8.0.201",
-      "MACCATALYST_SDK_VERSION": "17.2.8022/8.0.100",
-      "IOS_SDK_VERSION": "17.2.8022/8.0.100",
-      "MACOS_SDK_VERSION": "14.2.8022/8.0.100",
-      "ANDROID_SDK_VERSION": "34.0.79/8.0.100",
-      "MAUI_VERSION": "8.0.6/8.0.100"
+      "DOTNET_SDK_VERSION": "9.0.100",
+      "MACCATALYST_SDK_VERSION": "18.0.9617/9.0.100",
+      "IOS_SDK_VERSION": "18.0.9617/9.0.100",
+      "MACOS_SDK_VERSION": "15.0.9617/9.0.100",
+      "ANDROID_SDK_VERSION": "35.0.7/9.0.100",
+      "MAUI_VERSION": "9.0.0/9.0.100",
+      "WASMTOOLS_VERSION": "9.0.0/9.0.100"
     },
     "variableMappers": [
     ],
@@ -22,43 +23,43 @@
       }
     },
     "xcode": {
-      "exactVersion": "15.0",
-      "exactVersionName": "15A240d"
+      "exactVersion": "16.0",
+      "exactVersionName": "15F31d"
     },
     "vswin": {
-      "minimumVersion": "17.10.4"
+      "minimumVersion": "17.12"
     },
     "android": {
       "packages": [
         {
           "path": "emulator",
-          "version": "34.1.19"
+          "version": "34.2.16"
         },
         {
-          "path": "build-tools;34.0.0",
-          "version": "34.0.0"
+          "path": "build-tools;35.0.0",
+          "version": "35.0.0"
         },
         {
-          "path": "platforms;android-34",
+          "path": "platforms;android-35",
           "version": "1"
         },
         {
-          "path": "system-images;android-34;google_apis;x86_64",
-          "version": "6",
+          "path": "system-images;android-35;google_apis;x86_64",
+          "version": "7",
           "alternatives": [
             {
-              "path": "system-images;android-34;google_apis_playstore;x86_64",
-              "version": "6"
+              "path": "system-images;android-35;google_apis_playstore;x86_64",
+              "version": "7"
             },
             {
-              "path": "system-images;android-34;google_apis;arm64-v8a",
-              "version": "6"
+              "path": "system-images;android-35;google_apis;arm64-v8a",
+              "version": "7"
             }
           ]
         },
         {
           "path": "platform-tools",
-          "version": "34.0.5"
+          "version": "35.0.2"
         },
         {
           "path": "cmdline-tools;5.0",
@@ -67,13 +68,13 @@
       ],
       "emulators": [
         {
-          "sdkId": "system-images;android-34;google_apis;x86_64",
+          "sdkId": "system-images;android-35;google_apis;x86_64",
           "alternateSdkIds": [
             "system-images;android-31;google_apis_playstore;x86_64",
             "system-images;android-30;google_apis;arm64-v8a"
           ],
-          "desc": "Android Emulator - x86_64 - API34 - Google API's",
-          "apiLevel": 34,
+          "desc": "Android Emulator - x86_64 - API35 - Google API's",
+          "apiLevel": 35,
           "tag": "google_apis",
           "device": "pixel"
         }
@@ -100,44 +101,51 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-9.0.100",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-9.0.100",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-9.0.100",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "macos",
               "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-9.0.100",
               "version": "$(MACOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui-android",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-8.0.100",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-9.0.100",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Linux/x64" ]
+            },
+            {
+             "workloadId": "wasm-tools",
+             "workloadManifestId": "microsoft.net.workload.mono.toolchain.current",
+             "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Manifest-9.0.100",
+             "version": "$(WASMTOOLS_VERSION)",
+             "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
           ],
           "packs": []

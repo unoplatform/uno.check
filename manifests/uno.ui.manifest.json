@@ -4,12 +4,12 @@
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
       "DOTNET_SDK_VERSION": "9.0.100",
-      "MACCATALYST_SDK_VERSION": "18.0.9600-net9-rc2/9.0.100",
-      "IOS_SDK_VERSION": "18.0.9600-net9-rc2/9.0.100",
-      "MACOS_SDK_VERSION": "15.0.9600-net9-rc2/9.0.100",
-      "ANDROID_SDK_VERSION": "35.0.0-rc.2.152/9.0.100",
-      "MAUI_VERSION": "9.0.0-rc.2.24503.2/9.0.100",
-      "WASMTOOLS_VERSION": "9.0.0-rc.2.24473.5/9.0.100"
+      "MACCATALYST_SDK_VERSION": "18.0.9617/9.0.100",
+      "IOS_SDK_VERSION": "18.0.9617/9.0.100",
+      "MACOS_SDK_VERSION": "15.0.9617/9.0.100",
+      "ANDROID_SDK_VERSION": "35.0.7/9.0.100",
+      "MAUI_VERSION": "9.0.0/9.0.100",
+      "WASMTOOLS_VERSION": "9.0.0/9.0.100"
     },
     "variableMappers": [
     ],
@@ -23,11 +23,11 @@
       }
     },
     "xcode": {
-      "exactVersion": "15.4",
+      "exactVersion": "16.0",
       "exactVersionName": "15F31d"
     },
     "vswin": {
-      "minimumVersion": "17.11.0-pre.3"
+      "minimumVersion": "17.12"
     },
     "android": {
       "packages": [
