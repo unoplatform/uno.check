@@ -29,7 +29,7 @@ If it finds something missing, out of date, or misconfigured, it will either off
         dotnet tool update -g uno.check
         ```
 
-1. Run the tool from the command prompt with the following command:
+1. Run the tool from the command prompt (as administrator) with the following command:
 
     ```bash
     uno-check
