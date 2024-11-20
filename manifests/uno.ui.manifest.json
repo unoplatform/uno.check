@@ -23,7 +23,7 @@
       }
     },
     "xcode": {
-      "exactVersion": "16.0"
+      "minimumVersion": "16.1"
     },
     "vswin": {
       "minimumVersion": "17.12"
