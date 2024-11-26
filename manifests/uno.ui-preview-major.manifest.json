@@ -62,7 +62,7 @@
         },
         {
           "path": "cmdline-tools;5.0",
-          "version": "5.0"
+          "version": "12.0"
         }
       ],
       "emulators": [
