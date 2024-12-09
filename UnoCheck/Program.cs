@@ -13,6 +13,8 @@ namespace DotNetCheck
 	{
 		static Task<int> Main(string[] args)
 		{
+			TelemetryClient.Init();
+
 			// Need to register the code pages provider for code that parses
 			// and later needs ISO-8859-2
 			System.Text.Encoding.RegisterProvider(

@@ -43,7 +43,7 @@ namespace DotNetCheck.Checkups
 
 			AndroidSdk.AvdManager avdManager = null;
 
-			var javaHome = history.GetEnvironmentVariable("JAVA_HOME");
+			var javaHome = history.GetEnvironmentVariable("LATEST_JAVA_HOME") ?? history.GetEnvironmentVariable("JAVA_HOME");
 			string java = null;
 			if (!string.IsNullOrEmpty(javaHome) && Directory.Exists(javaHome))
 				java = Path.Combine(javaHome, "bin", "java" + (Util.IsWindows ? ".exe" : ""));
@@ -90,6 +90,12 @@ namespace DotNetCheck.Checkups
 				{
 					var devices = avdManager.ListDevices();
 
+                    Util.Log($"Listing devices:");
+					foreach (var device in devices)
+					{
+                        Util.Log($"Device: {device.Name} ({device.Id})");
+					}
+
 					preferredDevice = devices.FirstOrDefault(d => d.Name.Contains("pixel", StringComparison.OrdinalIgnoreCase));
 				}
 				else
@@ -120,7 +126,7 @@ namespace DotNetCheck.Checkups
 								var installer = new AndroidSDKInstaller(new Helper(), AndroidManifestType.GoogleV2);
 
 								var androidSdkPath = history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME");
-								installer.Discover(new List<string> { androidSdkPath});
+								installer.Discover(new List<string> { androidSdkPath });
 
 								var sdkInstance = installer.FindInstance(androidSdkPath);
 
@@ -145,8 +151,27 @@ namespace DotNetCheck.Checkups
 
 								var sdkId = sdkPackage?.Path ?? me.SdkId;
 
-								avdManager.Create($"Android_Emulator_{me.ApiLevel}", sdkId, device: preferredDevice?.Id, tag: "google_apis", force: true, interactive: true);
-								return Task.CompletedTask;
+								var result = avdManager.Create(
+									$"Android_Emulator_{me.ApiLevel}",
+									sdkId,
+									device: preferredDevice?.Id,
+									tag: "google_apis",
+									force: true,
+									interactive: true);
+
+								foreach (var msg in result.output)
+								{
+                                    Util.Log(msg);
+								}
+
+								if (result.success)
+								{
+									return Task.CompletedTask;
+								}
+								else
+								{
+									throw new Exception($"Unable to create Emulator");
+								}
 							}
 							catch (Exception ex)
 							{
