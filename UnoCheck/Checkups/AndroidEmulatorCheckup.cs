@@ -90,6 +90,12 @@ namespace DotNetCheck.Checkups
 				{
 					var devices = avdManager.ListDevices();
 
+					ReportStatus($"Listing devices:", null);
+					foreach (var device in devices)
+					{
+						ReportStatus($"Device: {device.Name} ({device.Id})", null);
+					}
+
 					preferredDevice = devices.FirstOrDefault(d => d.Name.Contains("pixel", StringComparison.OrdinalIgnoreCase));
 				}
 				else
