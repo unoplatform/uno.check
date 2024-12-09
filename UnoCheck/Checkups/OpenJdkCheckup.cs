@@ -68,7 +68,8 @@ namespace DotNetCheck.Checkups
 
 			var jdks = xamJdks.Concat(FindJdks())
 				.GroupBy(j => j.Directory.FullName)
-				.Select(g => g.First());
+				.Select(g => g.First())
+				.OrderBy(s => s.Version);
 
 			var ok = false;
 
@@ -96,7 +97,14 @@ namespace DotNetCheck.Checkups
 					ReportStatus($"{jdk.Version} ({jdk.Directory.FullName})", null);
 			}
 
-			if (ok)
+            // Setup the latest LATEST_JAVA_HOME
+            if (jdks.Any())
+            {
+                var latest = jdks.Last();
+                history.SetEnvironmentVariable("LATEST_JAVA_HOME", latest.Directory.FullName);
+            }
+
+            if (ok)
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
 			if (Util.IsLinux)

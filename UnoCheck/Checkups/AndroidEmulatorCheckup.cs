@@ -44,7 +44,7 @@ namespace DotNetCheck.Checkups
 
 			AndroidSdk.AvdManager avdManager = null;
 
-			var javaHome = history.GetEnvironmentVariable("JAVA_HOME");
+			var javaHome = history.GetEnvironmentVariable("LATEST_JAVA_HOME") ?? history.GetEnvironmentVariable("JAVA_HOME");
 			string java = null;
 			if (!string.IsNullOrEmpty(javaHome) && Directory.Exists(javaHome))
 				java = Path.Combine(javaHome, "bin", "java" + (Util.IsWindows ? ".exe" : ""));
