@@ -69,7 +69,7 @@ namespace DotNetCheck.AndroidSdk
 		}
 
 
-		public (bool success, string[] output) Create(string name, string sdkId, string device = null, string path = null, string tag = null, bool force = false, bool interactive = false)
+		public (bool success, string[] output) Create(string name, string sdkId, string device = null, string abi = null, string path = null, string tag = null, bool force = false, bool interactive = false)
 		{
 			var args = new List<string> {
 				"create", "avd", "--name", name, "--package", $"\"{sdkId}\""
@@ -81,13 +81,19 @@ namespace DotNetCheck.AndroidSdk
 				args.Add($"\"{device}\"");
 			}
 
-			if (!string.IsNullOrEmpty(path))
-			{
-				args.Add("-c");
-				args.Add($"\"{path}\"");
-			}
+            if (!string.IsNullOrEmpty(path))
+            {
+                args.Add("-c");
+                args.Add($"\"{path}\"");
+            }
 
-			if (force)
+            if (!string.IsNullOrEmpty(abi))
+            {
+                args.Add("--abi");
+                args.Add($"\"{abi}\"");
+            }
+
+            if (force)
 				args.Add("--force");
 
 			if (!string.IsNullOrEmpty(path))

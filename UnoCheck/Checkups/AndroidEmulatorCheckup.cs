@@ -152,7 +152,14 @@ namespace DotNetCheck.Checkups
 
 								var sdkId = sdkPackage?.Path ?? me.SdkId;
 
-								var result = avdManager.Create($"Android_Emulator_{me.ApiLevel}", sdkId, device: preferredDevice?.Id, tag: "google_apis", force: true, interactive: true);
+								var result = avdManager.Create(
+									$"Android_Emulator_{me.ApiLevel}",
+									sdkId,
+									device: preferredDevice?.Id,
+									tag: "google_apis",
+									force: true,
+									interactive: true,
+									abi: Util.IsArm64 ? armArch : "x86_64");
 
 								foreach (var msg in result.output)
 								{
