@@ -16,7 +16,7 @@ internal static class TelemetryClient
     {
         try
         {
-            _telemetry = new Telemetry(InstrumentationKey);
+            _telemetry = new Telemetry(InstrumentationKey, "uno-check");
         }
         catch (Exception e)
         {
@@ -31,7 +31,7 @@ internal static class TelemetryClient
         try
         {
             _telemetry.TrackEvent(
-                "unocheck-check-start",
+                "check-start",
                 [],
                 []
             );
@@ -49,7 +49,7 @@ internal static class TelemetryClient
         try
         {
             _telemetry.TrackEvent(
-                "unocheck-check-success",
+                "check-success",
                 [],
                 [
                     ("Duration", elapsed.TotalSeconds)
@@ -69,7 +69,7 @@ internal static class TelemetryClient
         try
         {
             _telemetry.TrackEvent(
-                "unocheck-check-warn",
+                "check-warn",
                 [
                     ("ReportedChecks", warnChecks),
                 ],
@@ -91,7 +91,7 @@ internal static class TelemetryClient
         try
         {
             _telemetry.TrackEvent(
-                "unocheck-check-fail",
+                "check-fail",
                 [
                     ("ReportedChecks", failedChecks),
                 ],

@@ -9,7 +9,6 @@ using DotNetCheck.Solutions;
 using Xamarin.Installer.AndroidSDK;
 using Xamarin.Installer.AndroidSDK.Manager;
 using System.IO;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace DotNetCheck.Checkups
 {
