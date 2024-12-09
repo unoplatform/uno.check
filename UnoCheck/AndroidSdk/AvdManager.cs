@@ -308,8 +308,9 @@ namespace DotNetCheck.AndroidSdk
 			proc.StartInfo.UseShellExecute = false;
 			proc.StartInfo.RedirectStandardOutput = true;
 			proc.StartInfo.RedirectStandardError = true;
+			proc.StartInfo.RedirectStandardInput = !string.IsNullOrWhiteSpace(forcedInput);
 
-			var output = new List<string>();
+            var output = new List<string>();
 
 			proc.OutputDataReceived += (s, e) =>
 			{
