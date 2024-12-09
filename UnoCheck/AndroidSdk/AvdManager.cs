@@ -322,10 +322,13 @@ namespace DotNetCheck.AndroidSdk
 					output.Add(e.Data);
 			};
 
+			Util.Log($"Running {proc.StartInfo.FileName} {proc.StartInfo.Arguments} in {proc.StartInfo.WorkingDirectory}");
+
 			proc.Start();
 			proc.BeginOutputReadLine();
 			proc.BeginErrorReadLine();
 			proc.WaitForExit();
+
 
 			return (proc.ExitCode == 0, output.ToArray());
 		}
