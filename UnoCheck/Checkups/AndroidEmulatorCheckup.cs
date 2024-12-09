@@ -158,8 +158,7 @@ namespace DotNetCheck.Checkups
 									device: preferredDevice?.Id,
 									tag: "google_apis",
 									force: true,
-									interactive: true,
-									abi: Util.IsArm64 ? armArch : "x86_64");
+									interactive: true);
 
 								foreach (var msg in result.output)
 								{

@@ -69,7 +69,7 @@ namespace DotNetCheck.AndroidSdk
 		}
 
 
-		public (bool success, string[] output) Create(string name, string sdkId, string device = null, string abi = null, string path = null, string tag = null, bool force = false, bool interactive = false)
+		public (bool success, string[] output) Create(string name, string sdkId, string device = null, string path = null, string tag = null, bool force = false, bool interactive = false)
 		{
 			var args = new List<string> {
 				"create", "avd", "--name", name, "--package", $"\"{sdkId}\""
@@ -87,12 +87,6 @@ namespace DotNetCheck.AndroidSdk
                 args.Add($"\"{path}\"");
             }
 
-            if (!string.IsNullOrEmpty(abi))
-            {
-                args.Add("--abi");
-                args.Add($"\"{abi}\"");
-            }
-
             if (force)
 				args.Add("--force");
 
@@ -102,7 +96,7 @@ namespace DotNetCheck.AndroidSdk
 				args.Add($"\"{path}\"");
 			}
 
-			return AvdManagerRun(args.ToArray());
+			return AvdManagerRun("no", args.ToArray());
 		}
 
 		public (bool success, string[] output) Delete(string name)
@@ -128,7 +122,7 @@ namespace DotNetCheck.AndroidSdk
 				args.Add(newName);
 			}
 
-			return AvdManagerRun(args.ToArray());
+			return AvdManagerRun(null, args.ToArray());
 		}
 
 		static Regex rxListTargets = new Regex(@"id:\s+(?<id>[^\n]+)\s+Name:\s+(?<name>[^\n]+)\s+Type\s?:\s+(?<type>[^\n]+)\s+API level\s?:\s+(?<api>[^\n]+)\s+Revision\s?:\s+(?<revision>[^\n]+)", RegexOptions.Multiline | RegexOptions.Compiled);
@@ -284,7 +278,7 @@ namespace DotNetCheck.AndroidSdk
 		}
 
 
-        (bool success, string[] output) AvdManagerRun(params string[] args)
+        (bool success, string[] output) AvdManagerRun(string forcedInput = null, params string[] args)
 		{
 			var adbManager = FindToolPath(AndroidSdkHome);
 			var java = Java;
@@ -331,6 +325,14 @@ namespace DotNetCheck.AndroidSdk
 			Util.Log($"Running {proc.StartInfo.FileName} {proc.StartInfo.Arguments} in {proc.StartInfo.WorkingDirectory}");
 
 			proc.Start();
+
+			if (!string.IsNullOrWhiteSpace(forcedInput))
+			{
+                proc.StandardInput.WriteLine(forcedInput);
+                proc.StandardInput.Flush();
+                proc.StandardInput.Close();
+            }
+
 			proc.BeginOutputReadLine();
 			proc.BeginErrorReadLine();
 			proc.WaitForExit();
