@@ -20,9 +20,9 @@ namespace DotNetCheck.Cli
 		public override async Task<int> ExecuteAsync(CommandContext context, CheckSettings settings)
 		{
 			var sw = Stopwatch.StartNew();
-            TelemetryClient.TrackStartCheck();
+			TelemetryClient.TrackStartCheck();
 
-            Util.Verbose = settings.Verbose;
+			Util.Verbose = settings.Verbose;
 			Util.LogFile = settings.LogFile;
 			Util.CI = settings.CI;
 			if (settings.CI)
@@ -284,7 +284,7 @@ namespace DotNetCheck.Cli
 
 			if (hasErrors)
 			{
-                TelemetryClient.TrackCheckFail(sw.Elapsed, string.Join(",", erroredChecks.Select(c => c.Checkup.Id)));
+				TelemetryClient.TrackCheckFail(sw.Elapsed, string.Join(",", erroredChecks.Select(c => c.Checkup.Id)));
 
 				AnsiConsole.Console.WriteLine();
 
@@ -296,8 +296,8 @@ namespace DotNetCheck.Cli
 			}
 			else if (hasWarnings)
 			{
-                TelemetryClient.TrackCheckWarning(sw.Elapsed, string.Join(",", warningChecks.Select(c => c.Checkup.Id)));
-                
+				TelemetryClient.TrackCheckWarning(sw.Elapsed, string.Join(",", warningChecks.Select(c => c.Checkup.Id)));
+
 				AnsiConsole.Console.WriteLine();
 
 				foreach (var wc in warningChecks)
@@ -308,7 +308,7 @@ namespace DotNetCheck.Cli
 			}
 			else
 			{
-                TelemetryClient.TrackCheckSuccess(sw.Elapsed);
+				TelemetryClient.TrackCheckSuccess(sw.Elapsed);
                 AnsiConsole.MarkupLine($"[bold blue]{Icon.Success} Congratulations, everything looks great![/]");
 			}
 
