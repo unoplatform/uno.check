@@ -91,10 +91,10 @@ namespace DotNetCheck.Checkups
 				{
 					var devices = avdManager.ListDevices();
 
-					ReportStatus($"Listing devices:", null);
+                    Util.Log($"Listing devices:");
 					foreach (var device in devices)
 					{
-						ReportStatus($"Device: {device.Name} ({device.Id})", null);
+                        Util.Log($"Device: {device.Name} ({device.Id})");
 					}
 
 					preferredDevice = devices.FirstOrDefault(d => d.Name.Contains("pixel", StringComparison.OrdinalIgnoreCase));
@@ -156,7 +156,7 @@ namespace DotNetCheck.Checkups
 
 								foreach (var msg in result.output)
 								{
-									ReportStatus(msg, null);
+                                    Util.Log(msg);
 								}
 
 								if (result.success)
