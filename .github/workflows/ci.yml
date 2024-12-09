@@ -212,7 +212,7 @@ jobs:
            previous_tool_params: '--pre'
            os: macos-14
            dotnet_version: 8.0.300
-           
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
            os: macos-14
@@ -249,11 +249,6 @@ jobs:
         with:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '3.1.x'
 
       # Preinstall .NET as it may fail on some build agents
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
