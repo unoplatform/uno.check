@@ -9,6 +9,7 @@ using DotNetCheck.Solutions;
 using Xamarin.Installer.AndroidSDK;
 using Xamarin.Installer.AndroidSDK.Manager;
 using System.IO;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace DotNetCheck.Checkups
 {
@@ -126,7 +127,7 @@ namespace DotNetCheck.Checkups
 								var installer = new AndroidSDKInstaller(new Helper(), AndroidManifestType.GoogleV2);
 
 								var androidSdkPath = history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME");
-								installer.Discover(new List<string> { androidSdkPath});
+								installer.Discover(new List<string> { androidSdkPath });
 
 								var sdkInstance = installer.FindInstance(androidSdkPath);
 
@@ -151,8 +152,21 @@ namespace DotNetCheck.Checkups
 
 								var sdkId = sdkPackage?.Path ?? me.SdkId;
 
-								avdManager.Create($"Android_Emulator_{me.ApiLevel}", sdkId, device: preferredDevice?.Id, tag: "google_apis", force: true, interactive: true);
-								return Task.CompletedTask;
+								var result = avdManager.Create($"Android_Emulator_{me.ApiLevel}", sdkId, device: preferredDevice?.Id, tag: "google_apis", force: true, interactive: true);
+
+								foreach (var msg in result.output)
+								{
+									ReportStatus(msg, null);
+								}
+
+								if (result.success)
+								{
+									return Task.CompletedTask;
+								}
+								else
+								{
+									throw new Exception($"Unable to create Emulator");
+								}
 							}
 							catch (Exception ex)
 							{

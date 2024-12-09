@@ -69,7 +69,7 @@ namespace DotNetCheck.AndroidSdk
 		}
 
 
-		public void Create(string name, string sdkId, string device = null, string path = null, string tag = null, bool force = false, bool interactive = false)
+		public (bool success, string[] output) Create(string name, string sdkId, string device = null, string path = null, string tag = null, bool force = false, bool interactive = false)
 		{
 			var args = new List<string> {
 				"create", "avd", "--name", name, "--package", $"\"{sdkId}\""
@@ -96,15 +96,15 @@ namespace DotNetCheck.AndroidSdk
 				args.Add($"\"{path}\"");
 			}
 
-			AvdManagerRun(args.ToArray());
+			return AvdManagerRun(args.ToArray());
 		}
 
-		public void Delete(string name)
+		public (bool success, string[] output) Delete(string name)
 		{
-			AvdManagerRun("delete", "avd", "-n", name);
+			return AvdManagerRun("delete", "avd", "-n", name);
 		}
 
-		public void Move(string name, string path = null, string newName = null)
+		public (bool success, string[] output) Move(string name, string path = null, string newName = null)
 		{
 			var args = new List<string> {
 				"move", "avd", "-n", name
@@ -122,7 +122,7 @@ namespace DotNetCheck.AndroidSdk
 				args.Add(newName);
 			}
 
-			AvdManagerRun(args.ToArray());
+			return AvdManagerRun(args.ToArray());
 		}
 
 		static Regex rxListTargets = new Regex(@"id:\s+(?<id>[^\n]+)\s+Name:\s+(?<name>[^\n]+)\s+Type\s?:\s+(?<type>[^\n]+)\s+API level\s?:\s+(?<api>[^\n]+)\s+Revision\s?:\s+(?<revision>[^\n]+)", RegexOptions.Multiline | RegexOptions.Compiled);
@@ -278,7 +278,7 @@ namespace DotNetCheck.AndroidSdk
 		}
 
 
-		IEnumerable<string> AvdManagerRun(params string[] args)
+        (bool success, string[] output) AvdManagerRun(params string[] args)
 		{
 			var adbManager = FindToolPath(AndroidSdkHome);
 			var java = Java;
@@ -327,7 +327,7 @@ namespace DotNetCheck.AndroidSdk
 			proc.BeginErrorReadLine();
 			proc.WaitForExit();
 
-			return output;
+			return (proc.ExitCode == 0, output.ToArray());
 		}
 	}
 }
