@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using IniParser;
 using System.Diagnostics;
+using NuGet.Common;
 
 namespace DotNetCheck.AndroidSdk
 {
@@ -101,7 +102,7 @@ namespace DotNetCheck.AndroidSdk
 
 		public (bool success, string[] output) Delete(string name)
 		{
-			return AvdManagerRun("delete", "avd", "-n", name);
+			return AvdManagerRun(null, "delete", "avd", "-n", name);
 		}
 
 		public (bool success, string[] output) Move(string name, string path = null, string newName = null)
@@ -131,30 +132,37 @@ namespace DotNetCheck.AndroidSdk
 		{
 			var r = new List<AvdTarget>();
 
-			var lines = AvdManagerRun("list", "target");
+			var result = AvdManagerRun(null, "list", "target");
 
-			var str = string.Join("\n", lines);
-
-			var matches = rxListTargets.Matches(str);
-			if (matches != null && matches.Count > 0)
+			if (result.success)
 			{
-				foreach (Match m in matches)
+				var str = string.Join("\n", result.output);
+
+				var matches = rxListTargets.Matches(str);
+				if (matches != null && matches.Count > 0)
 				{
-					var a = new AvdTarget
+					foreach (Match m in matches)
 					{
-						Name = m.Groups?["name"]?.Value,
-						Id = m.Groups?["id"]?.Value,
-						Type = m.Groups?["type"]?.Value
-					};
+						var a = new AvdTarget
+						{
+							Name = m.Groups?["name"]?.Value,
+							Id = m.Groups?["id"]?.Value,
+							Type = m.Groups?["type"]?.Value
+						};
 
-					if (int.TryParse(m.Groups?["api"]?.Value, out var api))
-						a.ApiLevel = api;
-					if (int.TryParse(m.Groups?["revision"]?.Value, out var rev))
-						a.Revision = rev;
+						if (int.TryParse(m.Groups?["api"]?.Value, out var api))
+							a.ApiLevel = api;
+						if (int.TryParse(m.Groups?["revision"]?.Value, out var rev))
+							a.Revision = rev;
 
-					if (!string.IsNullOrWhiteSpace(a.Id) && a.ApiLevel > 0)
-						r.Add(a);
+						if (!string.IsNullOrWhiteSpace(a.Id) && a.ApiLevel > 0)
+							r.Add(a);
+					}
 				}
+			}
+			else
+			{
+				Util.Log($"Failed to list targets: {string.Join("\n", result.output)}");
 			}
 
 			return r;
@@ -165,40 +173,47 @@ namespace DotNetCheck.AndroidSdk
 		{
 			var r = new List<Avd>();
 
-			var lines = AvdManagerRun("list", "avd");
+			var result = AvdManagerRun(null, "list", "avd");
 
-			var str = string.Join("\n", lines);
-
-			var matches = rxListAvds.Matches(str);
-			if (matches != null && matches.Count > 0)
+			if (result.success)
 			{
-				foreach (Match m in matches)
+				var str = string.Join("\n", result.output);
+
+				var matches = rxListAvds.Matches(str);
+				if (matches != null && matches.Count > 0)
 				{
-					var path = m.Groups?["path"]?.Value;
-
-					if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+					foreach (Match m in matches)
 					{
-						var avd = Avd.From(path);
+						var path = m.Groups?["path"]?.Value;
 
-						var parsedName = m.Groups?["name"]?.Value;
-						if (string.IsNullOrEmpty(avd.Name) && !string.IsNullOrEmpty(parsedName))
-							avd.Name = parsedName;
+						if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+						{
+							var avd = Avd.From(path);
 
-						var parsedDevice = m.Groups?["device"]?.Value;
-						if (string.IsNullOrEmpty(avd.Device) && !string.IsNullOrEmpty(parsedDevice))
-							avd.Device = parsedDevice;
+							var parsedName = m.Groups?["name"]?.Value;
+							if (string.IsNullOrEmpty(avd.Name) && !string.IsNullOrEmpty(parsedName))
+								avd.Name = parsedName;
 
-						var parsedTarget = m.Groups?["target"]?.Value;
-						if (string.IsNullOrEmpty(avd.Target) && !string.IsNullOrEmpty(parsedTarget))
-							avd.Target = parsedTarget;
+							var parsedDevice = m.Groups?["device"]?.Value;
+							if (string.IsNullOrEmpty(avd.Device) && !string.IsNullOrEmpty(parsedDevice))
+								avd.Device = parsedDevice;
 
-						var parsedBasedOn = m.Groups?["basedon"]?.Value;
-						if (string.IsNullOrEmpty(avd.BasedOn) && !string.IsNullOrEmpty(parsedBasedOn))
-							avd.BasedOn = parsedBasedOn;
+							var parsedTarget = m.Groups?["target"]?.Value;
+							if (string.IsNullOrEmpty(avd.Target) && !string.IsNullOrEmpty(parsedTarget))
+								avd.Target = parsedTarget;
 
-						r.Add(avd);
+							var parsedBasedOn = m.Groups?["basedon"]?.Value;
+							if (string.IsNullOrEmpty(avd.BasedOn) && !string.IsNullOrEmpty(parsedBasedOn))
+								avd.BasedOn = parsedBasedOn;
+
+							r.Add(avd);
+						}
 					}
 				}
+			}
+			else
+			{
+				Util.Log($"Failed to list avds: {string.Join("\n", result.output)}");
 			}
 
 			return r;
@@ -243,42 +258,48 @@ namespace DotNetCheck.AndroidSdk
 		{
 			var r = new List<AvdDevice>();
 
-			var lines = AvdManagerRun("list", "device");
+			var result = AvdManagerRun(null, "list", "device");
 
-			var str = string.Join("\n", lines);
-
-			var matches = rxListDevices.Matches(str);
-			if (matches != null && matches.Count > 0)
+			if (result.success)
 			{
-				foreach (Match m in matches)
+
+				var str = string.Join("\n", result.output);
+
+				var matches = rxListDevices.Matches(str);
+				if (matches != null && matches.Count > 0)
 				{
-					var id = m.Groups?["id"]?.Value;
-
-					if (!string.IsNullOrEmpty(id))
+					foreach (Match m in matches)
 					{
-						var idMatch = rxDeviceId.Match(id);
+						var id = m.Groups?["id"]?.Value;
 
-						if (idMatch?.Success ?? false)
+						if (!string.IsNullOrEmpty(id))
 						{
-							var a = new AvdDevice
-							{
-								Name = m.Groups?["name"]?.Value,
-								Id = idMatch.Groups?["name"]?.Value,
-								Oem = m.Groups?["oem"]?.Value
-							};
+							var idMatch = rxDeviceId.Match(id);
 
-							if (!string.IsNullOrWhiteSpace(a.Name))
-								r.Add(a);
+							if (idMatch?.Success ?? false)
+							{
+								var a = new AvdDevice
+								{
+									Name = m.Groups?["name"]?.Value,
+									Id = idMatch.Groups?["name"]?.Value,
+									Oem = m.Groups?["oem"]?.Value
+								};
+
+								if (!string.IsNullOrWhiteSpace(a.Name))
+									r.Add(a);
+							}
 						}
 					}
 				}
 			}
+			else
+			{
+				Util.Log($"Failed to list devices: {string.Join("\n", result.output)}");
+			}
 
 			return r;
 		}
-
-
-        (bool success, string[] output) AvdManagerRun(string forcedInput = null, params string[] args)
+		(bool success, string[] output) AvdManagerRun(string forcedInput = null, params string[] args)
 		{
 			var adbManager = FindToolPath(AndroidSdkHome);
 			var java = Java;
@@ -310,7 +331,7 @@ namespace DotNetCheck.AndroidSdk
 			proc.StartInfo.RedirectStandardError = true;
 			proc.StartInfo.RedirectStandardInput = !string.IsNullOrWhiteSpace(forcedInput);
 
-            var output = new List<string>();
+			var output = new List<string>();
 
 			proc.OutputDataReceived += (s, e) =>
 			{
@@ -323,16 +344,16 @@ namespace DotNetCheck.AndroidSdk
 					output.Add(e.Data);
 			};
 
-			Util.Log($"Running {proc.StartInfo.FileName} {proc.StartInfo.Arguments} in {proc.StartInfo.WorkingDirectory}");
+			Util.Log($"Running {proc.StartInfo.FileName} {proc.StartInfo.Arguments} in {proc.StartInfo.WorkingDirectory} (with input \"{forcedInput ?? "<no input>"}\")");
 
 			proc.Start();
 
 			if (!string.IsNullOrWhiteSpace(forcedInput))
 			{
-                proc.StandardInput.WriteLine(forcedInput);
-                proc.StandardInput.Flush();
-                proc.StandardInput.Close();
-            }
+				proc.StandardInput.WriteLine(forcedInput);
+				proc.StandardInput.Flush();
+				proc.StandardInput.Close();
+			}
 
 			proc.BeginOutputReadLine();
 			proc.BeginErrorReadLine();
