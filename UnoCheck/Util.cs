@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -10,6 +9,9 @@ namespace DotNetCheck
 {
 	public class Util
 	{
+        public static string[] RiderSkips = ["vswin","vswinworkloads", "dotnetnewunotemplates"];
+        public static string[] VSCodeSkips = ["vswin","vswinworkloads"];
+        public static string[] VSSkips = ["dotnetnewunotemplates"];
 		public static void LogAlways(string message)
 		{
 			Console.WriteLine(message);

@@ -104,6 +104,24 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("CI", "true");
             if (settings.Frameworks is { Length: > 0 })
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
+            if (!string.IsNullOrEmpty(settings.Ide))
+            {
+                var currentSkips = settings.Skip?.ToList() ?? [];
+
+                switch (settings.Ide.ToLowerInvariant())
+                {
+                    case "rider":
+                        currentSkips.AddRange(Util.RiderSkips);
+                        break;
+                    case "vs":
+                        currentSkips.AddRange(Util.VSSkips);
+                        break;
+                    case "vscode":
+                        currentSkips.AddRange(Util.VSCodeSkips);
+                        break;
+                }
+                settings.Skip = currentSkips.Distinct().ToArray();
+            }
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
