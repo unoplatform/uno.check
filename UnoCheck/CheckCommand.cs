@@ -106,7 +106,7 @@ namespace DotNetCheck.Cli
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
             if (!string.IsNullOrEmpty(settings.Ide))
             {
-                var currentSkips = settings.Skip.ToList();
+                var currentSkips = settings.Skip == null ? [] : settings.Skip.ToList();
                 switch (settings.Ide.ToLowerInvariant())
                 {
                     case "rider":

@@ -1,4 +1,5 @@
-﻿using Spectre.Console.Cli;
+﻿#nullable enable
+using Spectre.Console.Cli;
 using System.ComponentModel;
 
 namespace DotNetCheck
@@ -15,7 +16,7 @@ namespace DotNetCheck
 		public bool NonInteractive { get; set; }
 
 		[CommandOption("-s|--skip <CHECKUP_ID>")]
-		public string[] Skip { get; set; }
+		public string[]? Skip { get; set; }
 
 		[CommandOption("--pre|--preview|-d|--dev")]
 		public bool Preview { get; set; }
