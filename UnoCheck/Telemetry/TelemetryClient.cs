@@ -16,7 +16,7 @@ internal static class TelemetryClient
     {
         try
         {
-            _telemetry = new Telemetry(InstrumentationKey, "uno-check", GetType().Assembly);
+            _telemetry = new Telemetry(InstrumentationKey, "uno-check", typeof(TelemetryClient).Assembly);
         }
         catch (Exception e)
         {
