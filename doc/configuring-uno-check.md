@@ -1,3 +1,7 @@
+---
+uid: UnoCheck.Configuration
+---
+
 # Configuring Uno Check
 
 ## Running Uno.Check in a CI environment
