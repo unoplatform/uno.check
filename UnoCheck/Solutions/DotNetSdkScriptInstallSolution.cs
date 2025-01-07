@@ -51,7 +51,7 @@ namespace DotNetCheck.Solutions
 			var exe = Util.Platform switch
 			{
 				Platform.Linux => "bash",
-				Platform.OSX => "sh",
+				Platform.OSX => "bash",
 				Platform.Windows => "powershell",
 				_ => throw new NotSupportedException($"Unsupported platform {Util.Platform}")
 			};

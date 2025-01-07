@@ -189,56 +189,56 @@ jobs:
        include:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
            previous_tool_version: ''
            previous_tool_params: ''
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
 
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview net9
         #    previous_tool_version: ''
         #    previous_tool_params: ''
-        #    os: macos-12
+        #    os: macos-13
         #    dotnet_version: 8.0.100
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.17.0
            previous_tool_params: ''
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.17.0
            previous_tool_params: '--pre'
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFM's
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-android\ios TFM's
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios'
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-browserwasm TFM
-           os: macos-12
+           os: macos-13
            dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-browserwasm'
         #  - manifest: 'manifests/uno.ui-preview-major.manifest.json'
         #    manifest_name: Preview Upgrade net8
         #    previous_tool_version: 1.4.2
         #    previous_tool_params: '--pre'
-        #    os: macos-12
+        #    os: macos-13
         #    dotnet_version: 8.0.100
 
         # Disabled for android emulator setup issues
@@ -297,7 +297,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip androidemulator --skip wsl --skip edgewebview2  ${{ matrix.previous_tool_params }}
           & dotnet tool uninstall --global uno.check
 
       - name: Install and Run Tool
@@ -307,7 +307,7 @@ jobs:
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
-          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
+          & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip androidemulator --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
