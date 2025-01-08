@@ -1,3 +1,7 @@
 items:
 - name: Using Uno Check
-  href: using-uno-check.md
+  href: xref:UnoCheck.UsingUnoCheck
+- name: Configuring Uno Check
+  href: xref:UnoCheck.Configuration
+- name: Troubleshooting
+  href: xref:UnoCheck.Troubleshooting
