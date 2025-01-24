@@ -361,7 +361,7 @@ jobs:
         run: |
           Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
-          & dotnet tool install --global --version ${{ ssteps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
+          & dotnet tool install --global --version ${{ steps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --verbose --non-interactive --verbose --manifest ${{ matrix.manifest }} --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 ${{ matrix.tool_params }}
 
   sign:
