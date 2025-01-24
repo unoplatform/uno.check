@@ -15,9 +15,6 @@ on:
   schedule:
     - cron: '0 0 * * *' # every day at midnight
 
-env:
-  GitVersion_Version: 5.10.3
-
 concurrency:
   group: ${{github.workflow}} - ${{github.ref}}
   cancel-in-progress: true
@@ -37,22 +34,16 @@ jobs:
       with:
         dotnet-version: '8.0.100'
 
-    - name: Setup GitVersion
-      uses: gittools/actions/gitversion/setup@v0.9.9
+    - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+      id: nbgv
       with:
-        versionSpec: ${{ env.GitVersion_Version }}
-
-    - name: GitVersion
-      id: gitversion
-      uses: gittools/actions/gitversion/execute@v0.9.9
-      with:
-        useConfigFile: true
-        configFilePath: gitversion.yml
+        toolVersion: 3.6.139
+        setAllVars: true
 
     - name: Build - CI
       run: |
-        $adjustedPackageVersion="${{ steps.gitversion.outputs.semVer }}".ToLower();
-        dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.gitversion.outputs.assemblySemVer }} -o .\artifacts UnoCheck\UnoCheck.csproj
+        $adjustedPackageVersion="${{ steps.nbgv.outputs.SemVer2 }}".ToLower();
+        dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.nbgv.outputs.AssemblyVersion }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
@@ -148,23 +139,17 @@ jobs:
         with:
           dotnet-version: '3.1.x'
 
-      - name: Setup GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.9
+      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+        id: nbgv
         with:
-          versionSpec: ${{ env.GitVersion_Version }}
-
-      - name: GitVersion
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.9
-        with:
-          useConfigFile: true
-          configFilePath: gitversion.yml
+          toolVersion: 3.6.139
+          setAllVars: true
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
@@ -174,10 +159,10 @@ jobs:
       - name: Install and Run Tool
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
-          & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet\ uno.check
+          & dotnet tool install --global --version ${{ steps.nbgv.outputs.SemVer2 }} --add-source NuGet\ uno.check
           & uno-check --ci --fix --non-interactive --verbose --manifest ${{ matrix.manifest }} --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 ${{ matrix.tool_params }}
 
   testmac:
@@ -261,23 +246,17 @@ jobs:
       #   run: |
       #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
 
-      - name: Setup GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.9
+      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+        id: nbgv
         with:
-          versionSpec: ${{ env.GitVersion_Version }}
-
-      - name: GitVersion
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.9
-        with:
-          useConfigFile: true
-          configFilePath: gitversion.yml
+          toolVersion: 3.6.139
+          setAllVars: true
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
@@ -287,10 +266,10 @@ jobs:
       - name: Install and Run Tool
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
-          & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
+          & dotnet tool install --global --version ${{ steps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
 
   testlinux:
@@ -355,17 +334,11 @@ jobs:
         with:
           dotnet-version: '8.0.100'
 
-      - name: Setup GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.9
+      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+        id: nbgv
         with:
-          versionSpec: ${{ env.GitVersion_Version }}
-
-      - name: GitVersion
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.9
-        with:
-          useConfigFile: true
-          configFilePath: gitversion.yml
+          toolVersion: 3.6.139
+          setAllVars: true
 
       - uses: actions/setup-java@v3
         with:
@@ -376,7 +349,7 @@ jobs:
         if: ${{ contains(matrix.previous_tool_version, '.') }}
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ matrix.previous_tool_version }} uno.check
@@ -386,9 +359,9 @@ jobs:
       - name: Install and Run Tool
         shell: pwsh
         run: |
-          Write-Output "PACKAGE VERSION: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Output "PACKAGE VERSION: ${{ steps.nbgv.outputs.SemVer2 }}"
           $ProgressPreference = 'SilentlyContinue'
-          & dotnet tool install --global --version ${{ steps.gitversion.outputs.semVer }} --add-source NuGet/ uno.check
+          & dotnet tool install --global --version ${{ ssteps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --verbose --non-interactive --verbose --manifest ${{ matrix.manifest }} --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 ${{ matrix.tool_params }}
 
   sign:
