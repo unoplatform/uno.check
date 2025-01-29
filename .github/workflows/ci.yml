@@ -43,7 +43,7 @@ jobs:
     - name: Build - CI
       run: |
         $adjustedPackageVersion="${{ steps.nbgv.outputs.SemVer2 }}".ToLower();
-        dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.nbgv.outputs.AssemblyVersion }} -o .\artifacts UnoCheck\UnoCheck.csproj
+        dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.nbgv.outputs.SimpleVersion }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
