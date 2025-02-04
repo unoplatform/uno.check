@@ -1,5 +1,7 @@
 
 # dotnet-uno-check
+[![NuGet](https://badgen.net/nuget/v/Uno.Check)](https://www.nuget.org/packages/Uno.Check)
+
 Uno Check tool
 
 ---
