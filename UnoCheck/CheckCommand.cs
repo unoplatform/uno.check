@@ -20,7 +20,7 @@ namespace DotNetCheck.Cli
 		public override async Task<int> ExecuteAsync(CommandContext context, CheckSettings settings)
 		{
 			var sw = Stopwatch.StartNew();
-			TelemetryClient.TrackStartCheck();
+			TelemetryClient.TrackStartCheck(settings.Frameworks);
 
 			Util.Verbose = settings.Verbose;
 			Util.LogFile = settings.LogFile;
@@ -70,9 +70,10 @@ namespace DotNetCheck.Cli
 			var results = new Dictionary<string, DiagnosticResult>();
 			var consoleStatus = AnsiConsole.Status();
 
-			var skippedChecks = new List<string>();
+            var skippedChecks = new List<string>();
+            var skippedFix = new List<string>();
 
-			AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Synchronizing configuration...[/]");
+            AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Synchronizing configuration...[/]");
 
 			var channel = ManifestChannel.Default;
             if (settings.Preview)
@@ -239,6 +240,11 @@ namespace DotNetCheck.Cli
 							|| (!settings.NonInteractive && AnsiConsole.Confirm($"[bold]{Icon.Bell} Attempt to fix?[/]"))
 						);
 
+					if(!doFix && !isRetry)
+					{
+						skippedFix.Add(checkup.Id);
+					}
+
 					if (doFix && !isRetry)
 					{
 						var isAdmin = Util.IsAdmin();
@@ -302,7 +308,9 @@ namespace DotNetCheck.Cli
 
 			if (hasErrors)
 			{
-				TelemetryClient.TrackCheckFail(sw.Elapsed, string.Join(",", erroredChecks.Select(c => c.Checkup.Id)));
+				TelemetryClient.TrackCheckFail(
+					sw.Elapsed,
+					string.Join(",", erroredChecks.Select(c => skippedFix.Contains(c.Checkup.Id) ? "~" : "" + c.Checkup.Id)));
 
 				AnsiConsole.Console.WriteLine();
 

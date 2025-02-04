@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Uno.DevTools.Telemetry;
 
@@ -26,13 +27,24 @@ internal static class TelemetryClient
         }
     }
 
-    public static void TrackStartCheck()
+    public static void TrackStartCheck(string[] requestedFrameworks)
     {
         try
         {
+            // Remove strings that are not of the format net8.0 or net8.0-XXXXX, using a regex
+            var frameworks = string.Join(
+                ",",
+                requestedFrameworks
+                    .OrderBy(s => s)
+                    .Where(f => System.Text.RegularExpressions.Regex.IsMatch(f, @"^net\d+(\.0)(?:-[a-zA-Z0-9.]+)*$"))
+                    .Select(s => s[..32])
+                    .Take(10));
+
             _telemetry.TrackEvent(
                 "check-start",
-                [],
+                [
+                    ("RequestedFrameworks", frameworks),
+                ],
                 []
             );
         }
