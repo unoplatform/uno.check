@@ -92,7 +92,8 @@ namespace DotNetCheck.Cli
 
 			AnsiConsole.MarkupLine(" ok");
 			AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Scheduling appointments...[/]");
-
+			Util.UpdateSkips(settings, Util.BaseSkips);
+			
 			if (!string.IsNullOrEmpty(settings.DotNetSdkRoot))
 			{
 				sharedState.SetEnvironmentVariable("DOTNET_ROOT", settings.DotNetSdkRoot);
@@ -106,21 +107,18 @@ namespace DotNetCheck.Cli
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
             if (!string.IsNullOrEmpty(settings.Ide))
             {
-                var currentSkips = settings.Skip?.ToList() ?? [];
-
                 switch (settings.Ide.ToLowerInvariant())
                 {
                     case "rider":
-                        currentSkips.AddRange(Util.RiderSkips);
+	                    Util.UpdateSkips(settings, Util.RiderSkips);
                         break;
                     case "vs":
-                        currentSkips.AddRange(Util.VSSkips);
+	                    Util.UpdateSkips(settings, Util.VSSkips);
                         break;
                     case "vscode":
-                        currentSkips.AddRange(Util.VSCodeSkips);
+	                    Util.UpdateSkips(settings, Util.VSCodeSkips);
                         break;
                 }
-                settings.Skip = currentSkips.Distinct().ToArray();
             }
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
@@ -348,6 +346,14 @@ namespace DotNetCheck.Cli
             {
                 var parsedTfm = NuGetFramework.ParseFolder(tfm);
 
+                // For all TFM's besides net8.0 we skip these checks.
+                // https://github.com/unoplatform/private/issues/506
+                if (parsedTfm.Version.Major == 8)
+                {
+	                var skips = settings.Skip?.ToList() ?? [];
+	                settings.Skip = skips.Except(["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"]).Distinct().ToArray();
+                }
+                
                 if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
                 {
                     // Returning empty list which means that we will target all platforms.
