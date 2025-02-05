@@ -348,7 +348,7 @@ namespace DotNetCheck.Cli
 
                 // For all TFM's besides net8.0 we skip these checks.
                 // https://github.com/unoplatform/private/issues/506
-                if (parsedTfm.Version.Major == 8)
+                if (parsedTfm.Version.Major < 9)
                 {
 	                var skips = settings.Skip?.ToList() ?? [];
 	                settings.Skip = skips.Except(["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"]).Distinct().ToArray();
