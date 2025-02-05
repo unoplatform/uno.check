@@ -310,7 +310,7 @@ namespace DotNetCheck.Cli
 			{
 				TelemetryClient.TrackCheckFail(
 					sw.Elapsed,
-					string.Join(",", erroredChecks.Select(c => skippedFix.Contains(c.Checkup.Id) ? "~" : "" + c.Checkup.Id)));
+					string.Join(",", erroredChecks.Select(c => (skippedFix.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
 
 				AnsiConsole.Console.WriteLine();
 
