@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Spectre.Console;
@@ -9,9 +10,17 @@ namespace DotNetCheck
 {
 	public class Util
 	{
-        public static string[] RiderSkips = ["vswin","vswinworkloads", "dotnetnewunotemplates"];
+		public static string[] BaseSkips = ["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"];
+        public static string[] RiderSkips = ["vswin","vswinworkloads"];
         public static string[] VSCodeSkips = ["vswin","vswinworkloads"];
-        public static string[] VSSkips = ["dotnetnewunotemplates"];
+        public static string[] VSSkips = ["vswin","vswinworkloads"];
+
+        public static void UpdateSkips(CheckSettings settings, string[] skips)
+        {
+	        var currentSkips = settings.Skip?.ToList() ?? [];
+	        currentSkips.AddRange(skips);
+	        settings.Skip = currentSkips.Distinct().ToArray();
+        }
 		public static void LogAlways(string message)
 		{
 			Console.WriteLine(message);
