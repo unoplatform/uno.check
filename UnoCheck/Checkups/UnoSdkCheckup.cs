@@ -19,28 +19,34 @@ namespace DotNetCheck.Checkups
 
 		public override async Task<DiagnosticResult> Examine(SharedState state)
 		{
-			state.TryGetState("unosdk", "unoSdkLatestVersion", out string unoSdkLatestVersion);
+			string unoSdkVersion;
+			if (state.TryGetEnvironmentVariable("UnoSdkVersion", out var version))
+			{
+				unoSdkVersion = version;
+			}
+			else
+			{
+				state.TryGetState("unosdk", "unoSdkLatestVersion", out unoSdkVersion);
 
-			unoSdkLatestVersion ??= (await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.CurrentVersion.IsPrerelease)).ToString();
+				unoSdkVersion ??= (await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.CurrentVersion.IsPrerelease)).ToString();	
+			}
 
 			var defaultSettings = Settings.LoadDefaultSettings(root: null);
 
 			var packagesPath = SettingsUtility.GetGlobalPackagesFolder(defaultSettings);
 
-			if (Directory.Exists(Path.Combine(packagesPath, "uno.sdk", unoSdkLatestVersion)))
+			if (Directory.Exists(Path.Combine(packagesPath, "uno.sdk", unoSdkVersion)))
 			{
 				return DiagnosticResult.Ok(this);
 			}
-			else
-			{
-				state.ContributeState(this, "unoSdkLatestVersion", unoSdkLatestVersion);
 
-				return new DiagnosticResult(
-					Status.Error,
-					this,
-					$"Uno.Sdk {unoSdkLatestVersion} is not installed.",
-					new Suggestion($"Install Uno.Sdk {unoSdkLatestVersion}", new UnoSdkSolution()));
-			}
+			state.ContributeState(this, "unoSdkLatestVersion", unoSdkVersion);
+
+			return new DiagnosticResult(
+				Status.Error,
+				this,
+				$"Uno.Sdk {unoSdkVersion} is not installed.",
+				new Suggestion($"Install Uno.Sdk {unoSdkVersion}", new UnoSdkSolution()));
 		}
 	}
 }
