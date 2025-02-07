@@ -104,6 +104,8 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("DOTNET_FORCE", "true");
 			if (settings.CI)
 				sharedState.SetEnvironmentVariable("CI", "true");
+			if (!string.IsNullOrEmpty(settings.UnoSdkVersion))
+				sharedState.SetEnvironmentVariable("UnoSdkVersion", settings.UnoSdkVersion);
             if (settings.Frameworks is { Length: > 0 })
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
             if (!string.IsNullOrEmpty(settings.Ide))

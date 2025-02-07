@@ -26,5 +26,10 @@ Targets: webassembly ios android macos linux windows"
         [Description(
             @"This parameter skips some checks based on the IDE which is used to run the Uno.Check.")]
         public string? Ide { get; set; }
+        
+        [CommandOption("--unoSdkVersion <UNO_SDK_VERSION>")]
+        [Description(
+	        @"Uno SDK Checkup will validate if provided Uno SDK version is installed.")]
+        public string? UnoSdkVersion { get; set; }
 	}
 }
