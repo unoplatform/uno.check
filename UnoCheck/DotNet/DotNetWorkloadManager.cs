@@ -102,7 +102,7 @@ namespace DotNetCheck.DotNet
 				"--machine-readable"
 			};
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
@@ -127,7 +127,7 @@ namespace DotNetCheck.DotNet
 				"--print-rollback"
 			};
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
