@@ -14,10 +14,6 @@ inputs:
     description: 'Installs and sets the .NET SDK Version'
     required: false
     default: '9.0.x'
-  sdkVersion:
-    description: 'The version of the Windows Sdk'
-    required: false
-    default: '19041'
 
 runs:
   using: "composite"
