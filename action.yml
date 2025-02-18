@@ -28,14 +28,6 @@ runs:
       with:
         dotnet-version: '${{ inputs.dotnet-version }}'
 
-    # Install Windows SDK
-    - name: Install Windows SDK ${{ inputs.sdkVersion }}
-      shell: pwsh
-      if: ${{ runner.os == 'Windows' }}
-      uses: Lamparter/Install-WindowsSdk@v1.0.0
-      with:
-        buildNumber: '${{ inputs.sdkVersion }}'
-
     # Run Uno.Check
     - name: Install ${{ inputs.target-platform }} Workloads
       shell: pwsh
