@@ -11,7 +11,7 @@
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/UnoCheck/bin/Debug/netcoreapp3.1/UnoCheck.dll",
-            "args":["-v", "--manifest", "https://raw.githubusercontent.com/unoplatform/uno.check/bf3684e2ad725baa66da3573759129d6bb1d8817/manifests/uno.ui.manifest.json"],
+            "args":["-v", "--non-interactive", "--manifest", "${workspaceFolder}/manifests/uno.ui.manifest.json"],
             "cwd": "${workspaceFolder}/UnoCheck",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
