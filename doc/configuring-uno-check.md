@@ -60,6 +60,10 @@ So, for example, the following will only check your environment for web and Linu
 uno-check --target wasm --target linux
 ```
 
+> [!Note:]
+> When specifying multiple target platforms, each element must be preceded by --target.
+> It is not possible to list multiple values without this prefix.
+
 The following argument values for `--target` are supported:
 
 | Value     | Comments          |
