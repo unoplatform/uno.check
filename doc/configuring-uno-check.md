@@ -64,19 +64,18 @@ uno-check --target wasm --target linux
 > When specifying multiple target platforms, each element must be preceded by --target.
 > It is not possible to list multiple values without this prefix.
 
-The following argument values for `--target` are supported:
+Supported target platforms and their `--target` values:
 
-| Value     | Comments          |
-|-----------|-------------------|
-| wasm      |                   |
-| ios       |                   |
-| android   |                   |
-| macos     |                   |
-| linux     |                   |
-| skiawpf   |                   |
-| uwp       |                   |
-| win32     |                   |
-| all       | All platforms     |
+| Target Platform  | Input Values                       |
+|------------------|------------------------------------|
+| WebAssembly      | `web`, `webassembly`, `wasm`       |
+| iOS              | `ios`                              |
+| Android          | `android`, `droid`                 |
+| macOS            | `macos`                            |
+| SkiaDesktop      | `skiadesktop`, `skia`, `linux`     |
+| WinAppSDK        | `winappsdk`, `wasdk`               |
+| Windows          | `windows`, `win32desktop`, `win32` |
+| All Platforms    | `all`                              |
 
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
