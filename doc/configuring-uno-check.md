@@ -8,25 +8,24 @@ uid: UnoCheck.Configuration
 
 It is possible to run Uno.Check to setup your build environment in a repeatable way by using the following commands:
 
-# [**Windows**](#tab/windows)
+## [**Windows**](#tab/windows)
 
 ```bash
-dotnet tool install --global Uno.Check --version 1.20.0
+dotnet tool install --global Uno.Check --version 1.29.4
 uno-check -v --ci --non-interactive --fix --skip vswin --skip androidemulator --skip androidsdk
 ```
 
-# [**macOS**](#tab/macos)
+## [**macOS**](#tab/macos)
 
 ```bash
-dotnet tool install --global Uno.Check --version 1.20.0
+dotnet tool install --global Uno.Check --version 1.29.4
 uno-check -v --ci --non-interactive --fix --skip xcode --skip androidemulator --skip androidsdk
 ```
 
-
-# [**Linux**](#tab/linux)
+## [**Linux**](#tab/linux)
 
 ```bash
-dotnet tool install --global Uno.Check --version 1.20.0
+dotnet tool install --global Uno.Check --version 1.29.4
 uno-check -v --ci --non-interactive --fix --skip androidemulator
 ```
 
@@ -61,19 +60,22 @@ So, for example, the following will only check your environment for web and Linu
 uno-check --target wasm --target linux
 ```
 
-The following argument values for `--target` are supported:
+> [!Note:]
+> When specifying multiple target platforms, each element must be preceded by --target.
+> It is not possible to list multiple values without this prefix.
 
-| Value     | Comments          |
-|-----------|-------------------|
-| wasm      |                   |
-| ios       |                   |
-| android   |                   |
-| macos     |                   |
-| linux     |                   |
-| skiawpf   |                   |
-| uwp       |                   |
-| win32     |                   |
-| all       | All platforms     |
+Supported target platforms and their `--target` values:
+
+| Target Platform  | Input Values                       |
+|------------------|------------------------------------|
+| WebAssembly      | `web`, `webassembly`, `wasm`       |
+| iOS              | `ios`                              |
+| Android          | `android`, `droid`                 |
+| macOS            | `macos`                            |
+| SkiaDesktop      | `skiadesktop`, `skia`, `linux`     |
+| WinAppSDK        | `winappsdk`, `wasdk`               |
+| Windows          | `windows`, `win32desktop`, `win32` |
+| All Platforms    | `all`                              |
 
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 

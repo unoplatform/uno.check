@@ -24,11 +24,16 @@ namespace DotNetCheck
 
 			return output;
 		}
-
+        /// <summary>
+        /// Converts the string provided uno-check input argument to the corresponding <see cref="TargetPlatform"/>
+        /// </summary>
+        /// <param name="flag">The user-provided argument as <see langword="string"/></param>
+        /// <returns>The <see cref="TargetPlatform"/> from the <paramref name="flag"/></returns>
 		public static TargetPlatform GetTargetPlatformFromFlag(string flag)
 		{
 			switch (flag.ToLowerInvariant())
 			{
+                case "web":
 				case "webassembly":
 				case "wasm":
 					return TargetPlatform.WebAssembly;
@@ -39,24 +44,20 @@ namespace DotNetCheck
 					return TargetPlatform.Android;
 				case "macos":
 					return TargetPlatform.macOS;
-				case "skiadesktop":
-					return TargetPlatform.SkiaDesktop;
-                case "windows":
+                case "winappsdk":
                 case "wasdk":
 					return TargetPlatform.WinAppSDK;
+                case "windows":
                 case "win32desktop":
                 case "win32":
                     return TargetPlatform.Windows;
+                case "skiadesktop":
 				case "skia":
 					return TargetPlatform.SkiaDesktop;
 				case "linux":
 					return TargetPlatform.SkiaDesktop;
-				case "web":
-					return TargetPlatform.WebAssembly;
-
 				case "all":
 					return TargetPlatform.All;
-
 				default:
 					return TargetPlatform.None;
 			}
