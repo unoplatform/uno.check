@@ -19,7 +19,7 @@ namespace DotNetCheck
 			=> PrettyBoring(":magnifying_glass_tilted_right:", "›");
 
 		public static string Ignored
-			=> PrettyBoring($":{Emoji.Known.RightArrowCurvingDown}:", "¬");
+			=> PrettyBoring($"{Emoji.Known.RightArrowCurvingDown}", "¬");
 
 		public static string Recommend
 			=> PrettyBoring(":syringe:", "¤");
