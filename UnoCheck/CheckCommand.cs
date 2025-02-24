@@ -199,8 +199,8 @@ namespace DotNetCheck.Cli
 					AnsiConsole.WriteLine();
 
 					var icon = skipCheckup.isError
-						? "[bold red]{Icon.Error}"
-						: $"[bold gray]{Icon.Recommend}";
+						? $"[bold red]{Icon.Error}"
+						: $"[bold gray]{Icon.Ignored}";
 
 					AnsiConsole.MarkupLine($"{icon} Skipped: {checkup.Title} ({skipCheckup.skipReason})[/]");
 					continue;
