@@ -1,4 +1,6 @@
-﻿namespace DotNetCheck
+﻿using Spectre.Console;
+
+namespace DotNetCheck
 {
 	public static class Icon
 	{
@@ -15,6 +17,10 @@
 
 		public static string Checking
 			=> PrettyBoring(":magnifying_glass_tilted_right:", "›");
+
+		public static string Ignored
+			=> PrettyBoring($":{Emoji.Known.RightArrowCurvingDown}:", "@");
+
 		public static string Recommend
 			=> PrettyBoring(":syringe:", "¤");
 

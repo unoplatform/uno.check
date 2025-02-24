@@ -34,11 +34,11 @@ internal static class TelemetryClient
             // Remove strings that are not of the format net8.0 or net8.0-XXXXX, using a regex
             var frameworks = string.Join(
                 ",",
-                requestedFrameworks
+                requestedFrameworks?
                     .OrderBy(s => s)
                     .Where(f => System.Text.RegularExpressions.Regex.IsMatch(f, @"^net\d+(\.0)(?:-[a-zA-Z0-9.]+)*$"))
                     .Select(s => s[..32])
-                    .Take(10));
+                    .Take(10) ?? []);
 
             _telemetry.TrackEvent(
                 "check-start",
