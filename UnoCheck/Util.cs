@@ -207,7 +207,7 @@ namespace DotNetCheck
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string[] args)
 			=> WrapShellCommandWithSudo(cmd, null, false, args);
 
-		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
+        public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
 		{
 			var actualCmd = cmd;
 			var actualArgs = string.Join(" ", args);

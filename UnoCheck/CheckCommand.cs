@@ -93,7 +93,12 @@ namespace DotNetCheck.Cli
 
 			AnsiConsole.MarkupLine(" ok");
 			AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Scheduling appointments...[/]");
-			Util.UpdateSkips(settings, Util.BaseSkips);
+
+			SkipInfo[] skipList = (settings.Skip ?? [])
+				.Select(s => new SkipInfo(s, "Skipped by command line", false))
+				.Concat(Util.BaseSkips.Select(s => new SkipInfo(s, "Not required by the current configuration", false)))
+				.Distinct(SkipInfo.NameOnlyComparer)
+				.ToArray();
 			
 			if (!string.IsNullOrEmpty(settings.DotNetSdkRoot))
 			{
@@ -108,20 +113,23 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("UnoSdkVersion", settings.UnoSdkVersion);
             if (settings.Frameworks is { Length: > 0 })
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
+
             if (!string.IsNullOrEmpty(settings.Ide))
             {
-                switch (settings.Ide.ToLowerInvariant())
-                {
-                    case "rider":
-	                    Util.UpdateSkips(settings, Util.RiderSkips);
-                        break;
-                    case "vs":
-	                    Util.UpdateSkips(settings, Util.VSSkips);
-                        break;
-                    case "vscode":
-	                    Util.UpdateSkips(settings, Util.VSCodeSkips);
-                        break;
-                }
+                skipList = skipList.Concat(
+					(
+						settings.Ide.ToLowerInvariant() switch
+						{
+							"rider" => Util.RiderSkips,
+							"vs" => Util.VSSkips,
+							"vscode" => Util.VSCodeSkips,
+							_ => []
+						}
+					)
+					.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
+				)
+				.Distinct(SkipInfo.NameOnlyComparer)
+				.ToArray();
             }
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
@@ -151,7 +159,7 @@ namespace DotNetCheck.Cli
 					continue;
 				}
 
-				var skipCheckup = false;
+				SkipInfo skipCheckup = null;
 
 				var dependencies = checkup.DeclareDependencies(checkups.Select(c => c.Id));
 
@@ -166,24 +174,35 @@ namespace DotNetCheck.Cli
 						{
 							if (!checkupStatus.TryGetValue(dep.CheckupId, out var depStatus) || depStatus == Models.Status.Error)
 							{
-								skipCheckup = dep.IsRequired;
+								if (dep.IsRequired)
+								{
+                                    skipCheckup = new(checkup.Id, $"The dependent check {dep.CheckupId} is required first", true);
+								}
 								break;
 							}
 						}
 					}
 				}
 
-				// See if --skip was specified
-				if (settings.Skip?.Any(s => s.Equals(checkup.Id, StringComparison.OrdinalIgnoreCase)
-					|| s.Equals(checkup.GetType().Name, StringComparison.OrdinalIgnoreCase)) ?? false)
-					skipCheckup = true;
+                // See if --skip was specified
+                if(skipList?.FirstOrDefault(s => 
+					s.CheckupId.Equals(checkup.Id, StringComparison.OrdinalIgnoreCase)
+					|| s.CheckupId.Equals(checkup.GetType().Name, StringComparison.OrdinalIgnoreCase)) is { } explicitSkip)
+				{
+                    skipCheckup = explicitSkip;
+                }
 
-				if (skipCheckup)
+				if (skipCheckup is not null)
 				{
 					skippedChecks.Add(checkup.Id);
-					checkupStatus[checkup.Id] = Models.Status.Error;
+					checkupStatus[checkup.Id] = skipCheckup.isError ? Models.Status.Error : Models.Status.Ok;
 					AnsiConsole.WriteLine();
-					AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Skipped: " + checkup.Title + "[/]");
+
+					var icon = skipCheckup.isError
+						? $"[bold red]{Icon.Error}"
+						: $"[bold gray]{Icon.Ignored}";
+
+					AnsiConsole.MarkupLine($"{icon} Skipped: {checkup.Title} ({skipCheckup.skipReason})[/]");
 					continue;
 				}
 
@@ -469,5 +488,22 @@ namespace DotNetCheck.Cli
 		{
 			AnsiConsole.MarkupLine("  " + e.Message);
 		}
-	}
+
+		private record SkipInfo(string CheckupId, string skipReason, bool isError)
+		{
+            public static IEqualityComparer<SkipInfo> NameOnlyComparer { get; } = new SkipInfoNameOnlyComparer();
+
+            private class SkipInfoNameOnlyComparer : IEqualityComparer<SkipInfo>
+            {
+                public bool Equals(SkipInfo x, SkipInfo y)
+                {
+                    return x.CheckupId.Equals(y.CheckupId, StringComparison.OrdinalIgnoreCase);
+                }
+                public int GetHashCode(SkipInfo obj)
+                {
+                    return obj.CheckupId.GetHashCode();
+                }
+            }
+        }
+    }
 }
