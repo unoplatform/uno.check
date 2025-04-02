@@ -29,16 +29,17 @@ namespace DotNetCheck.Checkups
 			{
 				TargetPlatforms = activeTargetPlatforms;
 			}
+
+			if (sharedState.TryGetState<SkipInfo[]>(StateKey.EntryPoint, StateKey.Skips, out var skips))
+			{
+				_skipMaui = skips.Any(s => s.CheckupId == "maui");
+			}
+
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
+		}
 
-            if (sharedState.TryGetState<SkipInfo[]>(StateKey.EntryPoint, StateKey.Skips, out var skips))
-            {
-                _skipMaui = skips.Any(s => s.CheckupId == "maui");
-            }
-        }
-
-        private bool FilterPlatform(Manifest.DotNetWorkload w)
+		private bool FilterPlatform(Manifest.DotNetWorkload w)
 		{
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
