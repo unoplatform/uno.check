@@ -123,6 +123,9 @@ jobs:
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
            manifest_name: Test net9.0-browserwasm TFM
            tool_params: '--tfm net9.0-browserwasm'
+         - manifest: 'manifests\uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-tvos TFM
+           tool_params: '--tfm net9.0-tvos'
 
     steps:
       - name: Checkout
@@ -313,6 +316,9 @@ jobs:
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Test net9.0-browserwasm TFM
            tool_params: '--tfm net9.0-browserwasm'
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Test net9.0-tvos TFM
+           tool_params: '--tfm net9.0-tvos'
 
     steps:
       - name: Checkout

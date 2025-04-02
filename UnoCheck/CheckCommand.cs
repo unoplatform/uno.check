@@ -416,8 +416,10 @@ namespace DotNetCheck.Cli
                             break;
                         case "android":
                             targetPlatforms.Add("android");
+							break;
+                        case "tvos":
+                            targetPlatforms.Add("tvos");
                             break;
-                        case "macos":
                         case "maccatalyst":
                             targetPlatforms.Add("macos");
                             break;
