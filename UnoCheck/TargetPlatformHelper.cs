@@ -39,6 +39,8 @@ namespace DotNetCheck
 					return TargetPlatform.WebAssembly;
 				case "ios":
 					return TargetPlatform.iOS;
+				case "tvos":
+					return TargetPlatform.tvOS;
 				case "android":
 				case "droid":
 					return TargetPlatform.Android;
