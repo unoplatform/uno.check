@@ -157,6 +157,16 @@ namespace DotNetCheck.Checkups
 
 			foreach (var package in RequiredPackages)
 			{
+				if (history.TryGetState<SkipInfo[]>(StateKey.EntryPoint, StateKey.Skips, out var skips))
+				{
+                    if (package.Path.StartsWith("system-images;")
+						&& skips.Any(s => s.CheckupId == "androidemulator"))
+                    {
+                        ReportStatus($"{package.Path} ({package.Version}) skipped because the android emulator is skipped.", Status.Ok);
+                        continue;
+                    }
+                }
+
 				var v = !string.IsNullOrWhiteSpace(package.Version) ? new AndroidRevision(package.Version) : null;
 
 				var installedPkg = FindInstalledPackage(installed, package)

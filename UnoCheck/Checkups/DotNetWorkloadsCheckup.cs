@@ -12,7 +12,9 @@ namespace DotNetCheck.Checkups
 	public class DotNetWorkloadsCheckup
 		: Checkup
 	{
-		public DotNetWorkloadsCheckup() : base()
+		private bool _skipMaui = false;
+
+        public DotNetWorkloadsCheckup() : base()
 		{
 			throw new Exception("Do not IOC this type directly");
 		}
@@ -29,9 +31,14 @@ namespace DotNetCheck.Checkups
 			}
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
-		}
 
-		private bool FilterPlatform(Manifest.DotNetWorkload w)
+            if (sharedState.TryGetState<SkipInfo[]>(StateKey.EntryPoint, StateKey.Skips, out var skips))
+            {
+                _skipMaui = skips.Any(s => s.CheckupId == "maui");
+            }
+        }
+
+        private bool FilterPlatform(Manifest.DotNetWorkload w)
 		{
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
@@ -42,11 +49,11 @@ namespace DotNetCheck.Checkups
 				{
 					case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
 					case "maui-android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
-					case "maui" when (TargetPlatforms.HasFlag(TargetPlatform.Android)
+					case "maui" when !_skipMaui && (TargetPlatforms.HasFlag(TargetPlatform.Android)
 									|| TargetPlatforms.HasFlag(TargetPlatform.iOS)
 									|| TargetPlatforms.HasFlag(TargetPlatform.macOS)):
 					case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
-					case "macos" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
+					case "tvos" when TargetPlatforms.HasFlag(TargetPlatform.tvOS):
 					case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
 					case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
 						return true;

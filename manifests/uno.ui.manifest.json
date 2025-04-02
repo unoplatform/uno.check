@@ -6,7 +6,7 @@
       "DOTNET_SDK_VERSION": "9.0.200",
       "MACCATALYST_SDK_VERSION": "18.2.9180/9.0.100",
       "IOS_SDK_VERSION": "18.2.9180/9.0.100",
-      "MACOS_SDK_VERSION": "15.1.9163/9.0.100",
+      "TVOS_SDK_VERSION": "18.2.9180/9.0.100",
       "ANDROID_SDK_VERSION": "35.0.39/9.0.100",
       "MAUI_VERSION": "9.0.20/9.0.100",
       "WASMTOOLS_VERSION": "9.0.2/9.0.100"
@@ -119,10 +119,10 @@
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
-              "workloadId": "macos",
-              "workloadManifestId": "microsoft.net.sdk.macos",
-              "packageId": "Microsoft.NET.Sdk.macOS.Manifest-9.0.100",
-              "version": "$(MACOS_SDK_VERSION)",
+              "workloadId": "tvos",
+              "workloadManifestId": "microsoft.net.sdk.tvos",
+              "packageId": "Microsoft.NET.Sdk.tvos.Manifest-9.0.100",
+              "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {

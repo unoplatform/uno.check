@@ -8,6 +8,8 @@ namespace DotNetCheck.Models
 	{
 		public const string EntryPoint = "EntryPoint";
 
+		public const string Skips = "Skips";
+
 		public const string TargetPlatforms = "target_platforms";
 	}
 }

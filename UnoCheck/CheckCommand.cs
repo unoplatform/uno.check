@@ -131,6 +131,8 @@ namespace DotNetCheck.Cli
 				.Distinct(SkipInfo.NameOnlyComparer)
 				.ToArray();
             }
+
+			sharedState.ContributeState(StateKey.EntryPoint, StateKey.Skips, skipList);
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
@@ -414,8 +416,10 @@ namespace DotNetCheck.Cli
                             break;
                         case "android":
                             targetPlatforms.Add("android");
+							break;
+                        case "tvos":
+                            targetPlatforms.Add("tvos");
                             break;
-                        case "macos":
                         case "maccatalyst":
                             targetPlatforms.Add("macos");
                             break;
@@ -488,22 +492,5 @@ namespace DotNetCheck.Cli
 		{
 			AnsiConsole.MarkupLine("  " + e.Message);
 		}
-
-		private record SkipInfo(string CheckupId, string skipReason, bool isError)
-		{
-            public static IEqualityComparer<SkipInfo> NameOnlyComparer { get; } = new SkipInfoNameOnlyComparer();
-
-            private class SkipInfoNameOnlyComparer : IEqualityComparer<SkipInfo>
-            {
-                public bool Equals(SkipInfo x, SkipInfo y)
-                {
-                    return x.CheckupId.Equals(y.CheckupId, StringComparison.OrdinalIgnoreCase);
-                }
-                public int GetHashCode(SkipInfo obj)
-                {
-                    return obj.CheckupId.GetHashCode();
-                }
-            }
-        }
     }
 }

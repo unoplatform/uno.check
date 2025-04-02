@@ -15,6 +15,7 @@ namespace DotNetCheck
 		SkiaDesktop = 16,
 		Windows = 128,
 		WinAppSDK = 256,
+		tvOS = 512,
 
 		All = -1
 	}
