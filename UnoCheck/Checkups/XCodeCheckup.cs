@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Claunia.PropertyList;
 using DotNetCheck.Models;
@@ -66,8 +65,27 @@ namespace DotNetCheck.Checkups
 								new Solutions.XcodeEulaSolution())));
 					}
 
+					//before returning we want to validate that the iOS SDK is installed
+					if (!ValidateForiOSSDK(selected))
+					{
+						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK. Usually, this occurs after a recent Xcode install or update.", Status.Error);
+
+						Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
+
+						return Task.FromResult(new DiagnosticResult(
+							Status.Error,
+							this,
+							new Suggestion("Run `open -a Xcode`",
+								new Solutions.ActionSolution((sln, cancelToken) =>
+								{
+									ShellProcessRunner.Run("open", $"-a {selected.Path}");
+									return Task.CompletedTask;
+								}))));
+					}
+
 					// Selected version is good
 					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
+
 					return Task.FromResult(DiagnosticResult.Ok(this));
 				}
 
@@ -197,6 +215,21 @@ namespace DotNetCheck.Checkups
 				}
 			}
 			return null;
+		}
+
+		static bool ValidateForiOSSDK(XCodeInfo selected)
+		{
+			var iphoneSimulatorSDKPath = Path.Combine(selected.Path, "Contents", "Developer", "Platforms", "iPhoneSimulator.platform", "Developer", "SDKs", "iPhoneSimulator.sdk");
+
+			if (Directory.Exists(iphoneSimulatorSDKPath))
+			{
+				return true;
+			}
+
+			var r = ShellProcessRunner.Run("xcrun", "-sdk iphonesimulator --show-sdk-path");
+			iphoneSimulatorSDKPath = r.GetOutput().Trim();
+
+			return Directory.Exists(iphoneSimulatorSDKPath);
 		}
 	}
 
