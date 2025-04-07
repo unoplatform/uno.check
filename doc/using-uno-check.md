@@ -1,7 +1,7 @@
 ---
 uid: UnoCheck.UsingUnoCheck
 ---
-
+<!--markdownlint-disable MD025 -->
 # Setup your environment with uno check
 
 [`uno-check`](https://github.com/unoplatform/uno.check) is a dotnet command-line tool that runs a suite of automated check-ups on your dev environment, making sure you have all the prerequisites installed to successfully develop an Uno Platform application. The tool is available on Windows, Linux, and macOS.
@@ -77,7 +77,7 @@ If it finds something missing, out of date, or misconfigured, it will either off
 
 # [**macOS**](#tab/macos)
 
-1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/download).
+1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/en-us/download/dotnet/latest).
 1. Open a Terminal.
 1. Setup uno.check by:
     - Installing the tool:
@@ -106,7 +106,8 @@ If it finds something missing, out of date, or misconfigured, it will either off
 
 1. Follow the instructions indicated by the tool
 1. If you get any errors or warnings, run the provided fix or follow the provided instructions. Run `uno-check` again to verify that the fixes worked.
-1. Once `uno-check` gives you the green light, you can [get started](https://platform.uno/docs/articles/get-started.html)!
+1. Once `uno-check` gives you the green light, you can [get started](xref:Uno.GetStarted)!
 
 ***
 
+[!INCLUDE [getting-help](xref:Uno.Development.GettingHelp)]
