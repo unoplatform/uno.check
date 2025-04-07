@@ -6,20 +6,21 @@
 Once installed as a global tool, it runs a series of “checkups”, reports any missing or misconfigured components, and can apply automatic fixes.
 Designed to simplify setup and ensures you have everything you need to build and debug Uno apps with confidence.
 
-
-
 To install the tool:
-```
+
+```bash
 dotnet tool install -g Uno.Check
 ```
 
 To update the tool, if you already have an existing one:
-```
+
+```bash
 dotnet tool update -g uno.check
 ```
 
 To run the tool:
-```
+
+```bash
 uno-check
 ```
 
@@ -46,7 +47,6 @@ Uno.Check requires **Administrator** permissions to run so make sure to run your
 
 If you need to pass custom arguments update [launchSettings.json](https://github.com/unoplatform/uno.check/blob/main/UnoCheck/Properties/launchSettings.json) profiles accordingly.
 
-
 ### Build & install a local version
 
 We include a helper script to pack and install your locally built `uno.check` as a global tool, so you can test changes immediately on your machine:
@@ -56,15 +56,12 @@ We include a helper script to pack and install your locally built `uno.check` as
 ./pack-and-install.ps1
 ```
 
-
 ### Spectre.Console
 
 This CLI is built on [Spectre.Console](https://spectreconsole.net/) — feel free to explore their docs for examples.
 
-
-
 ---
-
+<!--cspell:ignore Redth's -->
 Based on [Redth's .NET MAUI Check tool](https://github.com/Redth/dotnet-maui-check).
 
 ---
