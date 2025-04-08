@@ -1,5 +1,5 @@
 ---
-uid: UnoCheck.Configuration.VersionManagement.Updating-Inline
+uid: UnoCheck.Configuration.VersionManagement.Updating
 ---
 
 Pinning Uno.Check to a specific version will allow to keep a repeatable build over time, regardless of the updates done to Uno Platform or .NET.
