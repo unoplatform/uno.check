@@ -122,9 +122,7 @@ Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK 
 uno-check --ci
 ```
 
-## See Also
-
-* [Using Uno Check in CI Environment](xref:UnoCheck.Configuration.CI)
+More Detailed Information about Uno.Check in CI: [Using Uno Check in CI Environment](xref:UnoCheck.Configuration.CI)
 
 # [Skip some Checkups](#tab/arg-skip)
 
