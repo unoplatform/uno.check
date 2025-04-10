@@ -52,7 +52,7 @@ The following command line arguments can be used to customize the tool's behavio
 
 ### `--target` Choose target platforms
 
-Uno Platform supports a number of platforms, and you may only wish to develop for a subset of them. By default, the tool runs check for all supported platforms. If you use the `--target` argument, it will only run checks for the nominated target or targets.
+Uno Platform supports a number of platforms, and you may only wish to develop for a subset of them. By default, the tool runs checks for all supported platforms. If you use the `--target` argument, it will only run checks for the nominated target or targets.
 
 So, for example, the following will only check your environment for web and Linux development:
 
@@ -60,7 +60,7 @@ So, for example, the following will only check your environment for web and Linu
 uno-check --target wasm --target linux
 ```
 
-> [!Note:]
+> [!NOTE]
 > When specifying multiple target platforms, each element must be preceded by --target.
 > It is not possible to list multiple values without this prefix.
 
@@ -106,9 +106,9 @@ uno-check --non-interactive
 
 ### `--pre`, `--preview`, `-d`, `--dev` Preview Manifest feed
 
-This uses a more frequently updated manifest with newer versions of things more often. If you use the prerelease versions of Uno.UI NuGet packages, you should use this flag.
+This uses a more frequently updated manifest with newer versions of things more often. If you use the pre-release versions of Uno.UI NuGet packages, you should use this flag.
 
-The manifest is hosted by default at: `https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json`
+The manifest is hosted by default here: [uno.ui-preview.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json)
 
 ```bash
 uno-check --pre
@@ -118,7 +118,7 @@ uno-check --pre
 
 This generally uses the preview builds of the next major version of .NET available.
 
-The manifest is hosted by default at: `https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json`
+The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 
 ```bash
 uno-check --pre
@@ -134,10 +134,10 @@ uno-check --ci
 
 ### `-s <ID_OR_NAME>`, `--skip <ID_OR_NAME>` Skip Checkup
 
-Skips a checkup by name or id as listed in `uno-check list`.
+Skips a checkup by name or ID as listed in `uno-check list`.
 
 > [!NOTE]
-> If there are any other checkups which depend on a skipped checkup, they will be skipped too.
+> If any other checkups depend on a skipped checkup, they will be skipped too.
 
 ```bash
 uno-check --skip openjdk --skip androidsdk
@@ -146,7 +146,7 @@ uno-check --skip openjdk --skip androidsdk
 ### `list` List Checkups
 
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
-These can be used to specify `--skip checkup_id`, `-s checkup_name` arguments.
+These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
 
 ### `config` Configure global.json and NuGet.config in Working Dir
 
