@@ -108,7 +108,7 @@ uno-check --non-interactive
 
 This uses a more frequently updated manifest with newer versions of things more often. If you use the pre-release versions of Uno.UI NuGet packages, you should use this flag.
 
-The manifest is hosted by default at: [uno.ui-preview.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json)
+The manifest is hosted by default here: [uno.ui-preview.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview.manifest.json)
 
 ```bash
 uno-check --pre
@@ -118,7 +118,7 @@ uno-check --pre
 
 This generally uses the preview builds of the next major version of .NET available.
 
-The manifest is hosted by default at: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
+The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 
 ```bash
 uno-check --pre
