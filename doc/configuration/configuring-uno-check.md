@@ -1,7 +1,9 @@
 ---
 uid: UnoCheck.Configuration
 ---
+
 <!--markdownlint-disable MD025 MD001 -->
+
 # Configuring Uno Check
 
 ## Overview of Command line arguments
