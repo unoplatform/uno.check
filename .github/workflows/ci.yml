@@ -124,6 +124,9 @@ jobs:
            manifest_name: Test net9.0-browserwasm TFM
            tool_params: '--tfm net9.0-browserwasm'
 
+    env:
+      DOTNET_ROOT: '${{ github.workspace }}\.dotnet'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
