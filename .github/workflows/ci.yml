@@ -127,6 +127,9 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
+    env:
+      DOTNET_ROOT: '${{ github.workspace }}\.dotnet'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
