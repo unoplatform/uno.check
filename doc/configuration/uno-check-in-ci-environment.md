@@ -29,6 +29,6 @@ uno-check -v --ci --non-interactive --fix --skip androidemulator
 
 ---
 
-[!INCLUDES [Version-Management-Updating](xref:UnoCheck.Configuration.VersionManagement.Updating)]
+[!INCLUDES [Version-Management-Updating](../includes/version-management-updating-inline.md)]
 
-[!INCLUDES [dotnet-search-package](xref:UnoCheck.Configuration.VersionManagement.DotnetSearch)]
+[!INCLUDES [dotnet-search-package](../includes/dotnet-search-package-inline.md)]

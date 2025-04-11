@@ -17,9 +17,9 @@ If it finds something missing, out of date, or misconfigured, it will either off
 1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/download/dotnet/latest).
 1. Open a command-line prompt, Windows Terminal if you have it installed, or else Command Prompt or Windows Powershell from the Start menu.
 
-    [!INCLUDE [setup-uno-check-inline](xref:UnoCheck.Setup)]
+    [!INCLUDE [setup-uno-check-inline](includes/setup-uno-check-inline.md)]
 
-[!INCLUDE [uno-check-after-check](xref:UnoCheck.AfterCheck)]
+[!INCLUDE [uno-check-after-check](includes/uno-check-after-check-inline.md)]
 
 # [**Linux**](#tab/linux)
 
@@ -29,7 +29,7 @@ If it finds something missing, out of date, or misconfigured, it will either off
       > [!IMPORTANT]
       > If your distribution is Ubuntu and you want to develop for Android, make sure to use the directions to install the Microsoft feed and not the Ubuntu official feed. The latter does not contain Android workloads.
 
-    [!INCLUDE [setup-uno-check-inline](xref:UnoCheck.Setup)]
+    [!INCLUDE [setup-uno-check-inline](includes/setup-uno-check-inline.md)]
 
     If the above command fails, use the following:
 
@@ -37,14 +37,14 @@ If it finds something missing, out of date, or misconfigured, it will either off
     ~/.dotnet/tools/uno-check
     ```
 
-[!INCLUDE [uno-check-after-check](xref:UnoCheck.AfterCheck)]
+[!INCLUDE [uno-check-after-check](includes/uno-check-after-check-inline.md)]
 
 # [**macOS**](#tab/macos)
 
 1. Make sure you have the [.NET SDK installed](https://dotnet.microsoft.com/download/dotnet/latest).
 1. Open a Terminal.
 
-    [!INCLUDE [setup-uno-check-inline](xref:UnoCheck.Setup)]
+    [!INCLUDE [setup-uno-check-inline](includes/setup-uno-check-inline.md)]
 
     If the above command fails, use the following:
 
@@ -52,7 +52,7 @@ If it finds something missing, out of date, or misconfigured, it will either off
     ~/.dotnet/tools/uno-check
     ```
 
-[!INCLUDE [uno-check-after-check](xref:UnoCheck.AfterCheck)]
+[!INCLUDE [uno-check-after-check](includes/uno-check-after-check-inline.md)]
 
 ***
 
@@ -61,4 +61,4 @@ If it finds something missing, out of date, or misconfigured, it will either off
 - [Configuration Arguments for Checks](xref:UnoCheck.Configuration)
 - [Troubleshooting Uno.Check](xref:UnoCheck.Troubleshooting)
 
-[!INCLUDE [getting-help](xref:Uno.Development.GettingHelp)]
+[!INCLUDE [getting-help](https://github.com/unoplatform/uno/doc/articles/includes\getting-help.md)]
