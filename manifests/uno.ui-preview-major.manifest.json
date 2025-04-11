@@ -3,6 +3,7 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
+<<<<<<< HEAD
       "DOTNET_SDK_VERSION": "9.0.200",
 <<<<<<< HEAD
       "MACCATALYST_SDK_VERSION": "18.2.9180/9.0.100",
@@ -10,6 +11,9 @@
       "MACOS_SDK_VERSION": "15.1.9163/9.0.100",
       "ANDROID_SDK_VERSION": "35.0.39/9.0.100",
 =======
+=======
+      "DOTNET_SDK_VERSION": "9.0.203",
+>>>>>>> 6c812d5 (chore: Adjust base version)
       "MACCATALYST_SDK_VERSION": "18.4.9288/9.0.100",
       "IOS_SDK_VERSION": "18.4.9288/9.0.100",
       "TVOS_SDK_VERSION": "18.4.9288/9.0.100",
