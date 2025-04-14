@@ -43,15 +43,15 @@
           "version": "1"
         },
         {
-          "path": "system-images;android-36;google_apis;x86_64",
+          "path": "system-images;android-35;google_apis;x86_64",
           "version": "7",
           "alternatives": [
             {
-              "path": "system-images;android-36;google_apis_playstore;x86_64",
+              "path": "system-images;android-35;google_apis_playstore;x86_64",
               "version": "7"
             },
             {
-              "path": "system-images;android-36;google_apis;arm64-v8a",
+              "path": "system-images;android-35;google_apis;arm64-v8a",
               "version": "7"
             }
           ]
@@ -67,13 +67,13 @@
       ],
       "emulators": [
         {
-          "sdkId": "system-images;android-36;google_apis;x86_64",
+          "sdkId": "system-images;android-35;google_apis;x86_64",
           "alternateSdkIds": [
             "system-images;android-31;google_apis_playstore;x86_64",
             "system-images;android-30;google_apis;arm64-v8a"
           ],
-          "desc": "Android Emulator - x86_64 - API36 - Google API's",
-          "apiLevel": 36,
+          "desc": "Android Emulator - x86_64 - API35 - Google API's",
+          "apiLevel": 35,
           "tag": "google_apis",
           "device": "pixel"
         }
