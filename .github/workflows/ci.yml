@@ -344,6 +344,7 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
+         # preview major
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Test default Uno template TFM's with net10
            tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
