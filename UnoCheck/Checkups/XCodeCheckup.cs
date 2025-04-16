@@ -216,14 +216,49 @@ namespace DotNetCheck.Checkups
 			return null;
 		}
 
+		// Checking iOS SDK is a three step process:
+		// 1. Get the path to the iOS SDK using `xcrun -sdk iphonesimulator --show-sdk-path`
+		// 2. Find the SDK Version in the SDKSettings.json file located at the SDK path
+		// 3. Filter the iOS Runtime installed using the SDK Version
 		static bool ValidateForiOSSDK()
 		{
-			var r = ShellProcessRunner.Run("xcrun", "-sdk iphonesimulator --show-sdk-path");
-			var iphoneSimulatorSDKPath = r.GetOutput().Trim();
+			Util.Log($"Validating for iOS SDK...");
+			try
+			{
+				var r = ShellProcessRunner.Run("xcrun", "-sdk iphonesimulator --show-sdk-path");
+				var iphoneSimulatorSDKPath = r.GetOutput().Trim();
 
-			return Directory.Exists(iphoneSimulatorSDKPath);
+				if (Directory.Exists(iphoneSimulatorSDKPath))
+				{					
+					var sdkInfo = Path.Combine(iphoneSimulatorSDKPath, "SDKSettings.json");
+					if (File.Exists(sdkInfo))
+					{
+						var text = File.ReadAllText(sdkInfo);
+						var settings = System.Text.Json.JsonSerializer.Deserialize<SDKSettings>(text, new System.Text.Json.JsonSerializerOptions
+						{
+							PropertyNameCaseInsensitive = true
+						});
+						
+						Util.Log($"Found iOS SDK at {iphoneSimulatorSDKPath}. Searching for iOS Runtime ({settings.Version})...");
+
+						// Check if the SDK Runtime for iOS Simulator is installed
+						var p = ShellProcessRunner.Run("xcrun", $"simctl list runtimes ios available | grep {settings.Version}");
+						var runtimeOutput = p.GetOutput().Trim();
+
+						return !string.IsNullOrEmpty(runtimeOutput);
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Util.Exception(ex);
+			}
+
+			return false;
 		}
 	}
 
 	public record XCodeInfo(NuGetVersion Version, string VersionString, string BuildVersion, string Path, bool Selected);
+
+	public record SDKSettings(string DisplayName, string Version);
 }
