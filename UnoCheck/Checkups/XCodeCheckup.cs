@@ -66,7 +66,7 @@ namespace DotNetCheck.Checkups
 					}
 
 					//before returning we want to validate that the iOS SDK is installed
-					if (!ValidateForiOSSDK(selected))
+					if (!ValidateForiOSSDK())
 					{
 						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK. Usually, this occurs after a recent Xcode install or update.", Status.Error);
 
@@ -217,17 +217,10 @@ namespace DotNetCheck.Checkups
 			return null;
 		}
 
-		static bool ValidateForiOSSDK(XCodeInfo selected)
+		static bool ValidateForiOSSDK()
 		{
-			var iphoneSimulatorSDKPath = Path.Combine(selected.Path, "Contents", "Developer", "Platforms", "iPhoneSimulator.platform", "Developer", "SDKs", "iPhoneSimulator.sdk");
-
-			if (Directory.Exists(iphoneSimulatorSDKPath))
-			{
-				return true;
-			}
-
 			var r = ShellProcessRunner.Run("xcrun", "-sdk iphonesimulator --show-sdk-path");
-			iphoneSimulatorSDKPath = r.GetOutput().Trim();
+			var iphoneSimulatorSDKPath = r.GetOutput().Trim();
 
 			return Directory.Exists(iphoneSimulatorSDKPath);
 		}
