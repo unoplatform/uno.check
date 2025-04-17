@@ -245,7 +245,9 @@ namespace DotNetCheck.Checkups
 						var p = ShellProcessRunner.Run("xcrun", $"simctl list runtimes ios available | grep {settings.Version}");
 						var runtimeOutput = p.GetOutput().Trim();
 
-						return !string.IsNullOrEmpty(runtimeOutput);
+						Util.Log($"Found iOS Runtime: {runtimeOutput}");
+
+						return !string.IsNullOrEmpty(runtimeOutput) && runtimeOutput.Contains(settings.Version);
 					}
 				}
 			}
