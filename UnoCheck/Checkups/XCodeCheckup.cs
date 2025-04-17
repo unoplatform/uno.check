@@ -80,7 +80,7 @@ namespace DotNetCheck.Checkups
 									ShellProcessRunner.Run("open", $"-a {selected.Path}");
 									return Task.CompletedTask;
 								}))));
-					}					
+					}
 
 					// Selected version is good
 					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
@@ -216,7 +216,7 @@ namespace DotNetCheck.Checkups
 			return null;
 		}
 
-		// Checking iOS SDK is a three step process:
+		// Checking iOS SDK is a three-step process:
 		// 1. Get the path to the iOS SDK using `xcrun -sdk iphonesimulator --show-sdk-path`
 		// 2. Find the SDK Version in the SDKSettings.json file located at the SDK path
 		// 3. Filter the iOS Runtime installed using the SDK Version
