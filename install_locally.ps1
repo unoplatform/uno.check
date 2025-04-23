@@ -11,6 +11,16 @@
 .PARAMETER LocalFeed
     Optional directory to emit nupkg files into.
     If omitted or empty, defaults to `LocalFeed` in the script folder.
+	
+.EXAMPLE
+    Packs the solution from the current directory and places all nupkg files in ./LocalFeed
+	Removes any installed Uno.Check versions and installs locally-built version instead.
+    ./pack-and-install.ps1
+
+.EXAMPLE
+    # Packs path/to/MySolution.sln into ./MyFeed folder. 
+	Removes any installed Uno.Check versions and installs locally-built version instead.
+    ./pack-and-install.ps1 path/to/MySolution.sln MyFeed
 #>
 
 [CmdletBinding()]
