@@ -18,7 +18,7 @@ internal static class ToolUpdater
 
     public static async Task<bool> CheckAndPromptForUpdateAsync(CheckSettings settings)
     {
-        if ((settings.Manifest is not null && !settings.CI) || Debugger.IsAttached)
+        if ((!string.IsNullOrEmpty(settings.Manifest) && !settings.CI) || Debugger.IsAttached)
         {
             return false;
         }
@@ -29,45 +29,54 @@ internal static class ToolUpdater
         try
         {
             latestVersion = await ToolInfo.GetLatestVersion(currentVersion.IsPrerelease);
+            if (string.IsNullOrEmpty(latestVersion?.ToString()))
+            {
+                return false;
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            if (Util.Verbose)
+            {
+                AnsiConsole.MarkupLine(ex.ToString());   
+            }
+            
             AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Could not check for latest version on NuGet.org. The currently installed version may be out of date.[/]");
             AnsiConsole.WriteLine();
             AnsiConsole.Write(new Rule());
         }
 
-        if (latestVersion is not null && currentVersion < latestVersion)
+        if (currentVersion < latestVersion)
         {
             AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Your uno-check version is not up to date. The latest version is {latestVersion}. You can update with:[/]");
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {latestVersion}");
             AnsiConsole.WriteLine();
             AnsiConsole.Write(new Rule());
-        }
-        
-        if (!settings.CI && (latestVersion is null || currentVersion < latestVersion))
-        {
-            var action = AnsiConsole.Prompt(
-                new SelectionPrompt<UserAction>()
-                    .Title("What would you like to do?")
-                    .AddChoices(UserAction.Continue, UserAction.Update, UserAction.Stop)
-                    .UseConverter(action => action switch
-                    {
-                        UserAction.Continue => "[green]Continue[/]",
-                        UserAction.Update => "[yellow]Update[/]",
-                        UserAction.Stop => "[red]Stop[/]",
-                        _ => action.ToString()
-                    })
-                    .PageSize(3)
-            );
-
-            if (action == UserAction.Update)
+            
+            if (!settings.CI)
             {
-                RelaunchWithUpdate(latestVersion?.ToString() ?? currentVersion.ToString());
-            }
+                var action = AnsiConsole.Prompt(
+                    new SelectionPrompt<UserAction>()
+                        .Title("What would you like to do?")
+                        .AddChoices(UserAction.Continue, UserAction.Update, UserAction.Stop)
+                        .UseConverter(action => action switch
+                        {
+                            UserAction.Continue => "[green]Continue[/]",
+                            UserAction.Update => "[yellow]Update[/]",
+                            UserAction.Stop => "[red]Stop[/]",
+                            _ => action.ToString()
+                        })
+                        .PageSize(3)
+                );
 
-            return action == UserAction.Stop;
+                if (action == UserAction.Update)
+                {
+                    RelaunchWithUpdate(latestVersion!.ToString());
+                }
+
+                return action == UserAction.Stop;
+            }
         }
 
         return false;
