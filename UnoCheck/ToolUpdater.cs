@@ -38,7 +38,7 @@ internal static class ToolUpdater
         {
             if (Util.Verbose)
             {
-                AnsiConsole.MarkupLine(ex.ToString());   
+                AnsiConsole.WriteException(ex);   
             }
             
             AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Could not check for latest version on NuGet.org. The currently installed version may be out of date.[/]");
