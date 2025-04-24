@@ -31,23 +31,23 @@ Visit our [documentation](doc/using-uno-check.md) for more details.
 
 Thanks for helping improve Uno.Check — your contributions make a difference! ❤️
 
-## Clone the repository
+### Clone the repository
 
 ```bash
 git clone https://github.com/unoplatform/uno.check.git
 cd uno.check
 ```
 
-## Run your IDE as Administrator
+### Run your IDE as Administrator
 
 Uno.Check requires **Administrator** permissions to run so make sure to run your IDE elevated.
 
-## Configure launchSettings.json
+### Configure launchSettings.json
 
 If you need to pass custom arguments update [launchSettings.json](https://github.com/unoplatform/uno.check/blob/main/UnoCheck/Properties/launchSettings.json) profiles accordingly.
 
 
-## Build & install a local version
+### Build & install a local version
 
 We include a helper script to pack and install your locally built `uno.check` as a global tool, so you can test changes immediately on your machine:
 
@@ -57,7 +57,7 @@ We include a helper script to pack and install your locally built `uno.check` as
 ```
 
 
-## Spectre.Console
+### Spectre.Console
 
 This CLI is built on [Spectre.Console](https://spectreconsole.net/) — feel free to explore their docs for examples.
 
