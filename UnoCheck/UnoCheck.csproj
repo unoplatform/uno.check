@@ -10,7 +10,7 @@
 		<PackAsToolShimRuntimeIdentifiers Condition="'$(Configuration)'=='Release'">win-x64;win-x86;osx-x64;linux-x64</PackAsToolShimRuntimeIdentifiers>
 		<LangVersion>latest</LangVersion>
 		<RollForward>Major</RollForward>
-        <BuildDate>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
+		<BuildDate>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -24,13 +24,13 @@
 		<Title>Uno Platform Check Tool</Title>
 	</PropertyGroup>
 
-    <ItemGroup>
-        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-            <_Parameter1>BuildDate</_Parameter1>
-            <_Parameter2>$(BuildDate)</_Parameter2>
-        </AssemblyAttribute>
-    </ItemGroup>
-
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>BuildDate</_Parameter1>
+			<_Parameter2>$(BuildDate)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+	
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(TF_BUILD)' == 'true'">
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 	</PropertyGroup>
