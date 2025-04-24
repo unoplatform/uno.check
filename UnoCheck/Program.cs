@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DotNetCheck.Checkups;
@@ -51,6 +51,12 @@ namespace DotNetCheck
 
 			app.Configure(config =>
 			{
+                var version = ToolInfo.CurrentVersion;
+                var buildDate = File.GetLastWriteTime(typeof(ToolInfo).Assembly.Location)
+                    .ToString("yyyy-MM-dd");
+                var versionText = $"Uno.Check Version {version} (built {buildDate})";
+                config.SetApplicationName(ToolInfo.ToolCommand);
+                config.SetApplicationVersion(versionText);
 				config.AddCommand<CheckCommand>("check");
 				config.AddCommand<ListCheckupCommand>("list");
 				config.AddCommand<ConfigCommand>("config");
@@ -59,8 +65,8 @@ namespace DotNetCheck
 			var finalArgs = new List<string>();
 
 			var firstArg = args?.FirstOrDefault()?.Trim()?.ToLowerInvariant() ?? string.Empty;
-
-			if (firstArg != "list" && firstArg != "config" && firstArg != "acquirepackages")
+            bool isGlobalOption = firstArg is "-h" or "--help" or "-v" or "--version";
+            if (!isGlobalOption && firstArg != "list" && firstArg != "config" && firstArg != "acquirepackages")
 				finalArgs.Add("check");
 
 			if (args?.Any() ?? false)
