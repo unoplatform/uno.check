@@ -42,7 +42,7 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("If problems are detected, it will offer the option to try and fix them for you, or suggest a way to fix them yourself.");
 			AnsiConsole.Write(new Rule());
 
-			if (await NeedsToolUpdateAsync(settings))
+			if (await ToolUpdater.CheckAndPromptForUpdateAsync(settings))
 			{
 				return 1;
 			}
@@ -432,46 +432,6 @@ namespace DotNetCheck.Cli
             }
             return targetPlatforms.ToArray();
         }
-
-		private async Task<bool> NeedsToolUpdateAsync(CheckSettings settings)
-		{
-			if ( (settings.Manifest is not null && !settings.CI) || Debugger.IsAttached)
-			{
-				return false;
-			}
-
-			bool needsToUpdate = false;
-			var currentVersion = ToolInfo.CurrentVersion;
-			NuGetVersion latestVersion = null;
-			try
-			{
-				latestVersion = await ToolInfo.GetLatestVersion(currentVersion.IsPrerelease);
-			}
-			catch
-			{
-				AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Could not check for latest version of uno-check on NuGet.org. The currently installed version may be out of date.[/]");
-				AnsiConsole.WriteLine();
-				AnsiConsole.Write(new Rule());
-			}
-
-			if (latestVersion is not null && currentVersion < latestVersion)
-			{
-				AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Your uno-check version is not up to date. The latest version is {latestVersion}. You can use the following command to update:[/]");
-				AnsiConsole.WriteLine();
-				AnsiConsole.MarkupLine($"dotnet tool update --global Uno.Check --version {latestVersion}");
-				AnsiConsole.WriteLine();
-
-				AnsiConsole.Write(new Rule());
-			}
-
-			if (!settings.CI && (latestVersion is null || currentVersion < latestVersion))
-			{
-				var shouldContinue = AnsiConsole.Confirm("Would you still like to continue with the currently installed version?", false);
-				needsToUpdate = !shouldContinue;
-            }
-
-			return needsToUpdate;
-		}
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
