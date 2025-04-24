@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -67,7 +67,7 @@ namespace DotNetCheck
 
 			var finalArgs = new List<string>();
 
-			var firstArg = args?.FirstOrDefault()?.Trim()?.ToLowerInvariant() ?? string.Empty;
+            var firstArg = args?.FirstOrDefault()?.Trim()?.ToLowerInvariant() ?? string.Empty;
             var isGlobalOption = firstArg is "-h" or "--help" or "-v" or "--version";
             if (!isGlobalOption && firstArg != "list" && firstArg != "config" && firstArg != "acquirepackages")
 				finalArgs.Add("check");
