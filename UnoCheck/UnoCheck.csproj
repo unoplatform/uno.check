@@ -10,6 +10,7 @@
 		<PackAsToolShimRuntimeIdentifiers Condition="'$(Configuration)'=='Release'">win-x64;win-x86;osx-x64;linux-x64</PackAsToolShimRuntimeIdentifiers>
 		<LangVersion>latest</LangVersion>
 		<RollForward>Major</RollForward>
+		<BuildDate>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,6 +24,13 @@
 		<Title>Uno Platform Check Tool</Title>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>BuildDate</_Parameter1>
+			<_Parameter2>$(BuildDate)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+	
 	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(TF_BUILD)' == 'true'">
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 	</PropertyGroup>
@@ -39,7 +47,7 @@
 		<PackageReference Include="NuGet.Versioning" Version="5.11.5" />
 		<PackageReference Include="Microsoft.Build.Framework" Version="16.9.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="Spectre.Console.Cli" Version="0.46.1-preview.0.6" />
+		<PackageReference Include="Spectre.Console.Cli" Version="0.50.0" />
 		<PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.1" />
 		<PackageReference Include="System.Text.Json" Version="5.0.2" />
@@ -49,7 +57,7 @@
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 		<PackageReference Include="plist-cil" Version="2.2.0" />
-		<PackageReference Include="Spectre.Console" Version="0.46.1-preview.0.6" />
+		<PackageReference Include="Spectre.Console" Version="0.50.0" />
 		<PackageReference Include="Xamarin.LibZipSharp" Version="2.0.0" />
 		<PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" Condition=" '$(OS)' != 'Windows_NT' " />
 		<PackageReference Include="ini-parser-netstandard" Version="2.5.2" />
