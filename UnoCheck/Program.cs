@@ -16,8 +16,10 @@ namespace DotNetCheck
 		{
 			TelemetryClient.Init();
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
 				ConsoleWindowHelpers.BringToFront();
-			
+			}
+
 			// Need to register the code pages provider for code that parses
 			// and later needs ISO-8859-2
 			System.Text.Encoding.RegisterProvider(
