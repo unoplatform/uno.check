@@ -12,9 +12,9 @@ To allow customizing and specifying the checks you want `uno-check` to do, it ac
 
 <!-- TODO: Decide if this should instead be also a tab like this: # [**help**](#tab/arg-help) -->
 
-[!INCLUDES [uno-check-help](xref:UnoCheck.GetHelpOutput)]
+[!INCLUDES [uno-check-help](../includes/uno-check-help.md)]
 
-[!INCLUDES [Uno-Check-Windows-Elevation](xref:UnoCheck.Configuration.Windows.Elevation)]
+[!INCLUDES [Uno-Check-Windows-Elevation](../includes/uno-check-help.md)]
 
 # [**target platforms**](#tab/arg-target)
 
