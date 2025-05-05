@@ -7,7 +7,7 @@
 		<ToolCommandName>uno-check</ToolCommandName>
 		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<RootNamespace>DotNetCheck</RootNamespace>
-		<PackAsToolShimRuntimeIdentifiers Condition="'$(Configuration)'=='Release'">win-x64;win-x86;win-arm64;osx-x64;osx-arm64;linux-x64;linux-arm64</PackAsToolShimRuntimeIdentifiers>
+		<PackAsToolShimRuntimeIdentifiers Condition="'$(Configuration)'=='Release'">win-x64;win-x86;win-arm64;osx-x64;linux-x64;linux-arm64</PackAsToolShimRuntimeIdentifiers>
 		<LangVersion>latest</LangVersion>
 		<RollForward>Major</RollForward>
 		<BuildDate>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
