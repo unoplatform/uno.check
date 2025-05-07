@@ -1,4 +1,3 @@
-
 # Uno.Check
 [![NuGet](https://badgen.net/nuget/v/Uno.Check)](https://www.nuget.org/packages/Uno.Check)
 
@@ -66,5 +65,3 @@ This CLI is built on [Spectre.Console](https://spectreconsole.net/) — feel fre
 ---
 
 Based on [Redth's .NET MAUI Check tool](https://github.com/Redth/dotnet-maui-check).
-
----
