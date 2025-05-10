@@ -88,11 +88,15 @@ namespace DotNetCheck.Checkups
 
 				if (!vsjson.TryGetProperty("installationPath", out var installPath))
 					continue;
+				
+				if (!vsjson.TryGetProperty("instanceId", out var instanceId))
+					continue;
 
 				items.Add(new VisualStudioInfo
 				{
 					Version = semVer,
-					Path = installPath.GetString()
+					Path = installPath.GetString(),
+					InstanceId = instanceId.GetString()
 				});
 			}
 
@@ -105,5 +109,7 @@ namespace DotNetCheck.Checkups
 		public string Path { get; set; }
 
 		public NuGetVersion Version { get; set; }
+		
+		public string InstanceId { get; set; }
 	}
 }
