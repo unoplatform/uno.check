@@ -75,8 +75,8 @@ namespace DotNetCheck.Checkups
 					continue;
 				}
 
-				var supportedInstalls = await VisualStudioWindowsCheckup.GetWindowsInfo(workload.Id);
-				if (supportedInstalls.Any())
+				var supportedInstalls = VisualStudioWindowsCheckup.GetWindowsInfo(workload.Id);
+				if (supportedInstalls.Count > 0)
 				{
 					var installsStr = string.Join(", ", supportedInstalls.Select(vs => vs.Version));
 					ReportStatus($"{workload.Name ?? workload.Id} is installed ({installsStr})", Status.Ok);
