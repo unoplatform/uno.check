@@ -73,7 +73,7 @@ namespace DotNetCheck
 			var finalArgs = new List<string>();
 
 			var firstArg = args?.FirstOrDefault()?.Trim()?.ToLowerInvariant() ?? string.Empty;
-			var isGlobalOption = firstArg is "-h" or "--help" or "-v" or "--version";
+			var isGlobalOption = firstArg is "-h" or "--help" or "--version";
 			var isExplicitCommand = firstArg is "check" or "list" or "config";
 
 			if (!isGlobalOption && !isExplicitCommand)
