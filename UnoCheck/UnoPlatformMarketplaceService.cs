@@ -16,6 +16,12 @@ public sealed class UnoPlatformMarketplaceService : IDisposable
         "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1";
     private const string Publisher = "unoplatform";
     private const string ExtensionId = "uno-platform-addin-2022";
+    private const ExtensionQueryFlags DefaultFlags =
+        ExtensionQueryFlags.IncludeFiles
+        | ExtensionQueryFlags.IncludeVersionProperties
+        | ExtensionQueryFlags.IncludeAssetUri
+        | ExtensionQueryFlags.IncludeStatistics
+        | ExtensionQueryFlags.IncludeLatestVersionOnly;
     
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -48,7 +54,7 @@ public sealed class UnoPlatformMarketplaceService : IDisposable
     private static ExtensionQueryRequest CreateQueryPayload() =>
         new([new Filter([new Criterion(7, $"{Publisher}.{ExtensionId}")])],
             ["Microsoft.VisualStudio.Services.VSIXPackage"], 
-            914);
+            (int)DefaultFlags);
 
     private async Task<string> PostMarketplaceRequest(ExtensionQueryRequest payload, CancellationToken ct)
     {

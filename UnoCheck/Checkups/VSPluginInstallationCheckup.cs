@@ -34,6 +34,11 @@ public sealed class VSPluginInstallationCheckup : Checkup
                     var marketplaceDetails = await marketplace.GetExtensionDetailsAsync();
                     
                     var installedVersion = FindInstalledUnoVsixVersion(extensionsPath);
+                    if (string.IsNullOrEmpty(installedVersion))
+                    {
+                        return SuggestVsixInstall();
+                    }
+                    
                     if (NuGetVersion.TryParse(installedVersion, out var localVer) &&
                         NuGetVersion.TryParse(marketplaceDetails.Version, out var marketVer) &&
                         localVer < marketVer)
@@ -47,11 +52,8 @@ public sealed class VSPluginInstallationCheckup : Checkup
 
                     return DiagnosticResult.Ok(this);
                 }
-                return new DiagnosticResult(
-                    Status.Warning,
-                    this,
-                    new Suggestion("Install Uno Platform VS extension for the best experience.",
-                        new VsixInstallSolution()));
+
+                return SuggestVsixInstall();
             }
         }
         return DiagnosticResult.Ok(this);
@@ -64,6 +66,15 @@ public sealed class VSPluginInstallationCheckup : Checkup
             $"{vsInfo.Version.Version.Major}.0_{vsInfo.InstanceId}", 
             "Extensions");
 
+    private DiagnosticResult SuggestVsixInstall()
+    {
+        return new DiagnosticResult(
+            Status.Warning,
+            this,
+            new Suggestion("Install Uno Platform VS extension for the best experience.",
+                new VsixInstallSolution()));
+    }
+    
     private static string FindInstalledUnoVsixVersion(string extensionsDir)
     {
         foreach (var vsixDir in Directory.GetDirectories(extensionsDir, "*", SearchOption.AllDirectories))
