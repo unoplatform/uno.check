@@ -32,6 +32,7 @@ namespace DotNetCheck
 				new AndroidEmulatorCheckup(),
 				new VisualStudioWindowsCheckup(),
 				new VSWinWorkloadsCheckup(),
+				new VSPluginInstallationCheckup(),
 				new AndroidSdkPackagesCheckup(),
 				new XCodeCheckup(),
 				new DotNetCheckup()
