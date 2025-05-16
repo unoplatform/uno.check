@@ -12,8 +12,7 @@ namespace DotNetCheck.Checkups
 
         // Only examine when WebAssembly is one of the targets
         public override bool ShouldExamine(SharedState history) => 
-            !Util.CI && !Util.NonInteractive
-            && history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var platforms)
+            history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var platforms)
             && platforms.HasFlag(TargetPlatform.WebAssembly);
 
         public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) =>
@@ -21,6 +20,12 @@ namespace DotNetCheck.Checkups
 
         public override async Task<DiagnosticResult> Examine(SharedState history)
         {
+            if (Util.CI || Util.NonInteractive)
+            {
+                ReportStatus("Skipping in CI / non-interactive mode", Status.Ok);
+                return DiagnosticResult.Ok(this);
+            }
+            
             var check = await Util.ShellCommand(
                 "dotnet",
                 Directory.GetCurrentDirectory(),
