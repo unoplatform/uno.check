@@ -105,6 +105,10 @@ namespace DotNetCheck.Cli
 			{
 				sharedState.SetEnvironmentVariable("DOTNET_ROOT", settings.DotNetSdkRoot);
 			}
+			else if (Environment.GetEnvironmentVariable("DOTNET_ROOT") is { } dotnetRoot)
+			{
+				sharedState.SetEnvironmentVariable("DOTNET_ROOT", dotnetRoot);
+			}
 
 			if (settings.ForceDotNet)
 				sharedState.SetEnvironmentVariable("DOTNET_FORCE", "true");
