@@ -11,8 +11,9 @@ namespace DotNetCheck.Checkups
         public override string Title => "HTTPS Developer Certificate Trust";
 
         // Only examine when WebAssembly is one of the targets
-        public override bool ShouldExamine(SharedState history) =>
-            history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var platforms)
+        public override bool ShouldExamine(SharedState history) => 
+            !Util.CI && !Util.NonInteractive
+            && history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var platforms)
             && platforms.HasFlag(TargetPlatform.WebAssembly);
 
         public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest) =>
