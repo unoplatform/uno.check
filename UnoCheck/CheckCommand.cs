@@ -27,6 +27,7 @@ namespace DotNetCheck.Cli
 			Util.CI = settings.CI;
 			if (settings.CI)
 				settings.NonInteractive = true;
+			Util.NonInteractive = settings.NonInteractive;
 
 			Console.Title = ToolInfo.ToolName;
 
