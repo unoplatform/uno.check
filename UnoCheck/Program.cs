@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using DotNetCheck.Checkups;
 using DotNetCheck.Cli;
@@ -14,6 +15,10 @@ namespace DotNetCheck
 		static Task<int> Main(string[] args)
 		{
 			TelemetryClient.Init();
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				ConsoleWindowHelpers.BringToFront();
+			}
 
 			// Need to register the code pages provider for code that parses
 			// and later needs ISO-8859-2
