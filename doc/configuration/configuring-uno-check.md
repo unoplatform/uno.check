@@ -2,55 +2,21 @@
 uid: UnoCheck.Configuration
 ---
 
+<!--markdownlint-disable MD025 MD001 -->
+
 # Configuring Uno Check
 
-## Running Uno.Check in a CI environment
+## Overview of Command line arguments
 
-It is possible to run Uno.Check to setup your build environment in a repeatable way by using the following commands:
+To allow customizing and specifying the checks you want `uno-check` to do, it accepts some command line arguments.
 
-## [**Windows**](#tab/windows)
+<!-- TODO: Decide if this should instead be also a tab like this: # [**help**](#tab/arg-help) -->
 
-```bash
-dotnet tool install --global Uno.Check --version 1.29.4
-uno-check -v --ci --non-interactive --fix --skip vswin --skip androidemulator --skip androidsdk
-```
+[!INCLUDES [uno-check-help](../includes/uno-check-help.md)]
 
-## [**macOS**](#tab/macos)
+[!INCLUDES [Uno-Check-Windows-Elevation](../includes/uno-check-help.md)]
 
-```bash
-dotnet tool install --global Uno.Check --version 1.29.4
-uno-check -v --ci --non-interactive --fix --skip xcode --skip androidemulator --skip androidsdk
-```
-
-## [**Linux**](#tab/linux)
-
-```bash
-dotnet tool install --global Uno.Check --version 1.29.4
-uno-check -v --ci --non-interactive --fix --skip androidemulator
-```
-
-***
-
-Pinning uno.check to a specific version will allow to keep a repeatable build over time, regardless of the updates done to Uno Platform or .NET. Make sure to regularly update to a more recent version of Uno.Check.
-
-> [!TIP]
-> You can use `dotnet package search uno.check` to search for the latest version of uno.check.
-
-## Running without elevation on Windows
-
-In restricted environments, it may be required to run uno-check to determine what needs to be installed without privileges elevation.
-
-In order to do so, use the following command:
-
-```bash
-cmd /c "set __COMPAT_LAYER=RUNASINVOKER && uno-check"
-```
-
-## Command line arguments
-
-The following command line arguments can be used to customize the tool's behavior.
-
-### `--target` Choose target platforms
+# [**target platforms**](#tab/arg-target)
 
 Uno Platform supports a number of platforms, and you may only wish to develop for a subset of them. By default, the tool runs checks for all supported platforms. If you use the `--target` argument, it will only run checks for the nominated target or targets.
 
@@ -77,18 +43,30 @@ Supported target platforms and their `--target` values:
 | Windows          | `windows`, `win32desktop`, `win32` |
 | All Platforms    | `all`                              |
 
-### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
+# [**Manifest File or Url**](#tab/arg-manifest)
 
 The manifest file is used by the tool to fetch the latest versions and requirements.
 The default manifest is hosted at: `https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json`
 
-Use this option to specify an alternative file path or URL to use.
+**Argument Value Syntax:**
 
-```bash
-uno-check --manifest /some/other/file
+```plaintext
+`uno-check -m <FILE_OR_URL>`, `uno-check --manifest <FILE_OR_URL>` 
 ```
 
-### `-f`, `--fix` Fix without prompt
+Use this option to specify an alternative manifest file path or URL, like this:
+
+```bash
+uno-check --manifest /some/other/file_or_url
+```
+
+Or short:
+
+```bash
+uno-check -m /some/other/file_or_url
+```
+
+# [**Fix without prompt**](#tab/arg-fix)
 
 You can try using the `--fix` argument to automatically enable solutions to run without being prompted.
 
@@ -96,7 +74,13 @@ You can try using the `--fix` argument to automatically enable solutions to run 
 uno-check --fix
 ```
 
-### `-n`, `--non-interactive` Non-Interactive
+Or short:
+
+```bash
+uno-check -f
+```
+
+# [**Non-Interactive**](#tab/arg-non-interactive)
 
 If you're running on CI, you may want to run without any required input with the `--non-interactive` argument.  You can combine this with `--fix` to automatically fix without prompting.
 
@@ -104,7 +88,13 @@ If you're running on CI, you may want to run without any required input with the
 uno-check --non-interactive
 ```
 
-### `--pre`, `--preview`, `-d`, `--dev` Preview Manifest feed
+Or short:
+
+```bash
+uno-check -n
+```
+
+# [**Preview Manifest feed**](#tab/arg-preview-and-dev)
 
 This uses a more frequently updated manifest with newer versions of things more often. If you use the pre-release versions of Uno.UI NuGet packages, you should use this flag.
 
@@ -114,17 +104,19 @@ The manifest is hosted by default here: [uno.ui-preview.manifest.json](https://r
 uno-check --pre
 ```
 
-### `--pre-major`, `--preview-major`
+**Synonym Arguments:** `--pre`, `--preview`, `-d`, `--dev`
+
+# [**pre-major .NET Version**] `--pre-major`, `--preview-major`
 
 This generally uses the preview builds of the next major version of .NET available.
 
 The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 
 ```bash
-uno-check --pre
+uno-check --pre-major
 ```
 
-### `--ci` Continuous Integration
+# [**Continuous Integration**](#tab/arg-ci)
 
 Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK version from the manifest instead of the global installer.
 
@@ -132,35 +124,63 @@ Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK 
 uno-check --ci
 ```
 
-### `-s <ID_OR_NAME>`, `--skip <ID_OR_NAME>` Skip Checkup
+More Detailed Information about Uno.Check in CI: [Using Uno Check in CI Environment](xref:UnoCheck.Configuration.CI)
 
-Skips a checkup by name or ID as listed in `uno-check list`.
+# [Skip some Checkups](#tab/arg-skip)
+
+Skips a checkup by name or ID as listed in [`uno-check list`](#list-list-checkups).
 
 > [!NOTE]
 > If any other checkups depend on a skipped checkup, they will be skipped too.
+
+**Argument Value Syntax:**
+
+```plaintext
+`uno-check -s <ID_OR_NAME>`, `--skip <ID_OR_NAME>`
+```
+
+Here is an Example:
 
 ```bash
 uno-check --skip openjdk --skip androidsdk
 ```
 
-### `list` List Checkups
+Or short:
+
+```bash
+uno-check -s openjdk -s androidsdk
+```
+
+# [**List Checkups**](#tab/arg-list)
+
+```bash
+uno-check list
+```
 
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
 These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
 
-### `config` Configure global.json and NuGet.config in Working Dir
+![uno-check-list](./assets/uno-check-list.png)
+
+# [**Configure global.json and NuGet.config in Working Dir**](#tab/arg-config)
 
 This allows you to quickly synchronize your `global.json` and/or `NuGet.config` in the current working directory to utilize the values specified in the manifest.
 
 Arguments:
 
-- `--dotnet` or `--dotnet-version`: Use the SDK version in the manifest in `global.json`.
-- `--dotnet-pre true|false`: Change the `allowPrerelease` value in the `global.json`.
-- `--dotnet-rollForward <OPTION>`: Change the `rollForward` value in `global.json` to one of the allowed values specified.
-- `--nuget` or `--nuget-sources`: Adds the nuget sources specified in the manifest to the `NuGet.config` and creates the file if needed.
+* `--dotnet` or `--dotnet-version`: Use the SDK version in the manifest in `global.json`.
+* `--dotnet-pre true|false`: Change the `allowPrerelease` value in the `global.json`.
+* `--dotnet-rollForward <OPTION>`: Change the `rollForward` value in `global.json` to one of the allowed values specified.
+* `--nuget` or `--nuget-sources`: Adds the nuget sources specified in the manifest to the `NuGet.config` and creates the file if needed.
 
 Example:
 
 ```bash
 uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true
 ```
+
+***
+
+## See Also
+
+* [Running Uno Check on Windows in Restricted Environment](xref:UnoCheck.Configuration.Windows.RestrictedEnvironments)
