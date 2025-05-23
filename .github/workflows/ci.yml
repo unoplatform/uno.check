@@ -51,6 +51,12 @@ jobs:
         name: NuGet
         path: .\artifacts
 
+    - name: Add NuGet Summary
+      shell: pwsh
+      run: |
+          echo "### NuGet Package Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "Package version: ${{ steps.nbgv.outputs.SemVer2 }}" >> $env:GITHUB_STEP_SUMMARY
+
   run_tests:
     name: Run Unit Tests
     needs: build_tool
@@ -481,3 +487,6 @@ jobs:
         shell: pwsh
         run: |
           dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k "${{ secrets.NUGET_ORG_API_KEY }}"
+
+      - name: "Tag Release"
+        uses: ./.github/actions/tag-release
