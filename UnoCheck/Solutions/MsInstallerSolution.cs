@@ -92,6 +92,7 @@ namespace DotNetCheck.Solutions
 			if (r.ExitCode == 0)
 			{
 				ReportStatus($"Installed {Title ?? Url.ToString()}.");
+				sharedState.ContributeState(StateKey.EntryPoint, "DotNetSdkInstalled", true);
 			}
 			else
 			{

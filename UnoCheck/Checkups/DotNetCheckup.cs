@@ -111,6 +111,8 @@ namespace DotNetCheck.Checkups
 						.Where(ms => ms.Url.AbsolutePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
 						.Select(ms => new MsInstallerSolution(ms.Url, ".NET SDK " + ms.Version)));
 				}
+				
+				history.ContributeState(StateKey.EntryPoint, "DotNetSdkInstalled", true);
 
 				return new DiagnosticResult(Status.Error, this, $".NET SDK {str} not installed.",
 							new Suggestion($"Download .NET SDK {str}",
