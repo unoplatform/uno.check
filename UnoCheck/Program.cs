@@ -39,7 +39,9 @@ namespace DotNetCheck
 			);
 
 			CheckupManager.RegisterCheckupContributors(
-				new DotNetSdkCheckupContributor());
+				new DotNetSdkCheckupContributor(),
+				new VSRestartCheckupContributor()
+			);
 
 			CheckupManager.RegisterCheckups(
 				new PSExecutionPolicyCheckup(),
