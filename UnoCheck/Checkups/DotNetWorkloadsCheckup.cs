@@ -159,7 +159,7 @@ namespace DotNetCheck.Checkups
 					}
 
 					await genericWorkloadManager.Install(RequiredWorkloads);
-					history.ContributeState(StateKey.EntryPoint, "DotNetWorkloadsInstalled", true);
+					history.ContributeState(StateKey.EntryPoint, "ShouldRestartVS", true);
 				})));
 		}
 	}

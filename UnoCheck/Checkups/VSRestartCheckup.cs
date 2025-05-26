@@ -16,8 +16,7 @@ namespace DotNetCheck.Checkups
 
         public override bool ShouldExamine(SharedState history)
         {
-            return history.TryGetState<bool>(StateKey.EntryPoint, "DotNetWorkloadsInstalled", out var workloadsInstalled) && workloadsInstalled
-                || history.TryGetState<bool>(StateKey.EntryPoint, "DotNetSdkInstalled", out var sdkInstalled) && sdkInstalled;
+            return history.TryGetState<bool>(StateKey.EntryPoint, "ShouldRestartVS", out var shouldRestartVs) && shouldRestartVs;
         }
 
         public override Task<DiagnosticResult> Examine(SharedState history)
