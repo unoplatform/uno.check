@@ -14,7 +14,7 @@ To allow customizing and specifying the checks you want `uno-check` to do, it ac
 
 [!INCLUDES [uno-check-help](../includes/uno-check-help.md)]
 
-[!INCLUDES [Uno-Check-Windows-Elevation](../includes/uno-check-help.md)]
+[!INCLUDES [Uno-Check-Windows-Elevation](../includes/uno-check-windows-elevation.md)]
 
 # [**target platforms**](#tab/arg-target)
 
