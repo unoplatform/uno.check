@@ -27,6 +27,7 @@ namespace DotNetCheck.Cli
 			Util.CI = settings.CI;
 			if (settings.CI)
 				settings.NonInteractive = true;
+			Util.NonInteractive = settings.NonInteractive;
 
 			Console.Title = ToolInfo.ToolName;
 
@@ -103,6 +104,10 @@ namespace DotNetCheck.Cli
 			if (!string.IsNullOrEmpty(settings.DotNetSdkRoot))
 			{
 				sharedState.SetEnvironmentVariable("DOTNET_ROOT", settings.DotNetSdkRoot);
+			}
+			else if (Environment.GetEnvironmentVariable("DOTNET_ROOT") is { } dotnetRoot)
+			{
+				sharedState.SetEnvironmentVariable("DOTNET_ROOT", dotnetRoot);
 			}
 
 			if (settings.ForceDotNet)
