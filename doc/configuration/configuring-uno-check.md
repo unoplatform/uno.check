@@ -16,7 +16,14 @@ To allow customizing and specifying the checks you want `uno-check` to do, it ac
 
 [!INCLUDES [Uno-Check-Windows-Elevation](../includes/uno-check-windows-elevation.md)]
 
-# [**target platforms**](#tab/arg-target)
+> [!IMPORTANT]
+> All of the following optional arguments require you to start your command with:
+>
+> `uno-check check`
+>
+> (the postfix `check` is optional, as uno-check defaults to this action.)
+
+# [**target**](#tab/target)
 
 Uno Platform supports a number of platforms, and you may only wish to develop for a subset of them. By default, the tool runs checks for all supported platforms. If you use the `--target` argument, it will only run checks for the nominated target or targets.
 
@@ -43,7 +50,7 @@ Supported target platforms and their `--target` values:
 | Windows          | `windows`, `win32desktop`, `win32` |
 | All Platforms    | `all`                              |
 
-# [**Manifest File or Url**](#tab/arg-manifest)
+# [**manifest**](#tab/manifest)
 
 The manifest file is used by the tool to fetch the latest versions and requirements.
 The default manifest is hosted at: `https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json`
@@ -66,7 +73,7 @@ Or short:
 uno-check -m /some/other/file_or_url
 ```
 
-# [**Fix without prompt**](#tab/arg-fix)
+# [**fix**](#tab/fix)
 
 You can try using the `--fix` argument to automatically enable solutions to run without being prompted.
 
@@ -80,7 +87,7 @@ Or short:
 uno-check -f
 ```
 
-# [**Non-Interactive**](#tab/arg-non-interactive)
+# [**non-interactive**](#tab/non-interactive)
 
 If you're running on CI, you may want to run without any required input with the `--non-interactive` argument.  You can combine this with `--fix` to automatically fix without prompting.
 
@@ -94,7 +101,7 @@ Or short:
 uno-check -n
 ```
 
-# [**Preview Manifest feed**](#tab/arg-preview-and-dev)
+# [**preview / dev**](#tab/preview-and-dev)
 
 This uses a more frequently updated manifest with newer versions of things more often. If you use the pre-release versions of Uno.UI NuGet packages, you should use this flag.
 
@@ -106,7 +113,7 @@ uno-check --pre
 
 **Synonym Arguments:** `--pre`, `--preview`, `-d`, `--dev`
 
-# [**pre-major .NET Version**] `--pre-major`, `--preview-major`
+# [**pre-major**](#tab/pre-mayor)
 
 This generally uses the preview builds of the next major version of .NET available.
 
@@ -116,7 +123,7 @@ The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](htt
 uno-check --pre-major
 ```
 
-# [**Continuous Integration**](#tab/arg-ci)
+# [**ci**](#tab/arg-ci)
 
 Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK version from the manifest instead of the global installer.
 
@@ -126,9 +133,9 @@ uno-check --ci
 
 More Detailed Information about Uno.Check in CI: [Using Uno Check in CI Environment](xref:UnoCheck.Configuration.CI)
 
-# [Skip some Checkups](#tab/arg-skip)
+# [**skip**](#tab/skip)
 
-Skips a checkup by name or ID as listed in [`uno-check list`](#list-list-checkups).
+Skips a checkup by name or ID. For more information for how to get all skip-able checks refer to the [list](#list) command.
 
 > [!NOTE]
 > If any other checkups depend on a skipped checkup, they will be skipped too.
@@ -151,7 +158,11 @@ Or short:
 uno-check -s openjdk -s androidsdk
 ```
 
-# [**List Checkups**](#tab/arg-list)
+---
+
+## list
+
+Beside the general `check` command / action, you can get a list of available, skip-able checks by using:
 
 ```bash
 uno-check list
@@ -160,9 +171,9 @@ uno-check list
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
 These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
 
-![uno-check-list](./assets/uno-check-list.png)
+![uno-check-list](../assets/uno-check-list.png)
 
-# [**Configure global.json and NuGet.config in Working Dir**](#tab/arg-config)
+## config
 
 This allows you to quickly synchronize your `global.json` and/or `NuGet.config` in the current working directory to utilize the values specified in the manifest.
 
@@ -179,7 +190,7 @@ Example:
 uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true
 ```
 
-***
+---
 
 ## See Also
 
