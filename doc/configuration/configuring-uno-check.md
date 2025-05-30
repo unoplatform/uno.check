@@ -113,7 +113,8 @@ uno-check --pre
 
 **Synonym Arguments:** `--pre`, `--preview`, `-d`, `--dev`
 
-# [**pre-major**](#tab/pre-mayor)
+# [**pre-major**](#tab/pre-major)
+
 
 This generally uses the preview builds of the next major version of .NET available.
 
