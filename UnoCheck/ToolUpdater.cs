@@ -114,7 +114,7 @@ internal static class ToolUpdater
                 $"sleep 2 && " +
                 $"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version} " +
                 $"&& {ToolInfo.ToolCommand} {argsForRelaunch}";
-            var full = $"nohup sh -c \"{shCommand}\" >/dev/null 2>&1 &";
+            var full = $"nohup sh -c '{shCommand}' >/dev/null 2>&1 &";
 
             Process.Start(new ProcessStartInfo("/bin/sh", $"-c \"{full}\"")
             {
