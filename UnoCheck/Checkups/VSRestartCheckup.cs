@@ -16,15 +16,15 @@ namespace DotNetCheck.Checkups
 
         public override bool ShouldExamine(SharedState history)
         {
-            return history.TryGetState<bool>(StateKey.EntryPoint, "ShouldRestartVS", out var shouldRestartVs) && shouldRestartVs;
+            return history.TryGetState<bool>(StateKey.EntryPoint, StateKey.ShouldRestartVs, out var shouldRestartVs) && shouldRestartVs;
         }
 
         public override Task<DiagnosticResult> Examine(SharedState history)
         {
-            const string VisualStudioProcessName = "devenv";
+            const string visualStudioProcessName = "devenv";
             try
             {
-                var vsProcesses = Process.GetProcessesByName(VisualStudioProcessName);
+                var vsProcesses = Process.GetProcessesByName(visualStudioProcessName);
                 
                 if (vsProcesses.Length > 0)
                 {
