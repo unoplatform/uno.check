@@ -21,9 +21,10 @@ namespace DotNetCheck.Checkups
 
         public override Task<DiagnosticResult> Examine(SharedState history)
         {
+            const string VisualStudioProcessName = "devenv";
             try
             {
-                var vsProcesses = Process.GetProcessesByName("devenv");
+                var vsProcesses = Process.GetProcessesByName(VisualStudioProcessName);
                 
                 if (vsProcesses.Length > 0)
                 {
