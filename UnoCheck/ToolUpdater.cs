@@ -103,23 +103,24 @@ internal static class ToolUpdater
 
             Process.Start(new ProcessStartInfo("cmd.exe", $"/C {cmdText}")
             {
-                UseShellExecute  = true,
-                CreateNoWindow   = true,
+                UseShellExecute = true,
+                CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             });
         }
         else
         {
             var shCommand =
-                $"sleep 2 && " +
+                $"sleep 1 && " +
                 $"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version} " +
-                $"&& {ToolInfo.ToolCommand} {argsForRelaunch}";
-            var full = $"nohup sh -c '{shCommand}' >/dev/null 2>&1 &";
+                $"&& {ToolInfo.ToolCommand} {argsForRelaunch}".Trim();
 
-            Process.Start(new ProcessStartInfo("/bin/sh", $"-c \"{full}\"")
+            var full = $"\"{shCommand} 2>&1\"";
+
+            Process.Start(new ProcessStartInfo("/bin/sh", $"-c {full}")
             {
-                UseShellExecute  = false,
-                CreateNoWindow   = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             });
         }
