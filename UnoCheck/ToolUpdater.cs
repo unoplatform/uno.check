@@ -122,7 +122,7 @@ internal static class ToolUpdater
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
-            });                        
+            });
         }
 
         AnsiConsole.MarkupLine($"[bold green]{Icon.Thinking} Update command executed. Relaunching uno-check...[/]");
