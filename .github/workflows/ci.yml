@@ -462,6 +462,7 @@ jobs:
           --azure-key-vault-managed-identity true
           --azure-key-vault-url "${{ secrets.SIGN_KEY_VAULT_URL }}"
           --azure-key-vault-certificate "${{ secrets.SIGN_KEY_VAULT_CERTIFICATE_ID }}"
+          --verbosity information
 
       - name: Upload Signed Artifacts
         uses: actions/upload-artifact@v4
