@@ -1,7 +1,5 @@
-topicHref: xref:UnoCheck.Intro
+topicHref: xref:UnoCheck.UsingUnoCheck
 items:
-- name: Introduction to Uno Check
-  href: xref:UnoCheck.Intro
 - name: Using Uno Check
   href: xref:UnoCheck.UsingUnoCheck
 - name: Configuring Uno Check

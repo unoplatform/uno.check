@@ -42,8 +42,8 @@ Supported target platforms and their `--target` values:
 | iOS              | `ios`                              |
 | Android          | `android`, `droid`                 |
 | macOS            | `macos`                            |
-| SkiaDesktop      | `skiadesktop`, `skia`, `linux`     |
-| WinAppSDK        | `winappsdk`, `wasdk`               |
+| SkiaDesktop      | `skiadesktop`, `skia`, `linux`, `desktop`     |
+| WinAppSDK        | `winappsdk`, `wasdk` , `winsdk`              |
 | Windows          | `windows`, `win32desktop`, `win32` |
 | All Platforms    | `all`                              |
 
@@ -111,7 +111,6 @@ uno-check --pre
 **Synonym Arguments:** `--pre`, `--preview`, `-d`, `--dev`
 
 # [**pre-major**](#tab/pre-major)
-
 
 This generally uses the preview builds of the next major version of .NET available.
 
