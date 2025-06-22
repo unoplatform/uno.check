@@ -11,5 +11,7 @@ namespace DotNetCheck.Models
 		public const string Skips = "Skips";
 
 		public const string TargetPlatforms = "target_platforms";
+		
+		public const string ShouldRestartVs = "ShouldRestartVS";
 	}
 }

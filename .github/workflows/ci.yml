@@ -415,6 +415,11 @@ jobs:
     name: Sign Package
     if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: windows-latest
+    environment: PackageSign
+
+    permissions:
+      id-token: write # Required for requesting the JWT
+
     needs:
       - build_tool
     steps:
@@ -430,16 +435,34 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '3.1.x'
+          dotnet-version: '9.0.x'
 
-      - name: Setup SignClient
-        run: |
-          dotnet tool install --tool-path build SignClient
+      # Install the code signing tool    
+      - name: Install Sign CLI tool
+        run: dotnet tool install --tool-path . sign --version 0.9.1-beta.25278.1
+      
+      # Login to Azure using a ServicePrincipal configured to authenticate agaist a GitHub Action
+      - name: 'Az CLI login'
+        uses: azure/login@v1
+        with:
+          allow-no-subscriptions: true
+          client-id: ${{ secrets.SIGN_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.SIGN_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.SIGN_AZURE_SUBSCRIPTION_ID }}
 
-      - name: SignClient
+      # Run the signing command
+      - name: Sign artifacts
         shell: pwsh
-        run: |
-          build\SignClient sign -i artifacts\NuGet\*.nupkg -c build\SignClient.json -r "${{ secrets.UNO_PLATFORM_CODESIGN_USERNAME }}" -s "${{ secrets.UNO_PLATFORM_CODESIGN_SECRET }}" -n "Uno.Check" -d "Uno.Check" -u "https://github.com/unoplatform/uno.check"
+        run: >
+          ./sign code azure-key-vault
+          artifacts\NuGet\*.nupkg
+          --publisher-name "Uno.Check"
+          --description "Uno.Check"
+          --description-url "https://github.com/${{ env.GITHUB_REPOSITORY }}"
+          --azure-key-vault-managed-identity true
+          --azure-key-vault-url "${{ secrets.SIGN_KEY_VAULT_URL }}"
+          --azure-key-vault-certificate "${{ secrets.SIGN_KEY_VAULT_CERTIFICATE_ID }}"
+          --verbosity information
 
       - name: Upload Signed Artifacts
         uses: actions/upload-artifact@v4
