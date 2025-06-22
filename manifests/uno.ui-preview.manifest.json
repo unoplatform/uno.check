@@ -3,7 +3,7 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "9.0.203",
+      "DOTNET_SDK_VERSION": "9.0.300",
       "MACCATALYST_SDK_VERSION": "18.4.9288/9.0.100",
       "IOS_SDK_VERSION": "18.4.9288/9.0.100",
       "TVOS_SDK_VERSION": "18.4.9288/9.0.100",
