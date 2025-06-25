@@ -1,7 +1,18 @@
+topicHref: xref:UnoCheck.UsingUnoCheck
 items:
 - name: Using Uno Check
   href: xref:UnoCheck.UsingUnoCheck
 - name: Configuring Uno Check
-  href: xref:UnoCheck.Configuration
+  topicHref: xref:UnoCheck.Configuration
+  items:
+    - name: Commandline Arguments
+      href: xref:UnoCheck.Configuration
+    - name: Using Uno.Check in a CI environment
+      href: xref:UnoCheck.Configuration.CI
 - name: Troubleshooting
-  href: xref:UnoCheck.Troubleshooting
+  topicHref: xref:UnoCheck.Troubleshooting
+  items:
+    - name: Troubleshooting Uno Check
+      href: xref:UnoCheck.Troubleshooting
+    - name: Running without elevation on Windows
+      href: xref:UnoCheck.Troubleshooting.KnownIssues
