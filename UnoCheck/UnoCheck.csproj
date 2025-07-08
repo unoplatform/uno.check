@@ -51,7 +51,7 @@
 		<PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="4.7.1" />
 		<PackageReference Include="System.Text.Json" Version="5.0.2" />
-		<PackageReference Include="Uno.DevTools.Telemetry" Version="1.0.0-dev.27"/>
+		<PackageReference Include="Uno.DevTools.Telemetry" Version="1.1.1"/>
 		<PackageReference Include="vswhere" Version="2.8.4">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
