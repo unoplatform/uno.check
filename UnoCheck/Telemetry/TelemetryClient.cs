@@ -9,7 +9,12 @@ namespace DotNetCheck;
 
 internal static class TelemetryClient
 {
-    private const string InstrumentationKey = "9a44058e-1913-4721-a979-9582ab8bedce";
+    private const string InstrumentationKey =
+#if !DEBUG
+		"9a44058e-1913-4721-a979-9582ab8bedce"; // Production key
+#else
+		"81286976-e3a4-49fb-b03b-30315092dbc4"; // Dev key
+#endif
 
     private static Telemetry _telemetry;
 
@@ -17,7 +22,7 @@ internal static class TelemetryClient
     {
         try
         {
-            _telemetry = new Telemetry(InstrumentationKey, "uno-check", typeof(TelemetryClient).Assembly);
+            _telemetry = new Telemetry(InstrumentationKey, "uno/uno-check", typeof(TelemetryClient).Assembly);
         }
         catch (Exception e)
         {
