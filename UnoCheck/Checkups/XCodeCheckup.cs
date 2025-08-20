@@ -35,7 +35,7 @@ namespace DotNetCheck.Checkups
 
 		public override string Id => "xcode";
 
-		public override string Title => $"XCode {VersionName}";
+		public override string Title => $"Minimum XCode version ({VersionName})";
 
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.XCode != null;
