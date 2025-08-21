@@ -110,7 +110,7 @@ namespace DotNetCheck.Checkups
 
 				Util.Exception(ex);
 				return Task.FromResult(
-					new DiagnosticResult(Status.Warning, this, msg));
+					new DiagnosticResult(Status.Warning, this, UnableToFindEmulatorsMessage));
 			}
 
 			return Task.FromResult(new DiagnosticResult(
