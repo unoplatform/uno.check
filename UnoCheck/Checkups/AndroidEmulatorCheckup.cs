@@ -15,7 +15,7 @@ namespace DotNetCheck.Checkups
 	public class AndroidEmulatorCheckup : Checkup
 	{
 		private const string ArmArch = "arm64-v8a";
-		private const string UnableToFindEmulatorsMessage = "Unable to find any Android Emulators.  See the Uno documentation for emulator setup: [underline]https://platform.uno/docs/articles/common-issues-mobile-debugging.html#android-emulator-setup[/]";const string msg = "Unable to find any Android Emulators.  See the Uno documentation for emulator setup: [underline]https://platform.uno/docs/articles/common-issues-mobile-debugging.html#android-emulator-setup[/]";
+		private const string UnableToFindEmulatorsMessage = "Unable to find any Android Emulators.  See the Uno documentation for emulator setup: [underline]https://platform.uno/docs/articles/common-issues-mobile-debugging.html#android-emulator-setup[/]";
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new [] { new CheckupDependency("androidsdk") };
 
