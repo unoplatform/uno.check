@@ -5,7 +5,7 @@ namespace UnoCheck.Tests;
 public class LaunchSettingsTests
 {
     [Fact]
-    public void LaunchProfile_Run_ShowsVersion()
+    public void Ensure_LaunchSettings_File_Is_Valid()
     {
         var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
         var launchSettings = Path.Combine(repoRoot, "UnoCheck", "Properties", "launchSettings.json");
@@ -13,7 +13,7 @@ public class LaunchSettingsTests
 
         var projectPath = Path.Combine(repoRoot, "UnoCheck", "UnoCheck.csproj");
 
-        var psi = new ProcessStartInfo("dotnet", $"run --no-build --project \"{projectPath}\" --framework net6.0 --launch-profile UnoCheck -- --non-interactive --ci")
+        var psi = new ProcessStartInfo("dotnet", $"run --project \"{projectPath}\" --framework net6.0 --launch-profile UnoCheck -- --non-interactive --ci")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
