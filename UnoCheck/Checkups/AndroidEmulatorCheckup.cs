@@ -14,7 +14,8 @@ namespace DotNetCheck.Checkups
 {
 	public class AndroidEmulatorCheckup : Checkup
 	{
-		const string armArch = "arm64-v8a";
+		private const string ArmArch = "arm64-v8a";
+		private const string UnableToFindEmulatorsMessage = "Unable to find any Android Emulators.  See the Uno documentation for emulator setup: [underline]https://platform.uno/docs/articles/common-issues-mobile-debugging.html#android-emulator-setup[/]";
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new [] { new CheckupDependency("androidsdk") };
 
@@ -105,13 +106,11 @@ namespace DotNetCheck.Checkups
 			}
 			catch (Exception ex)
 			{
-				var msg = "Unable to find any Android Emulators.  You can use Visual Studio to create one if necessary: [underline]https://docs.microsoft.com/xamarin/android/get-started/installation/android-emulator/device-manager[/]";
-
-				ReportStatus(msg, Status.Warning);
+				ReportStatus(UnableToFindEmulatorsMessage, Status.Warning);
 
 				Util.Exception(ex);
 				return Task.FromResult(
-					new DiagnosticResult(Status.Warning, this, msg));
+					new DiagnosticResult(Status.Warning, this, UnableToFindEmulatorsMessage));
 			}
 
 			return Task.FromResult(new DiagnosticResult(
@@ -143,7 +142,7 @@ namespace DotNetCheck.Checkups
 									// system-images;android-33;google_apis;arm64-v8a (for arm)
 									// system-images;android-31;google_apis;x86_64 (for x86 or x64)
 
-									? p.Path.Contains(armArch, StringComparison.OrdinalIgnoreCase)
+									? p.Path.Contains(ArmArch, StringComparison.OrdinalIgnoreCase)
 									: p.Path.Equals(me.SdkId, StringComparison.OrdinalIgnoreCase);
 								});
 								if (sdkPackage == null && (me.AlternateSdkIds?.Any() ?? false))
@@ -175,7 +174,7 @@ namespace DotNetCheck.Checkups
 							}
 							catch (Exception ex)
 							{
-								ReportStatus("Unable to create Emulator.  Use Visual Studio to create one instead: https://docs.microsoft.com/xamarin/android/get-started/installation/android-emulator/device-manager", Status.Warning);
+								ReportStatus(UnableToFindEmulatorsMessage, Status.Warning);
 								Util.Exception(ex);
 							}
 
