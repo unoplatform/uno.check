@@ -226,6 +226,12 @@ jobs:
            os: macos-14
            dotnet_version: 8.0.300
 
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Preview Major Upgrade
+           previous_tool_version: 1.17.0
+           os: macos-14
+           dotnet_version: 8.0.300
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFMs
            os: macos-14
