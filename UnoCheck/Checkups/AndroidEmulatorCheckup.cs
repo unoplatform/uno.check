@@ -15,7 +15,7 @@ namespace DotNetCheck.Checkups
 	public class AndroidEmulatorCheckup : Checkup
 	{
 		private const string ArmArch = "arm64-v8a";
-		private const string UnableToFindEmulatorsMessage = "Unable to find any Android Emulators.  See the Uno documentation for emulator setup: [underline]https://platform.uno/docs/articles/common-issues-mobile-debugging.html#android-emulator-setup[/]";
+		private const string UnableToFindEmulatorsMessage = "Unable to find any Android emulators. See the Uno documentation for setup instructions: [underline]https://aka.platform.uno/emulators-troubleshooting-android[/]";
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new [] { new CheckupDependency("androidsdk") };
 
@@ -133,7 +133,7 @@ namespace DotNetCheck.Checkups
 
 								var sdkPackage = installedPackages.FirstOrDefault(p =>
 								{
-									// This will be false if the proccess runs on Rosetta emulation
+									// This will be false if the process runs on Rosetta emulation
 									// and will install the wrong emulator (x86_64)
 									// https://github.com/dotnet/runtime/issues/42130
 									return Util.IsArm64
