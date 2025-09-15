@@ -9,7 +9,8 @@ namespace DotNetCheck.Checkups
     {
         public override string Id => "https-dev-cert";
         public override string Title => "HTTPS Developer Certificate Trust";
-
+        public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
+        
         // Only examine when WebAssembly is one of the targets
         public override bool ShouldExamine(SharedState history) => 
             history.TryGetState<TargetPlatform>(StateKey.EntryPoint, StateKey.TargetPlatforms, out var platforms)
