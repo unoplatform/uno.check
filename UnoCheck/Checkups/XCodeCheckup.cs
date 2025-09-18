@@ -65,19 +65,39 @@ namespace DotNetCheck.Checkups
 								new Solutions.XcodeEulaSolution())));
 					}
 
-					if (!ValidateForiOSSDK())
-					{
-						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK. Usually, this occurs after a recent Xcode install or update.", Status.Error);
+					var (isValid, sdkVersion) = ValidateForiOSSDK();
 
-						Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
+					if (!isValid)
+					{
+						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK ({sdkVersion}). Usually, this occurs after a recent Xcode install or update.", Status.Error);
+
+						if (string.IsNullOrEmpty(sdkVersion))
+						{
+							// If we don't have a sdk version, it means xcrun failed, likely because the tools haven't been fully installed
+							Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
+							return Task.FromResult(new DiagnosticResult(
+										Status.Error,
+										this,
+										new Suggestion("Run `open -a Xcode`",
+											new Solutions.ActionSolution((sln, cancelToken) =>
+											{
+												ShellProcessRunner.Run("open", $"-a {selected.Path}");
+												return Task.CompletedTask;
+											}))));
+						}
+
+						// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
+						Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
+
+						var tempPath = Path.GetTempPath();
 
 						return Task.FromResult(new DiagnosticResult(
 							Status.Error,
 							this,
-							new Suggestion("Run `open -a Xcode`",
+							new Suggestion($"Run `xcodebuild -downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}`",
 								new Solutions.ActionSolution((sln, cancelToken) =>
 								{
-									ShellProcessRunner.Run("open", $"-a {selected.Path}");
+									ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
 									return Task.CompletedTask;
 								}))));
 					}
@@ -220,7 +240,7 @@ namespace DotNetCheck.Checkups
 		// 1. Get the path to the iOS SDK using `xcrun -sdk iphonesimulator --show-sdk-path`
 		// 2. Find the SDK Version in the SDKSettings.json file located at the SDK path
 		// 3. Filter the iOS Runtime installed using the SDK Version
-		static bool ValidateForiOSSDK()
+		static (bool isValid, string sdkVersion) ValidateForiOSSDK()
 		{
 			Util.Log($"Validating for iOS SDK...");
 			try
@@ -247,7 +267,9 @@ namespace DotNetCheck.Checkups
 
 						Util.Log($"Found iOS Runtime: {runtimeOutput}");
 
-						return !string.IsNullOrEmpty(runtimeOutput) && runtimeOutput.Contains(settings.Version);
+						var isValid = !string.IsNullOrEmpty(runtimeOutput) && runtimeOutput.Contains(settings.Version);
+
+						return (isValid, settings.Version);
 					}
 				}
 			}
@@ -256,7 +278,7 @@ namespace DotNetCheck.Checkups
 				Util.Exception(ex);
 			}
 
-			return false;
+			return (false, string.Empty);
 		}
 	}
 
