@@ -67,45 +67,44 @@ namespace DotNetCheck.Checkups
 
 					var (isValid, sdkVersion) = ValidateForiOSSDK();
 
-					if (!isValid)
+					if (isValid)
 					{
-						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK ({sdkVersion}). Usually, this occurs after a recent Xcode install or update.", Status.Error);
+						// Selected version is good
+						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
 
-						if (string.IsNullOrEmpty(sdkVersion))
-						{
-							// If we don't have a sdk version, it means xcrun failed, likely because the tools haven't been fully installed
-							Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
-							return Task.FromResult(new DiagnosticResult(
-										Status.Error,
-										this,
-										new Suggestion("Run `open -a Xcode`",
-											new Solutions.ActionSolution((sln, cancelToken) =>
-											{
-												ShellProcessRunner.Run("open", $"-a {selected.Path}");
-												return Task.CompletedTask;
-											}))));
-						}
-
-						// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
-						Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
-
-						var tempPath = Path.GetTempPath();
-
-						return Task.FromResult(new DiagnosticResult(
-							Status.Error,
-							this,
-							new Suggestion($"Run `xcodebuild -downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}`",
-								new Solutions.ActionSolution((sln, cancelToken) =>
-								{
-									ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
-									return Task.CompletedTask;
-								}))));
+						return Task.FromResult(DiagnosticResult.Ok(this));
 					}
 
-					// Selected version is good
-					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
+					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK ({sdkVersion}). Usually, this occurs after a recent Xcode install or update.", Status.Error);
 
-					return Task.FromResult(DiagnosticResult.Ok(this));
+					if (string.IsNullOrEmpty(sdkVersion))
+					{
+						// If we don't have a sdk version, it means xcrun failed, likely because the tools haven't been fully installed
+						Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
+						return Task.FromResult(new DiagnosticResult(
+									Status.Error,
+									this,
+									new Suggestion("Run `open -a Xcode`",
+										new Solutions.ActionSolution((sln, cancelToken) =>
+										{
+											ShellProcessRunner.Run("open", $"-a {selected.Path}");
+											return Task.CompletedTask;
+										}))));
+					}
+
+					// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
+					Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
+					var tempPath = Path.GetTempPath();
+
+					return Task.FromResult(new DiagnosticResult(
+						Status.Error,
+						this,
+						new Suggestion($"Run `xcodebuild -downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}`",
+							new Solutions.ActionSolution((sln, cancelToken) =>
+							{
+								ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
+								return Task.CompletedTask;
+							}))));
 				}
 
 				XCodeInfo eligibleXcode = null;
