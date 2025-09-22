@@ -94,7 +94,9 @@ namespace DotNetCheck.Checkups
 
 					// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
 					Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
-					var tempPath = Path.GetTempPath();
+
+					var tempPath = Path.Combine(Path.GetTempPath(), $"Uno.Check.iOS-{Guid.NewGuid()}");
+					Directory.CreateDirectory(tempPath);
 
 					return Task.FromResult(new DiagnosticResult(
 						Status.Error,
