@@ -106,10 +106,6 @@ namespace DotNetCheck.Checkups
 								if (result.ExitCode != 0)
 								{
 									Spectre.Console.AnsiConsole.MarkupLine($"[bold red]Failed to download iOS SDK runtime. Exit code: {result.ExitCode}[/]");
-									if (!string.IsNullOrWhiteSpace(result.StandardError))
-										Spectre.Console.AnsiConsole.MarkupLine($"[red]{result.StandardError}[/]");
-									else if (!string.IsNullOrWhiteSpace(result.StandardOutput))
-										Spectre.Console.AnsiConsole.MarkupLine($"[red]{result.StandardOutput}[/]");
 								}
 								return Task.CompletedTask;
 							}))));
