@@ -102,7 +102,15 @@ namespace DotNetCheck.Checkups
 						new Suggestion($"Run `xcodebuild -downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}`",
 							new Solutions.ActionSolution((sln, cancelToken) =>
 							{
-								ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
+								var result = ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
+								if (result.ExitCode != 0)
+								{
+									Spectre.Console.AnsiConsole.MarkupLine($"[bold red]Failed to download iOS SDK runtime. Exit code: {result.ExitCode}[/]");
+									if (!string.IsNullOrWhiteSpace(result.StandardError))
+										Spectre.Console.AnsiConsole.MarkupLine($"[red]{result.StandardError}[/]");
+									else if (!string.IsNullOrWhiteSpace(result.StandardOutput))
+										Spectre.Console.AnsiConsole.MarkupLine($"[red]{result.StandardOutput}[/]");
+								}
 								return Task.CompletedTask;
 							}))));
 				}
