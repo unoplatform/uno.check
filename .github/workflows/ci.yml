@@ -501,11 +501,18 @@ jobs:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: windows-latest
     environment: Production
-
     needs:
       - sign
-
+  
+    permissions:
+      contents: write  # allow pushing tags
+  
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -517,5 +524,5 @@ jobs:
         run: |
           dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k "${{ secrets.NUGET_ORG_API_KEY }}"
 
-      - name: "Tag Release"
-        uses: ./.github/actions/tag-release
+      - name: Tag Release
+        uses: ./.github/workflows/actions/tag-release
