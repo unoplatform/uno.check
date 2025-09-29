@@ -7,7 +7,7 @@ uid: UnoCheck.Troubleshooting
 If you run into problems with uno-check, you should generally try the following:
 
 1. Update the tool to the latest version: `dotnet tool update -g uno.check --add-source https://api.nuget.org/v3/index.json`
-1. If you are running with .NET 8, and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
+1. If you are running with .NET 9+, and workloads are causing issues (e.g. missing workloads even when everything seems installed), try running the following command:
 
     ```dotnetcli
     dotnet workload clean --all
@@ -15,6 +15,14 @@ If you run into problems with uno-check, you should generally try the following:
 
   This command will clean all workloads for all installed .NET versions. This will allow `uno-check` to reinstall them properly.
   If the `dotnet workload clean` tells that some workloads can't be removed, try using the `repair` command in the Visual Studio installer as well.
+
+1. If you encounter build errors such as: `error MSB4022: The result "" of evaluating the value "$(MonoTargetsTasksAssemblyPath)" of the "AssemblyFile" attribute in element <UsingTask> is not valid.`, it may help to run the following command:
+
+    ```dotnetcli
+    dotnet workload repair
+    ```
+
+  This can resolve issues where uno-check does not surface any problems but builds still fail.
 
 1. Run with `uno-check --force-dotnet` to ensure the workload repair/update/install commands run regardless of if uno-check thinks the workload versions look good.
 1. If you encounter the error `Unable to load the service index` when installing `uno-check` for a host name not ending by `nuget.org`, try using the `--ignore-failed-sources` parameter.
