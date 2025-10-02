@@ -121,7 +121,7 @@ This generally uses the preview builds of the next major version of .NET availab
 The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 
 ```bash
-uno-check --pre
+uno-check --pre-major
 ```
 
 ### `--ci` Continuous Integration
@@ -164,3 +164,4 @@ Example:
 ```bash
 uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true
 ```
+
