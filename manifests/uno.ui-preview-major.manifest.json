@@ -3,13 +3,13 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "10.0.100-rc.1.25451.107",
-      "MACCATALYST_SDK_VERSION": "18.5.10727-net10-rc.1/10.0.100-rc.1",
-      "IOS_SDK_VERSION": "18.5.10727-net10-rc.1/10.0.100-rc.1",
-      "TVOS_SDK_VERSION": "18.5.10727-net10-rc.1/10.0.100-rc.1",
-      "ANDROID_SDK_VERSION": "36.0.0-rc.1.285/10.0.100-rc.1",
-      "MAUI_VERSION": "10.0.0-rc.1.25452.6/10.0.100-rc.1",
-      "WASMTOOLS_VERSION": "10.0.100-rc.1.25451.107/10.0.100-rc.1"
+      "DOTNET_SDK_VERSION": "10.0.100-rc.2.25502.107",
+      "MACCATALYST_SDK_VERSION": "26.0.10970-net10-rc.2/10.0.100-rc.2",
+      "IOS_SDK_VERSION": "26.0.10970-net10-rc.2/10.0.100-rc.2",
+      "TVOS_SDK_VERSION": "26.0.10970-net10-rc.2/10.0.100-rc.2",
+      "ANDROID_SDK_VERSION": "36.0.0-rc.2.332/10.0.100-rc.2",
+      "MAUI_VERSION": "10.0.0-rc.2.25504.7/10.0.100-rc.2",
+      "WASMTOOLS_VERSION": "10.0.100-rc.2.25502.107/10.0.100-rc.2"
     },
     "variableMappers": [
     ],
@@ -100,49 +100,49 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-10.0.100-rc.2",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-10.0.100-rc.2",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-10.0.100-rc.2",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvos.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.tvos.Manifest-10.0.100-rc.2",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-10.0.100-rc.2",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui-android",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-10.0.100-rc.2",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Linux/x64" ]
             },
             {
               "workloadId": "wasm-tools",
               "workloadManifestId": "microsoft.net.workload.mono.toolchain.current",
-              "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Manifest-10.0.100-rc.1",
+              "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Manifest-10.0.100-rc.2",
               "version": "$(WASMTOOLS_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
