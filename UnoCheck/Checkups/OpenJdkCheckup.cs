@@ -115,14 +115,14 @@ namespace DotNetCheck.Checkups
 			if (Util.IsLinux)
 			{
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11", "OpenJDK 11 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
+					new Suggestion("Install OpenJDK17", "OpenJDK 17 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
 			}
 			else
 			{
 				var url = Manifest?.Check?.OpenJdk?.Url;
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11",
-						new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
+					new Suggestion("Install OpenJDK17",
+						new BootsSolution(url, "Download and Install Microsoft OpenJDK 17"))));
 			}
 		}
 
