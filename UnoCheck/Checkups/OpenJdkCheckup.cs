@@ -75,7 +75,12 @@ namespace DotNetCheck.Checkups
 
 			foreach (var jdk in jdks)
 			{
-				if ((jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
+				if ((
+					jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("zulu", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("temurin", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("corretto", StringComparison.OrdinalIgnoreCase))
 					&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null))
 				{
 					ok = true;
