@@ -160,7 +160,7 @@ namespace DotNetCheck.Checkups
 				// /Library/Java/JavaVirtualMachines/
 				try
 				{
-					var javaVmDir = Path.Combine("Library", "Java", "JavaVirtualMachines");
+					var javaVmDir = Path.Combine("/Library", "Java", "JavaVirtualMachines");
 
 					if (Directory.Exists(javaVmDir))
 					{
