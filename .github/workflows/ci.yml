@@ -70,11 +70,11 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '8.0.100'
+          dotnet-version: '9.0.100'
 
       - name: Run Tests
         run: |
-          dotnet test UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --verbosity normal
+          dotnet run --project UnoCheck.Tests/UnoCheck.Tests.csproj --configuration Release --verbosity normal
 
   testwin:
     name: Validate Tool - Windows - ${{ matrix.manifest_name }}
