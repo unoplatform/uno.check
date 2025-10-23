@@ -151,9 +151,6 @@ namespace DotNetCheck.Checkups
 			}
 			else if (Util.IsMac)
 			{
-				var ms11Dir = Path.Combine("/Library", "Java", "JavaVirtualMachines", "microsoft-11.jdk", "Contents", "Home");
-				SearchDirectoryForJdks(paths, ms11Dir, true);
-
 				var msDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "jdk");
 				SearchDirectoryForJdks(paths, msDir, true);
 
