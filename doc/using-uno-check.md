@@ -2,7 +2,7 @@
 uid: UnoCheck.UsingUnoCheck
 ---
 
-# Setup your environment with uno check
+# Setup your environment with uno-check
 
 [`uno-check`](https://github.com/unoplatform/uno.check) is a dotnet command-line tool that runs a suite of automated check-ups on your dev environment, making sure you have all the prerequisites installed to successfully develop an Uno Platform application. The tool is available on Windows, Linux, and macOS.
 
@@ -110,3 +110,54 @@ If it finds something missing, out of date, or misconfigured, it will either off
 
 ***
 
+## Common uno-check command lines
+
+### Run uno-check in verbose mode
+
+```bash
+uno-check -v
+```
+
+This command shows additional logs for each running check.
+
+### Run uno-check for a specific platforms
+
+```bash
+uno-check --target desktop --target web # or ios, android, windows
+```
+
+This command avoids installing tooling that is not needed.
+
+See [Command line arguments](xref:UnoCheck.Configuration#command-line-arguments) for more details
+
+### Run uno-check in readonly mode on Windows
+
+```bash
+cmd /c "set __COMPAT_LAYER=RUNASINVOKER && uno-check --ci --non-interactive"
+```
+
+This command only checks for missing tooling and report the results.
+
+### Run uno-check in readonly mode on macOS or Linux
+
+```bash
+uno-check -v --ci --non-interactive
+```
+
+This command only checks for missing tooling and report the results.
+
+### Run uno-check to list available checks
+
+```bash
+uno-check list
+```
+
+This command lists checks that can be skipped using `--skip`
+
+### Run uno-check with specific checks skipped
+
+```bash
+uno-check --skip androidsdk
+```
+
+This command skips specified checks and runs the rest.

@@ -2,11 +2,11 @@
 uid: UnoCheck.Configuration
 ---
 
-# Configuring Uno Check
+# Configuring Uno-Check
 
-## Running Uno.Check in a CI environment
+## Running Uno-Check in a CI environment
 
-It is possible to run Uno.Check to setup your build environment in a repeatable way by using the following commands:
+It is possible to run Uno-Check to setup your build environment in a repeatable way by using the following commands:
 
 ## [**Windows**](#tab/windows)
 
@@ -36,9 +36,9 @@ Pinning uno.check to a specific version will allow to keep a repeatable build ov
 > [!TIP]
 > You can use `dotnet package search uno.check` to search for the latest version of uno.check.
 
-## Running without elevation on Windows
+## Running in read-only mode on Windows
 
-In restricted environments, it may be required to run uno-check to determine what needs to be installed without privileges elevation.
+In restricted environments, it may be required to run uno-check to determine what needs to be installed without privileges elevation, without fixing the issues found.
 
 In order to do so, use the following command:
 
@@ -66,16 +66,16 @@ uno-check --target wasm --target linux
 
 Supported target platforms and their `--target` values:
 
-| Target Platform  | Input Values                       |
-|------------------|------------------------------------|
-| WebAssembly      | `web`, `webassembly`, `wasm`       |
-| iOS              | `ios`                              |
-| Android          | `android`, `droid`                 |
-| macOS            | `macos`                            |
-| SkiaDesktop      | `skiadesktop`, `skia`, `linux`     |
-| WinAppSDK        | `winappsdk`, `wasdk`               |
-| Windows          | `windows`, `win32desktop`, `win32` |
-| All Platforms    | `all`                              |
+| Target Platform  | Input Values                                  |
+|------------------|-----------------------------------------------|
+| WebAssembly      | `web`, `webassembly`, `wasm`                  |
+| iOS              | `ios`                                         |
+| Android          | `android`, `droid`                            |
+| macOS            | `macos`                                       |
+| SkiaDesktop      | `skiadesktop`, `skia`, `desktop`, `linux`     |
+| WinAppSDK        | `winappsdk`, `wasdk`                          |
+| Windows          | `windows`, `win32desktop`, `win32`            |
+| All Platforms    | `all`                                         |
 
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
@@ -164,4 +164,3 @@ Example:
 ```bash
 uno-check config --dev --nuget-sources --dotnet-version --dotnet-pre true
 ```
-
