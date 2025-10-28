@@ -75,7 +75,12 @@ namespace DotNetCheck.Checkups
 
 			foreach (var jdk in jdks)
 			{
-				if ((jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
+				if ((
+					jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("zulu", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("temurin", StringComparison.OrdinalIgnoreCase) ||
+					jdk.JavaC.FullName.Contains("corretto", StringComparison.OrdinalIgnoreCase))
 					&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null))
 				{
 					ok = true;
@@ -110,14 +115,14 @@ namespace DotNetCheck.Checkups
 			if (Util.IsLinux)
 			{
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11", "OpenJDK 11 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
+					new Suggestion("Install OpenJDK17", "OpenJDK 17 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
 			}
 			else
 			{
 				var url = Manifest?.Check?.OpenJdk?.Url;
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11",
-						new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
+					new Suggestion("Install OpenJDK17",
+						new BootsSolution(url, "Download and Install Microsoft OpenJDK 17"))));
 			}
 		}
 
@@ -151,16 +156,13 @@ namespace DotNetCheck.Checkups
 			}
 			else if (Util.IsMac)
 			{
-				var ms11Dir = Path.Combine("/Library", "Java", "JavaVirtualMachines", "microsoft-11.jdk", "Contents", "Home");
-				SearchDirectoryForJdks(paths, ms11Dir, true);
-
 				var msDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "jdk");
 				SearchDirectoryForJdks(paths, msDir, true);
 
 				// /Library/Java/JavaVirtualMachines/
 				try
 				{
-					var javaVmDir = Path.Combine("Library", "Java", "JavaVirtualMachines");
+					var javaVmDir = Path.Combine("/Library", "Java", "JavaVirtualMachines");
 
 					if (Directory.Exists(javaVmDir))
 					{
