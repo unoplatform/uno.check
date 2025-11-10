@@ -315,6 +315,12 @@ namespace DotNetCheck.Cli
 							i--;
 					}
 				}
+				else if (!string.IsNullOrEmpty(diagnosis.Message))
+				{
+					// Display error/warning message when there's no suggestion
+					Console.WriteLine();
+					AnsiConsole.MarkupLine($"[bold {statusColor}]{statusEmoji} {diagnosis.Message}[/]");
+				}
 
 				checkup.OnStatusUpdated -= CheckupStatusUpdated;
 			}
