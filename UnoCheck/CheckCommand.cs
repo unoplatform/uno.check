@@ -315,11 +315,11 @@ namespace DotNetCheck.Cli
 							i--;
 					}
 				}
-				else if (!string.IsNullOrEmpty(diagnosis.Message))
+				else if (diagnosis.Status != Models.Status.Ok && diagnosis.Message is { Length: > 0 } m)
 				{
 					// Display error/warning message when there's no suggestion
 					Console.WriteLine();
-					AnsiConsole.MarkupLine($"[bold {statusColor}]{statusEmoji} {diagnosis.Message}[/]");
+					AnsiConsole.MarkupLine($"[bold {statusColor}]{statusEmoji} {m}[/]");
 				}
 
 				checkup.OnStatusUpdated -= CheckupStatusUpdated;
