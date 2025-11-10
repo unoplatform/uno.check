@@ -58,11 +58,6 @@ namespace DotNetCheck.Checkups
 					history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME"));
 				avds.AddRange(avdManager.ListAvds());
 			}
-			else
-			{
-				return Task.FromResult(
-					new DiagnosticResult(Status.Error, this, $"Unable to find Java {java}"));
-			}
 
 			// Fallback to manually reading the avd files
 			if (!avds.Any())
