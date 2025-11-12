@@ -396,7 +396,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: 'microsoft' # See 'Supported distributions' for available options
-          java-version: '17'
+          java-version: '17.0.17'
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
