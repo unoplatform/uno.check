@@ -37,6 +37,19 @@ namespace DotNetCheck.Checkups
 		public bool RequireExact
 			=> Manifest?.Check?.OpenJdk?.RequireExact ?? false;
 
+		public string MajorVersion
+		{
+			get
+			{
+				var versionString = Manifest?.Check?.OpenJdk?.Version;
+				if (!string.IsNullOrEmpty(versionString) && System.Version.TryParse(versionString, out var version))
+				{
+					return version.Major.ToString();
+				}
+				return "17";
+			}
+		}
+
 		public override string Id => "openjdk";
 
 		public override string Title => $"OpenJDK {Version}";
@@ -110,14 +123,14 @@ namespace DotNetCheck.Checkups
 			if (Util.IsLinux)
 			{
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11", "OpenJDK 11 is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
+					new Suggestion($"Install OpenJDK{MajorVersion}", $"OpenJDK {MajorVersion} is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
 			}
 			else
 			{
 				var url = Manifest?.Check?.OpenJdk?.Url;
 				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion("Install OpenJDK11",
-						new BootsSolution(url, "Download and Install Microsoft OpenJDK 11"))));
+					new Suggestion($"Install OpenJDK{MajorVersion}",
+						new BootsSolution(url, $"Download and Install Microsoft OpenJDK {MajorVersion}"))));
 			}
 		}
 
@@ -151,8 +164,8 @@ namespace DotNetCheck.Checkups
 			}
 			else if (Util.IsMac)
 			{
-				var ms11Dir = Path.Combine("/Library", "Java", "JavaVirtualMachines", "microsoft-11.jdk", "Contents", "Home");
-				SearchDirectoryForJdks(paths, ms11Dir, true);
+				var msJdkDir = Path.Combine("/Library", "Java", "JavaVirtualMachines", $"microsoft-{MajorVersion}.jdk", "Contents", "Home");
+				SearchDirectoryForJdks(paths, msJdkDir, true);
 
 				var msDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Developer", "Xamarin", "jdk");
 				SearchDirectoryForJdks(paths, msDir, true);
