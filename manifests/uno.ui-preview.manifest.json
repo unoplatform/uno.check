@@ -14,7 +14,7 @@
     "variableMappers": [
     ],
     "openjdk": {
-      "version": "17.0",
+      "version": "17.0.16",
       "urls": {
         "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
         "winArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-aarch64.msi",
