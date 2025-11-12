@@ -38,7 +38,17 @@ namespace DotNetCheck.Checkups
 			=> Manifest?.Check?.OpenJdk?.RequireExact ?? false;
 
 		public string MajorVersion
-			=> Manifest?.Check?.OpenJdk?.Version?.Split('.')[0] ?? "17";
+		{
+			get
+			{
+				var versionString = Manifest?.Check?.OpenJdk?.Version;
+				if (!string.IsNullOrEmpty(versionString) && System.Version.TryParse(versionString, out var version))
+				{
+					return version.Major.ToString();
+				}
+				return "17";
+			}
+		}
 
 		public override string Id => "openjdk";
 
