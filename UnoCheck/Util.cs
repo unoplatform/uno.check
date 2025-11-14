@@ -137,6 +137,8 @@ namespace DotNetCheck
 			{
 				if (IsWindows)
 				{
+#pragma warning disable IDE0079 // remove unnecessary pragma suppression
+#pragma warning disable CA1416 // Validate platform compatibility as this is only executed on windows
 					using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
 					{
 						var principal = new System.Security.Principal.WindowsPrincipal(identity);
@@ -144,6 +146,8 @@ namespace DotNetCheck
 						{
 							return false;
 						}
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning restore IDE0079 // remove unnecessary pragma suppression
 					}
 				}
 				else if (getuid() != 0)
