@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -8,9 +10,9 @@ namespace DotNetCheck.Manifest
 {
 	public partial class Manifest
 	{
-		public const string DefaultManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/056fb3c05dee462715bc170638c988f90bc9a5df/manifests/uno.ui.manifest.json";
-		public const string PreviewManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/056fb3c05dee462715bc170638c988f90bc9a5df/manifests/uno.ui-preview.manifest.json";
-		public const string PreviewMajorManifestUrl = "https://raw.githubusercontent.com/unoplatform/uno.check/056fb3c05dee462715bc170638c988f90bc9a5df/manifests/uno.ui-preview-major.manifest.json";
+		public const string DefaultManifestResourceName = "uno.ui.manifest.json";
+		public const string PreviewManifestResourceName = "uno.ui-preview.manifest.json";
+		public const string PreviewMajorManifestResourceName = "uno.ui-preview-major.manifest.json";
 
 		public static Task<Manifest> FromFileOrUrl(string fileOrUrl)
 		{
@@ -18,6 +20,19 @@ namespace DotNetCheck.Manifest
 				return FromUrl(fileOrUrl);
 
 			return FromFile(fileOrUrl);
+		}
+
+		public static async Task<Manifest> FromEmbeddedResource(string resourceName)
+		{
+			var assembly = typeof(Manifest).Assembly;
+			using var stream = assembly.GetManifestResourceStream(resourceName);
+			
+			if (stream == null)
+				throw new InvalidOperationException($"Embedded resource '{resourceName}' not found.");
+
+			using var reader = new StreamReader(stream);
+			var json = await reader.ReadToEndAsync();
+			return await FromJson(json);
 		}
 
 		public static async Task<Manifest> FromFile(string filename)
