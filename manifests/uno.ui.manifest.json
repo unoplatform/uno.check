@@ -3,13 +3,13 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "11.0.20.1",
-      "DOTNET_SDK_VERSION": "9.0.305",
-      "MACCATALYST_SDK_VERSION": "18.5.9219/9.0.100",
-      "IOS_SDK_VERSION": "18.5.9219/9.0.100",
-      "TVOS_SDK_VERSION": "18.5.9219/9.0.100",
-      "ANDROID_SDK_VERSION": "35.0.101/9.0.100",
-      "MAUI_VERSION": "9.0.82/9.0.100",
-      "WASMTOOLS_VERSION": "9.0.9/9.0.100"
+      "DOTNET_SDK_VERSION": "9.0.308",
+      "MACCATALYST_SDK_VERSION": "26.0.9769/9.0.100",
+      "IOS_SDK_VERSION": "26.0.9769/9.0.100",
+      "TVOS_SDK_VERSION": "26.0.9769/9.0.100",
+      "ANDROID_SDK_VERSION": "35.0.105/9.0.100",
+      "MAUI_VERSION": "9.0.111/9.0.100",
+      "WASMTOOLS_VERSION": "9.0.11/9.0.100"
     },
     "variableMappers": [
     ],
