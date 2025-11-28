@@ -59,7 +59,7 @@ public class CheckCommandTests
     }
 
     [Theory]
-    [InlineData(new string[] { "net9.0-android", "net9.0-ios", "net9.0-browserwasm", "net9.0-desktop"/*, "net9.0"*/}, new string[] { "android", "ios", "web", "win32" })]
+    [InlineData(new string[] { "net9.0-android", "net9.0-ios", "net9.0-browserwasm", "net9.0-desktop" }, new string[] { "android", "ios", "web", "win32" })]
     [InlineData(new string[] { "net9.0-windows10.0.19041", "net9.0-android", "net9.0-ios", "net9.0-maccatalyst", "net9.0-browserwasm" }, new string[] { "windows", "android", "ios", "macos", "web" })]
     public void ParseTfmsToTargetPlatforms_Returns_Correct_Values_For_TFMs(string[] commandLineInput, string[] expectedToBeIncludedTargetPlatforms)
     {
