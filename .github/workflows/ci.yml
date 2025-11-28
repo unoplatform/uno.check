@@ -197,6 +197,10 @@ jobs:
     name: Validate Tool - macOS - ${{ matrix.manifest_name }}/${{ matrix.os }}
     needs: build_tool
 
+    env:
+      DOTNET_INSTALL_DIR: "${{ github.workspace }}/.custom-dotnet"
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
     strategy:
       matrix:
        include:
