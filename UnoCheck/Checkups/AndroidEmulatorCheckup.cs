@@ -14,7 +14,8 @@ namespace DotNetCheck.Checkups
 {
 	public class AndroidEmulatorCheckup : Checkup
 	{
-		const string armArch = "arm64-v8a";
+		private const string ArmArch = "arm64-v8a";
+		private const string UnableToFindEmulatorsMessage = "Unable to find any Android emulators. See the Uno documentation for setup instructions: [underline]https://aka.platform.uno/emulators-troubleshooting-android[/]";
 		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
 			=> new [] { new CheckupDependency("androidsdk") };
 
@@ -56,11 +57,6 @@ namespace DotNetCheck.Checkups
 				avdManager = new AndroidSdk.AvdManager(java,
 					history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME"));
 				avds.AddRange(avdManager.ListAvds());
-			}
-			else
-			{
-				return Task.FromResult(
-					new DiagnosticResult(Status.Error, this, $"Unable to find Java {java}"));
 			}
 
 			// Fallback to manually reading the avd files
@@ -105,13 +101,11 @@ namespace DotNetCheck.Checkups
 			}
 			catch (Exception ex)
 			{
-				var msg = "Unable to find any Android Emulators.  You can use Visual Studio to create one if necessary: [underline]https://docs.microsoft.com/xamarin/android/get-started/installation/android-emulator/device-manager[/]";
-
-				ReportStatus(msg, Status.Warning);
+				ReportStatus(UnableToFindEmulatorsMessage, Status.Warning);
 
 				Util.Exception(ex);
 				return Task.FromResult(
-					new DiagnosticResult(Status.Warning, this, msg));
+					new DiagnosticResult(Status.Warning, this, UnableToFindEmulatorsMessage));
 			}
 
 			return Task.FromResult(new DiagnosticResult(
@@ -134,7 +128,7 @@ namespace DotNetCheck.Checkups
 
 								var sdkPackage = installedPackages.FirstOrDefault(p =>
 								{
-									// This will be false if the proccess runs on Rosetta emulation
+									// This will be false if the process runs on Rosetta emulation
 									// and will install the wrong emulator (x86_64)
 									// https://github.com/dotnet/runtime/issues/42130
 									return Util.IsArm64
@@ -143,7 +137,7 @@ namespace DotNetCheck.Checkups
 									// system-images;android-33;google_apis;arm64-v8a (for arm)
 									// system-images;android-31;google_apis;x86_64 (for x86 or x64)
 
-									? p.Path.Contains(armArch, StringComparison.OrdinalIgnoreCase)
+									? p.Path.Contains(ArmArch, StringComparison.OrdinalIgnoreCase)
 									: p.Path.Equals(me.SdkId, StringComparison.OrdinalIgnoreCase);
 								});
 								if (sdkPackage == null && (me.AlternateSdkIds?.Any() ?? false))
@@ -175,7 +169,7 @@ namespace DotNetCheck.Checkups
 							}
 							catch (Exception ex)
 							{
-								ReportStatus("Unable to create Emulator.  Use Visual Studio to create one instead: https://docs.microsoft.com/xamarin/android/get-started/installation/android-emulator/device-manager", Status.Warning);
+								ReportStatus(UnableToFindEmulatorsMessage, Status.Warning);
 								Util.Exception(ex);
 							}
 

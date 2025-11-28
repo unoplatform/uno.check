@@ -40,6 +40,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="..\manifests\uno.ui.manifest.json">
+			<LogicalName>uno.ui.manifest.json</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="..\manifests\uno.ui-preview.manifest.json">
+			<LogicalName>uno.ui-preview.manifest.json</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="..\manifests\uno.ui-preview-major.manifest.json">
+			<LogicalName>uno.ui-preview-major.manifest.json</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="NuGet.Frameworks" Version="6.11.0" />
 		<PackageReference Include="NuGet.Packaging" Version="5.11.5" />
@@ -101,16 +113,7 @@
 
 	<PropertyGroup>
 		<SigningTimestampServer>http://timestamp.entrust.net/TSS/RFC3161sha2TS</SigningTimestampServer>
-		<SignToolPath>C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe</SignToolPath>
 	</PropertyGroup>
-
-	<Target Name="AuthenticodeSignBeforeBack" BeforeTargets="GenerateNuspec" Condition="'$(SigningCertificatePfxFile)' != ''">
-		<ItemGroup>
-			<FilesToSign Include="@(_PackageFiles)" Condition=" '%(_PackageFiles.Filename)%(_PackageFiles.Extension)' == 'MauiCheck.dll' " />
-			<FilesToSign Include="@(_PackageFiles)" Condition=" '%(_PackageFiles.Filename)%(_PackageFiles.Extension)' == 'maui-check.exe' " />
-		</ItemGroup>
-		<Exec Command="&quot;$(SignToolPath)&quot; sign /v /f $(SigningCertificatePfxFile) /fd sha256 /tr $(SigningTimestampServer) %(FilesToSign.FullPath)" />
-	</Target>
 
 	<Target Name="NugetSignAfterPack" AfterTargets="Pack" Condition="'$(SigningCertificatePfxFile)' != ''">
 		<Exec Command="nuget sign $(PackageOutputAbsolutePath)\*.nupkg -CertificatePath $(SigningCertificatePfxFile) -Timestamper $(SigningTimestampServer)" />
