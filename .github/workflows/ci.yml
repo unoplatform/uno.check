@@ -226,6 +226,12 @@ jobs:
            os: macos-14
            dotnet_version: 8.0.300
 
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Preview Major Upgrade
+           previous_tool_version: 1.17.0
+           os: macos-14
+           dotnet_version: 8.0.300
+
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFMs
            os: macos-14
@@ -390,7 +396,7 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: 'microsoft' # See 'Supported distributions' for available options
-          java-version: '11'
+          java-version: '21'
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
@@ -495,11 +501,18 @@ jobs:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: windows-latest
     environment: Production
-
     needs:
       - sign
-
+  
+    permissions:
+      contents: write  # allow pushing tags
+  
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -511,5 +524,5 @@ jobs:
         run: |
           dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k "${{ secrets.NUGET_ORG_API_KEY }}"
 
-      - name: "Tag Release"
-        uses: ./.github/actions/tag-release
+      - name: Tag Release
+        uses: ./.github/workflows/actions/tag-release

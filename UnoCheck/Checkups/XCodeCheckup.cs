@@ -35,7 +35,7 @@ namespace DotNetCheck.Checkups
 
 		public override string Id => "xcode";
 
-		public override string Title => $"XCode {VersionName}";
+		public override string Title => $"Required Xcode {VersionName} (newer version might not be supported)";
 
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.XCode != null;
@@ -65,27 +65,52 @@ namespace DotNetCheck.Checkups
 								new Solutions.XcodeEulaSolution())));
 					}
 
-					if (!ValidateForiOSSDK())
+					var (isValid, sdkVersion) = ValidateForiOSSDK();
+
+					if (isValid)
 					{
-						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK. Usually, this occurs after a recent Xcode install or update.", Status.Error);
+						// Selected version is good
+						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
 
-						Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
-
-						return Task.FromResult(new DiagnosticResult(
-							Status.Error,
-							this,
-							new Suggestion("Run `open -a Xcode`",
-								new Solutions.ActionSolution((sln, cancelToken) =>
-								{
-									ShellProcessRunner.Run("open", $"-a {selected.Path}");
-									return Task.CompletedTask;
-								}))));
+						return Task.FromResult(DiagnosticResult.Ok(this));
 					}
 
-					// Selected version is good
-					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
+					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK ({sdkVersion}). Usually, this occurs after a recent Xcode install or update.", Status.Error);
 
-					return Task.FromResult(DiagnosticResult.Ok(this));
+					if (string.IsNullOrEmpty(sdkVersion))
+					{
+						// If we don't have a sdk version, it means xcrun failed, likely because the tools haven't been fully installed
+						Spectre.Console.AnsiConsole.MarkupLine("Open Xcode to complete the installation of the iOS SDK");
+						return Task.FromResult(new DiagnosticResult(
+									Status.Error,
+									this,
+									new Suggestion("Run `open -a Xcode`",
+										new Solutions.ActionSolution((sln, cancelToken) =>
+										{
+											ShellProcessRunner.Run("open", $"-a {selected.Path}");
+											return Task.CompletedTask;
+										}))));
+					}
+
+					// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
+					Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
+
+					var tempPath = Path.Combine(Path.GetTempPath(), $"Uno.Check.iOS-{Guid.NewGuid()}");
+					Directory.CreateDirectory(tempPath);
+
+					return Task.FromResult(new DiagnosticResult(
+						Status.Error,
+						this,
+						new Suggestion($"Run `xcodebuild -downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}`",
+							new Solutions.ActionSolution((sln, cancelToken) =>
+							{
+								var result = ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
+								if (result.ExitCode != 0)
+								{
+									Spectre.Console.AnsiConsole.MarkupLine($"[bold red]Failed to download iOS SDK runtime. Exit code: {result.ExitCode}[/]");
+								}
+								return Task.CompletedTask;
+							}))));
 				}
 
 				XCodeInfo eligibleXcode = null;
@@ -220,7 +245,7 @@ namespace DotNetCheck.Checkups
 		// 1. Get the path to the iOS SDK using `xcrun -sdk iphonesimulator --show-sdk-path`
 		// 2. Find the SDK Version in the SDKSettings.json file located at the SDK path
 		// 3. Filter the iOS Runtime installed using the SDK Version
-		static bool ValidateForiOSSDK()
+		static (bool isValid, string sdkVersion) ValidateForiOSSDK()
 		{
 			Util.Log($"Validating for iOS SDK...");
 			try
@@ -247,7 +272,9 @@ namespace DotNetCheck.Checkups
 
 						Util.Log($"Found iOS Runtime: {runtimeOutput}");
 
-						return !string.IsNullOrEmpty(runtimeOutput) && runtimeOutput.Contains(settings.Version);
+						var isValid = !string.IsNullOrEmpty(runtimeOutput) && runtimeOutput.Contains(settings.Version);
+
+						return (isValid, settings.Version);
 					}
 				}
 			}
@@ -256,7 +283,7 @@ namespace DotNetCheck.Checkups
 				Util.Exception(ex);
 			}
 
-			return false;
+			return (false, string.Empty);
 		}
 	}
 

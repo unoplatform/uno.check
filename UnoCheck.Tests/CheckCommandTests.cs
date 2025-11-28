@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using DotNetCheck;
 using DotNetCheck.Cli;
+using DotNetCheck.Models;
 
 namespace UnoCheck.Tests;
 
@@ -76,3 +77,90 @@ public class CheckCommandTests
     }
 }
 
+public class DiagnosticResultTests
+{
+    private class TestCheckup : Checkup
+    {
+        public override string Id => "test";
+        public override string Title => "Test";
+        public override Task<DiagnosticResult> Examine(SharedState history) => Task.FromResult(DiagnosticResult.Ok(this));
+    }
+
+    [Fact]
+    public void DiagnosticResult_WithErrorAndMessage_HasNoSuggestion()
+    {
+        // Arrange
+        var checkup = new TestCheckup();
+        var message = "Unable to find Java";
+        
+        // Act
+        var result = new DiagnosticResult(Status.Error, checkup, message);
+        
+        // Assert
+        Assert.Equal(Status.Error, result.Status);
+        Assert.Equal(message, result.Message);
+        Assert.False(result.HasSuggestion);
+    }
+
+    [Fact]
+    public void DiagnosticResult_WithWarningAndMessage_HasNoSuggestion()
+    {
+        // Arrange
+        var checkup = new TestCheckup();
+        var message = "Warning message";
+        
+        // Act
+        var result = new DiagnosticResult(Status.Warning, checkup, message);
+        
+        // Assert
+        Assert.Equal(Status.Warning, result.Status);
+        Assert.Equal(message, result.Message);
+        Assert.False(result.HasSuggestion);
+    }
+
+    [Fact]
+    public void DiagnosticResult_WithSuggestion_HasSuggestion()
+    {
+        // Arrange
+        var checkup = new TestCheckup();
+        var suggestion = new Suggestion("Fix it");
+        
+        // Act
+        var result = new DiagnosticResult(Status.Error, checkup, suggestion);
+        
+        // Assert
+        Assert.Equal(Status.Error, result.Status);
+        Assert.True(result.HasSuggestion);
+        Assert.Null(result.Message);
+    }
+
+    [Fact]
+    public void DiagnosticResult_WithEmptyMessage_MessageIsEmpty()
+    {
+        // Arrange
+        var checkup = new TestCheckup();
+        
+        // Act
+        var result = new DiagnosticResult(Status.Error, checkup, "");
+        
+        // Assert
+        Assert.Equal(Status.Error, result.Status);
+        Assert.Empty(result.Message);
+        Assert.False(result.HasSuggestion);
+    }
+
+    [Fact]
+    public void DiagnosticResult_Ok_HasOkStatus()
+    {
+        // Arrange
+        var checkup = new TestCheckup();
+        
+        // Act
+        var result = DiagnosticResult.Ok(checkup);
+        
+        // Assert
+        Assert.Equal(Status.Ok, result.Status);
+        Assert.Null(result.Message);
+        Assert.False(result.HasSuggestion);
+    }
+}

@@ -30,19 +30,26 @@ namespace DotNetCheck
 
 		public static async Task<Manifest.Manifest> LoadManifest(string fileOrUrl, ManifestChannel channel)
 		{
-			var f = fileOrUrl ??
-				channel switch
-				{
-                    ManifestChannel.Preview => Manifest.Manifest.PreviewManifestUrl,
-                    ManifestChannel.PreviewMajor => Manifest.Manifest.PreviewMajorManifestUrl,
-                    ManifestChannel.Main => Manifest.Manifest.DefaultManifestUrl,
-					ManifestChannel.Default => Manifest.Manifest.DefaultManifestUrl,
-					_ => Manifest.Manifest.DefaultManifestUrl
-				};
+			// If a specific file or URL is provided, use it
+			if (!string.IsNullOrEmpty(fileOrUrl))
+			{
+				Util.Log($"Loading Manifest from: {fileOrUrl}");
+				return await Manifest.Manifest.FromFileOrUrl(fileOrUrl);
+			}
 
-			Util.Log($"Loading Manifest from: {f}");
+			// Otherwise, load from embedded resources based on the channel
+			var resourceName = channel switch
+			{
+				ManifestChannel.Preview => Manifest.Manifest.PreviewManifestResourceName,
+				ManifestChannel.PreviewMajor => Manifest.Manifest.PreviewMajorManifestResourceName,
+				ManifestChannel.Main => Manifest.Manifest.DefaultManifestResourceName,
+				ManifestChannel.Default => Manifest.Manifest.DefaultManifestResourceName,
+				_ => Manifest.Manifest.DefaultManifestResourceName
+			};
 
-			return await Manifest.Manifest.FromFileOrUrl(f);
+			Util.Log($"Loading Manifest from embedded resource: {resourceName}");
+
+			return await Manifest.Manifest.FromEmbeddedResource(resourceName);
 		}
 
 		public static NuGetVersion CurrentVersion

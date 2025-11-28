@@ -53,6 +53,7 @@ namespace DotNetCheck
                 case "win32desktop":
                 case "win32":
                     return TargetPlatform.Windows;
+                case "desktop":
                 case "skiadesktop":
 				case "skia":
 					return TargetPlatform.SkiaDesktop;
