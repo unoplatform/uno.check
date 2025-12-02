@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NuGet.Versioning;
 using Spectre.Console;
@@ -9,6 +11,10 @@ namespace DotNetCheck;
 
 internal static class ToolUpdater
 {
+    // P/Invoke for Unix exec system call
+    [DllImport("libc", SetLastError = true)]
+    private static extern int execv(string path, string[] argv);
+
     private enum UserAction
     {
         Continue,
@@ -110,19 +116,40 @@ internal static class ToolUpdater
         }
         else
         {
-            var shCommand =
-                $"sleep 1 && " +
-                $"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version} " +
-                $"&& {ToolInfo.ToolCommand} {argsForRelaunch}".Trim();
+            // On macOS/Linux, use execv to replace the current process atomically
+            // Create a script that performs update and relaunch
+            var tempScript = Path.Combine(Path.GetTempPath(), $"uno-check-update-{Guid.NewGuid()}.sh");
+            var scriptContent = $"""
+                #!/bin/sh
+                sleep 1
+                dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}
+                rm -f "{tempScript}"
+                exec {ToolInfo.ToolCommand} {argsForRelaunch}
+                """;
 
-            var full = $"\"{shCommand} 2>&1\"";
-
-            Process.Start(new ProcessStartInfo("/bin/sh", $"-c {full}")
+            File.WriteAllText(tempScript, scriptContent);
+            
+            // Make script executable
+            Process.Start(new ProcessStartInfo("chmod", $"+x \"{tempScript}\"")
             {
                 UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            });
+                CreateNoWindow = true
+            })?.WaitForExit();
+
+            AnsiConsole.MarkupLine($"[bold green]{Icon.Thinking} Updating and relaunching uno-check...[/]");
+            
+            // Use execv to replace current process - this preserves the terminal session
+            var argv = new[] { "/bin/sh", tempScript, null! };
+            var result = execv("/bin/sh", argv);
+            
+            // execv only returns if it fails
+            if (result < 0)
+            {
+                AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to execute update script. Please update manually and relaunch.[/]");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
+                Environment.Exit(1);
+            }
         }
 
         AnsiConsole.MarkupLine($"[bold green]{Icon.Thinking} Update command executed. Relaunching uno-check...[/]");
