@@ -127,7 +127,18 @@ internal static class ToolUpdater
                 exec {ToolInfo.ToolCommand} {argsForRelaunch}
                 """;
 
-            File.WriteAllText(tempScript, scriptContent);
+            try
+            {
+                File.WriteAllText(tempScript, scriptContent);
+            }
+            catch (Exception ex)
+            {
+                Util.Exception(ex);
+                AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to execute update script. Please update manually and relaunch.[/]");
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
+                Environment.Exit(1);                
+            }
             
             // Make script executable
             Process.Start(new ProcessStartInfo("chmod", $"+x \"{tempScript}\"")
