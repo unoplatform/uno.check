@@ -32,25 +32,28 @@ public class CheckCommandTests
     [Fact]
     public void ParseTfmsToTargetPlatforms_Returns_Correct_Values_For_OS_Specific_TFMs()
     {
-        var platformsToInclude = CheckCommand.ParseTfmsToTargetPlatforms(new CheckSettings { Frameworks =
+        var platformsToInclude = CheckCommand.ParseTfmsToTargetPlatforms(new CheckSettings
+        {
+            Frameworks =
             ["net8.0-windows10.0.19041", "net8.0-android", "net8.0-ios", "net8.0-maccatalyst", "net8.0-browserwasm"]
         });
-        Assert.Equal(platformsToInclude, ["windows", "android", "ios", "macos", "web"]);
+
+        Assert.Equal(["windows", "android", "ios", "macos", "web"], platformsToInclude);
         
         platformsToInclude = CheckCommand.ParseTfmsToTargetPlatforms(new CheckSettings { Frameworks =
             ["net8.0-windows10.0.19041", "net8.0-android", "net8.0-ios", "net8.0-maccatalyst", "net8.0-browserwasm", "net8.0-desktop"]
         });
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            Assert.Equal(platformsToInclude, ["windows", "android", "ios", "macos", "web", "win32"]);
+            Assert.Equal(["windows", "android", "ios", "macos", "web", "win32"], platformsToInclude);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            Assert.Equal(platformsToInclude, ["windows", "android", "ios", "macos", "web", "macos"]);
+            Assert.Equal(["windows", "android", "ios", "macos", "web", "macos"], platformsToInclude);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            Assert.Equal(platformsToInclude, ["windows", "android", "ios", "macos", "web", "linux"]);
+            Assert.Equal(["windows", "android", "ios", "macos", "web", "linux"], platformsToInclude);
         }
     }
 }
