@@ -46,9 +46,8 @@ namespace DotNetCheck
 					return TargetPlatform.Android;
 				case "macos":
 					return TargetPlatform.macOS;
-				case "winappsdk":
-				case "winsdk":
-				case "wasdk":
+                case "winappsdk":
+                case "wasdk":
 					return TargetPlatform.WinAppSDK;
 				case "windows":
 				case "win32desktop":
