@@ -62,19 +62,11 @@ public class ReportingTests
 		{
 			[androidCheckup.Id] =
 			[
-				new CheckResultDetailReport
-				{
-					Message = "Android SDK missing",
-					Status = Status.Warning
-				}
+				new CheckResultDetailReport("Android SDK missing", Status.Warning)
 			],
 			[jdkCheckup.Id] =
 			[
-				new CheckResultDetailReport
-				{
-					Message = "No JDK found",
-					Status = Status.Error
-				}
+				new CheckResultDetailReport("No JDK found", Status.Error)
 			]
 		};
 		var startedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
@@ -152,48 +144,38 @@ public class ReportingTests
 	public async Task CheckReportWriter_WritesReportToDisk()
 	{
 		// Arrange
-		var report = new CheckReport
-		{
-			ToolVersion = "1.2.3",
-			ManifestVersion = "9.9.9",
-			ManifestChannel = "preview",
-			StartedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:00Z"),
-			CompletedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:05Z"),
-			DurationSeconds = 5,
-			ExitCode = 0,
-			Platform = Platform.Windows,
-			Frameworks = ["net8.0-android"],
-			TargetPlatforms = ["android"],
-			Results =
+		var report = new CheckReport(
+			ToolVersion: "1.2.3",
+			ManifestVersion: "9.9.9",
+			ManifestChannel: "preview",
+			StartedAtUtc: DateTimeOffset.Parse("2024-01-01T00:00:00Z"),
+			CompletedAtUtc: DateTimeOffset.Parse("2024-01-01T00:00:05Z"),
+			DurationSeconds: 5,
+			ExitCode: 0,
+			Platform: Platform.Windows,
+			Frameworks: ["net8.0-android"],
+			TargetPlatforms: ["android"],
+			Results:
 			[
-				new CheckResultReport
-				{
-					Id = "androidsdk",
-					Title = "Android SDK",
-					Status = Status.Ok,
-					Details =
+				new CheckResultReport(
+					Id: "androidsdk",
+					Title: "Android SDK",
+					Status: Status.Ok,
+					Message: null,
+					Details:
 					[
-						new CheckResultDetailReport
-						{
-							Message = "All good",
-							Status = Status.Ok
-						}
-					]
-				}
+						new CheckResultDetailReport("All good", Status.Ok)
+					],
+					Suggestion: null)
 			],
-			SkippedCheckups =
+			SkippedCheckups:
 			[
-				new SkippedCheckReport
-				{
-					Id = "git",
-					Reason = "Not needed",
-					IsError = false
-				}
+				new SkippedCheckReport("git", "Not needed", false)
 			],
-			SkippedFixes = ["androidsdk"],
-			HasErrors = false,
-			HasWarnings = false
-		};
+			SkippedFixes: ["androidsdk"],
+			UnresolvedCheckups: Array.Empty<UnresolvedCheckReport>(),
+			HasErrors: false,
+			HasWarnings: false);
 
 		var reportDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 		var reportPath = Path.Combine(reportDirectory, "report.json");

@@ -6,77 +6,41 @@ using DotNetCheck.Models;
 
 namespace DotNetCheck.Reporting;
 
-internal sealed record CheckReport
-{
-    public string ToolVersion { get; init; } = string.Empty;
+internal sealed record CheckReport(
+    string ToolVersion,
+    string ManifestVersion,
+    string ManifestChannel,
+    DateTimeOffset StartedAtUtc,
+    DateTimeOffset CompletedAtUtc,
+    double DurationSeconds,
+    int ExitCode,
+    Platform Platform,
+    IReadOnlyList<string> Frameworks,
+    IReadOnlyList<string> TargetPlatforms,
+    IReadOnlyList<CheckResultReport> Results,
+    IReadOnlyList<SkippedCheckReport> SkippedCheckups,
+    IReadOnlyList<string> SkippedFixes,
+    IReadOnlyList<UnresolvedCheckReport> UnresolvedCheckups,
+    bool HasErrors,
+    bool HasWarnings);
 
-    public string ManifestVersion { get; init; } = string.Empty;
+internal sealed record CheckResultReport(
+    string Id,
+    string Title,
+    Status Status,
+    string? Message,
+    IReadOnlyList<CheckResultDetailReport>? Details,
+    SuggestionReport? Suggestion);
 
-    public string ManifestChannel { get; init; } = string.Empty;
+internal sealed record CheckResultDetailReport(string Message, Status? Status);
 
-    public DateTimeOffset StartedAtUtc { get; init; }
-
-    public DateTimeOffset CompletedAtUtc { get; init; }
-
-    public double DurationSeconds { get; init; }
-
-    public int ExitCode { get; init; }
-
-    public Platform Platform { get; init; }
-
-    public IReadOnlyList<string> Frameworks { get; init; } = Array.Empty<string>();
-
-    public IReadOnlyList<string> TargetPlatforms { get; init; } = Array.Empty<string>();
-
-    public IReadOnlyList<CheckResultReport> Results { get; init; } = Array.Empty<CheckResultReport>();
-
-    public IReadOnlyList<SkippedCheckReport> SkippedCheckups { get; init; } = Array.Empty<SkippedCheckReport>();
-
-    public IReadOnlyList<string> SkippedFixes { get; init; } = Array.Empty<string>();
-
-    public IReadOnlyList<UnresolvedCheckReport> UnresolvedCheckups { get; init; } = Array.Empty<UnresolvedCheckReport>();
-
-    public bool HasErrors { get; init; }
-
-    public bool HasWarnings { get; init; }
-}
-
-internal sealed record CheckResultReport
-{
-    public string Id { get; init; } = string.Empty;
-
-    public string Title { get; init; } = string.Empty;
-
-    public Status Status { get; init; }
-
-    public string? Message { get; init; }
-
-    public IReadOnlyList<CheckResultDetailReport>? Details { get; init; }
-
-    public SuggestionReport? Suggestion { get; init; }
-}
-
-internal sealed record CheckResultDetailReport
-{
-    public string Message { get; init; } = string.Empty;
-
-    public Status? Status { get; init; }
-}
-
-internal sealed record UnresolvedCheckReport
-{
-    public string Id { get; init; } = string.Empty;
-
-    public string Title { get; init; } = string.Empty;
-
-    public Status Status { get; init; }
-
-    public string? Message { get; init; }
-
-    public FixStatus FixStatus { get; init; }
-
-    public string Reason { get; init; } = string.Empty;
-}
+internal sealed record UnresolvedCheckReport(
+    string Id,
+    string Title,
+    Status Status,
+    string? Message,
+    FixStatus FixStatus,
+    string Reason);
 
 internal enum FixStatus
 {
@@ -85,20 +49,6 @@ internal enum FixStatus
     Attempted
 }
 
-internal sealed record SuggestionReport
-{
-    public string Name { get; init; } = string.Empty;
+internal sealed record SuggestionReport(string Name, string? Description, bool HasSolution);
 
-    public string? Description { get; init; }
-
-    public bool HasSolution { get; init; }
-}
-
-internal sealed record SkippedCheckReport
-{
-    public string Id { get; init; } = string.Empty;
-
-    public string Reason { get; init; } = string.Empty;
-
-    public bool IsError { get; init; }
-}
+internal sealed record SkippedCheckReport(string Id, string Reason, bool IsError);

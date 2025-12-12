@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DotNetCheck;
 using DotNetCheck.Models;
 
 namespace DotNetCheck.Reporting;
@@ -46,25 +45,23 @@ internal static class CheckReportFactory
 
         var completedAtUtc = startedAtUtc + duration;
 
-        return new CheckReport
-        {
-			ToolVersion = ToolInfo.CurrentVersion.ToNormalizedString(),
-			ManifestVersion = manifest.Check?.ToolVersion ?? string.Empty,
-			ManifestChannel = manifestChannel.ToString().ToLowerInvariant(),
-            StartedAtUtc = startedAtUtc,
-            CompletedAtUtc = completedAtUtc,
-            DurationSeconds = duration.TotalSeconds,
-            ExitCode = exitCode,
-            Platform = platform,
-            Frameworks = settings.Frameworks ?? Array.Empty<string>(),
-            TargetPlatforms = settings.TargetPlatforms ?? Array.Empty<string>(),
-            Results = CreateCheckResultReports(results, checkupDetails),
-            SkippedCheckups = CreateSkippedCheckReports(skippedCheckups),
-            SkippedFixes = skippedFixes.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            UnresolvedCheckups = CreateUnresolvedCheckReports(results, skippedFixes, skippedFixReasons),
-            HasErrors = results.Values.Any(r => r.Status == Status.Error),
-            HasWarnings = results.Values.Any(r => r.Status == Status.Warning)
-        };
+        return new CheckReport(
+            ToolInfo.CurrentVersion.ToNormalizedString(),
+            manifest.Check?.ToolVersion ?? string.Empty,
+            manifestChannel.ToString().ToLowerInvariant(),
+            startedAtUtc,
+            completedAtUtc,
+            duration.TotalSeconds,
+            exitCode,
+            platform,
+            settings.Frameworks ?? [],
+            settings.TargetPlatforms ?? [],
+            CreateCheckResultReports(results, checkupDetails),
+            CreateSkippedCheckReports(skippedCheckups),
+            skippedFixes.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            CreateUnresolvedCheckReports(results, skippedFixes, skippedFixReasons),
+            results.Values.Any(r => r.Status == Status.Error),
+            results.Values.Any(r => r.Status == Status.Warning));
     }
 
     private static IReadOnlyList<CheckResultReport> CreateCheckResultReports(
@@ -90,45 +87,37 @@ internal static class CheckReportFactory
             && checkupDetails.TryGetValue(result.Checkup.Id, out var captured)
             && captured.Count > 0)
         {
-            details = captured.ToArray();
+            details = [.. captured];
         }
 
-        return new CheckResultReport
-        {
-            Id = result.Checkup.Id,
-            Title = result.Checkup.Title,
-            Status = result.Status,
-            Message = message,
-            Details = details,
-            Suggestion = result.Suggestion is null
-                ? null
-                : new SuggestionReport
-                {
-                    Name = result.Suggestion.Name,
-                    Description = string.IsNullOrWhiteSpace(result.Suggestion.Description)
-                        ? null
-                        : result.Suggestion.Description,
-                    HasSolution = result.Suggestion.HasSolution
-                }
-        };
+        var suggestion = result.Suggestion is null
+            ? null
+            : new SuggestionReport(
+                result.Suggestion.Name,
+                string.IsNullOrWhiteSpace(result.Suggestion.Description)
+                    ? null
+                    : result.Suggestion.Description,
+                result.Suggestion.HasSolution);
+
+        return new CheckResultReport(
+            result.Checkup.Id,
+            result.Checkup.Title,
+            result.Status,
+            message,
+            details,
+            suggestion);
     }
 
     private static IReadOnlyList<SkippedCheckReport> CreateSkippedCheckReports(IEnumerable<SkipInfo> skippedCheckups)
     {
-        return skippedCheckups
+        return [.. skippedCheckups
             .GroupBy(s => s.CheckupId, StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
                 var skip = g.First();
-                return new SkippedCheckReport
-                {
-                    Id = skip.CheckupId,
-                    Reason = skip.skipReason,
-                    IsError = skip.isError
-                };
+                return new SkippedCheckReport(skip.CheckupId, skip.skipReason, skip.isError);
             })
-            .OrderBy(s => s.Id, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .OrderBy(s => s.Id, StringComparer.OrdinalIgnoreCase)];
     }
 
     private static IReadOnlyList<UnresolvedCheckReport> CreateUnresolvedCheckReports(
@@ -138,7 +127,7 @@ internal static class CheckReportFactory
     {
         var skippedFixIds = skippedFixes as IReadOnlyCollection<string> ?? skippedFixes.ToArray();
 
-        return results.Values
+        return [.. results.Values
             .Where(r => r.Status is Status.Error or Status.Warning)
             .Select(r =>
             {
@@ -173,17 +162,14 @@ internal static class CheckReportFactory
                     }
                 }
 
-                return new UnresolvedCheckReport
-                {
-                    Id = r.Checkup.Id,
-                    Title = r.Checkup.Title,
-                    Status = r.Status,
-                    Message = string.IsNullOrWhiteSpace(r.Message) ? null : r.Message,
-                    FixStatus = fixStatus,
-                    Reason = reason
-                };
+                return new UnresolvedCheckReport(
+                    r.Checkup.Id,
+                    r.Checkup.Title,
+                    r.Status,
+                    string.IsNullOrWhiteSpace(r.Message) ? null : r.Message,
+                    fixStatus,
+                    reason);
             })
-            .OrderBy(r => r.Id, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+            .OrderBy(r => r.Id, StringComparer.OrdinalIgnoreCase)];
     }
 }

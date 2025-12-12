@@ -518,11 +518,7 @@ namespace DotNetCheck.Cli
 					_checkupDetails[e.Checkup.Id] = details;
 				}
 
-				details.Add(new CheckResultDetailReport
-				{
-					Message = e.Message,
-					Status = e.Status
-				});
+				details.Add(new CheckResultDetailReport(e.Message, e.Status));
 			}
 
 			var msg = "";
