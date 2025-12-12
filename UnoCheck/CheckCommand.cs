@@ -18,6 +18,8 @@ namespace DotNetCheck.Cli
 {
 	public class CheckCommand : AsyncCommand<CheckSettings>
 	{
+		private readonly Dictionary<string, List<CheckResultDetailReport>> _checkupDetails = new(StringComparer.OrdinalIgnoreCase);
+
 		public override async Task<int> ExecuteAsync(CommandContext context, CheckSettings settings)
 		{
 			var checkStartedAtUtc = DateTimeOffset.UtcNow;
@@ -69,12 +71,14 @@ namespace DotNetCheck.Cli
 
 			var checkupStatus = new Dictionary<string, Models.Status>();
 			var sharedState = new SharedState();
+			_checkupDetails.Clear();
 
 			var results = new Dictionary<string, DiagnosticResult>();
 			var consoleStatus = AnsiConsole.Status();
 
             var skippedCheckups = new List<SkipInfo>();
             var skippedFixes = new List<string>();
+			var skippedFixReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             bool IsSkipped(string checkupId) =>
 	            skippedCheckups.Any(s => s.CheckupId.Equals(checkupId, StringComparison.OrdinalIgnoreCase));
@@ -165,6 +169,18 @@ namespace DotNetCheck.Cli
 				// Track the last used id so we can detect retry
 				checkupId = checkup.Id;
 
+				if (isRetry)
+				{
+					if (_checkupDetails.TryGetValue(checkup.Id, out var retryDetails))
+					{
+						retryDetails.Clear();
+					}
+				}
+				else
+				{
+					_checkupDetails.Remove(checkup.Id);
+				}
+
 				if (!checkup.ShouldExamine(sharedState))
 				{
 					checkupStatus[checkup.Id] = Models.Status.Ok;
@@ -251,6 +267,8 @@ namespace DotNetCheck.Cli
 
 				if (diagnosis.HasSuggestion)
 				{
+					var hasAutoFix = diagnosis.Suggestion.HasSolution;
+
 					Console.WriteLine();
 					AnsiConsole.Write(new Rule());
 					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {diagnosis.Suggestion.Name}[/]");
@@ -263,17 +281,21 @@ namespace DotNetCheck.Cli
 
 					// See if we should fix
 					// needs to have a remedy available to even bother asking/trying
-					var doFix = diagnosis.Suggestion.HasSolution
+					var doFix = hasAutoFix
 						&& (
 							// --fix + --non-interactive == auto fix, no prompt
-							(settings.NonInteractive && settings.Fix)
+							settings is { NonInteractive: true, Fix: true }
 							// interactive (default) + prompt/confirm they want to fix
 							|| (!settings.NonInteractive && AnsiConsole.Confirm($"[bold]{Icon.Bell} Attempt to fix?[/]"))
 						);
 
-					if(!doFix && !isRetry)
+					if (!doFix && !isRetry && hasAutoFix)
 					{
 						skippedFixes.Add(checkup.Id);
+						var reason = settings.NonInteractive
+							? "Automatic fix was not attempted in non-interactive mode."
+							: "User declined automatic fix.";
+						skippedFixReasons[checkup.Id] = reason;
 					}
 
 					if (doFix && !isRetry)
@@ -384,6 +406,12 @@ namespace DotNetCheck.Cli
 
 			try
 			{
+				var checkupDetailsSnapshot = _checkupDetails.Count == 0
+					? null
+					: _checkupDetails.ToDictionary(
+						kvp => kvp.Key, IReadOnlyList<CheckResultDetailReport> (kvp) => kvp.Value.ToArray(),
+						StringComparer.OrdinalIgnoreCase);
+
 				var report = CheckReportFactory.Create(
 					results,
 					skippedCheckups,
@@ -394,7 +422,9 @@ namespace DotNetCheck.Cli
 					checkStartedAtUtc,
 					sw.Elapsed,
 					Util.Platform,
-					exitCode);
+					exitCode,
+					checkupDetailsSnapshot,
+					skippedFixReasons);
 
 				await CheckReportWriter.WriteReportAsync(report, System.Threading.CancellationToken.None);
 			}
@@ -480,6 +510,21 @@ namespace DotNetCheck.Cli
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
+			if (e.Checkup is not null)
+			{
+				if (!_checkupDetails.TryGetValue(e.Checkup.Id, out var details))
+				{
+					details = [];
+					_checkupDetails[e.Checkup.Id] = details;
+				}
+
+				details.Add(new CheckResultDetailReport
+				{
+					Message = e.Message,
+					Status = e.Status
+				});
+			}
+
 			var msg = "";
 			if (e.Status == Models.Status.Error)
 				msg = $"[red]{Icon.Error} {e.Message}[/]";

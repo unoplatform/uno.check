@@ -48,8 +48,8 @@ public class ReportingTests
 		var skippedFixes = new[] { androidCheckup.Id, androidCheckup.Id };
 		var settings = new CheckSettings
 		{
-			Frameworks = new[] { "net8.0-ios" },
-			TargetPlatforms = new[] { "ios" }
+			Frameworks = ["net8.0-ios"],
+			TargetPlatforms = ["ios"]
 		};
 		var manifest = new Manifest
 		{
@@ -57,6 +57,25 @@ public class ReportingTests
 			{
 				ToolVersion = "2.0.0"
 			}
+		};
+		var details = new Dictionary<string, IReadOnlyList<CheckResultDetailReport>>
+		{
+			[androidCheckup.Id] =
+			[
+				new CheckResultDetailReport
+				{
+					Message = "Android SDK missing",
+					Status = Status.Warning
+				}
+			],
+			[jdkCheckup.Id] =
+			[
+				new CheckResultDetailReport
+				{
+					Message = "No JDK found",
+					Status = Status.Error
+				}
+			]
 		};
 		var startedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
 		var duration = TimeSpan.FromSeconds(5);
@@ -73,7 +92,8 @@ public class ReportingTests
 			startedAtUtc,
 			duration,
 			Platform.OSX,
-			exitCode);
+			exitCode,
+			details);
 
 		// Assert
 		Assert.Equal(ToolInfo.CurrentVersion.ToNormalizedString(), report.ToolVersion);
@@ -88,10 +108,14 @@ public class ReportingTests
 		Assert.Equal(settings.TargetPlatforms, report.TargetPlatforms);
 		Assert.True(report.HasErrors);
 		Assert.True(report.HasWarnings);
-		Assert.Equal(new[] { androidCheckup.Id, jdkCheckup.Id }, report.Results.Select(r => r.Id));
+		Assert.Equal([androidCheckup.Id, jdkCheckup.Id], report.Results.Select(r => r.Id));
 
 		var androidResult = Assert.Single(report.Results, r => r.Id == androidCheckup.Id);
 		Assert.Equal(Status.Warning, androidResult.Status);
+		Assert.NotNull(androidResult.Details);
+		Assert.Single(androidResult.Details!);
+		Assert.Equal("Android SDK missing", androidResult.Details![0].Message);
+		Assert.Equal(Status.Warning, androidResult.Details[0].Status);
 		Assert.NotNull(androidResult.Suggestion);
 		Assert.Equal("Install Android SDK", androidResult.Suggestion!.Name);
 		Assert.Equal("Use Android SDK manager", androidResult.Suggestion.Description);
@@ -99,13 +123,29 @@ public class ReportingTests
 
 		var jdkResult = Assert.Single(report.Results, r => r.Id == jdkCheckup.Id);
 		Assert.Equal("JDK not found", jdkResult.Message);
+		Assert.NotNull(jdkResult.Details);
+		Assert.Single(jdkResult.Details!);
+		Assert.Equal("No JDK found", jdkResult.Details![0].Message);
+		Assert.Equal(Status.Error, jdkResult.Details[0].Status);
+
+		Assert.Equal([androidCheckup.Id, jdkCheckup.Id], report.UnresolvedCheckups.Select(r => r.Id));
+
+		var androidUnresolved = Assert.Single(report.UnresolvedCheckups, r => r.Id == androidCheckup.Id);
+		Assert.Equal(Status.Warning, androidUnresolved.Status);
+		Assert.Equal(FixStatus.Skipped, androidUnresolved.FixStatus);
+		Assert.Equal("Automatic fix was available but not attempted.", androidUnresolved.Reason);
+
+		var jdkUnresolved = Assert.Single(report.UnresolvedCheckups, r => r.Id == jdkCheckup.Id);
+		Assert.Equal(Status.Error, jdkUnresolved.Status);
+		Assert.Equal(FixStatus.NotAvailable, jdkUnresolved.FixStatus);
+		Assert.Equal("No automatic fix is available for this checkup.", jdkUnresolved.Reason);
 
 		var skipInfo = Assert.Single(report.SkippedCheckups);
 		Assert.Equal("git", skipInfo.Id);
 		Assert.Equal("Skipped for test coverage", skipInfo.Reason);
 		Assert.False(skipInfo.IsError);
 
-		Assert.Equal(new[] { androidCheckup.Id }, report.SkippedFixes);
+		Assert.Equal([androidCheckup.Id], report.SkippedFixes);
 	}
 
 	[Fact]
@@ -116,33 +156,41 @@ public class ReportingTests
 		{
 			ToolVersion = "1.2.3",
 			ManifestVersion = "9.9.9",
-			ManifestChannel = "Preview",
+			ManifestChannel = "preview",
 			StartedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:00Z"),
 			CompletedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:05Z"),
 			DurationSeconds = 5,
 			ExitCode = 0,
 			Platform = Platform.Windows,
-			Frameworks = new[] { "net8.0-android" },
-			TargetPlatforms = new[] { "android" },
-			Results = new[]
-			{
+			Frameworks = ["net8.0-android"],
+			TargetPlatforms = ["android"],
+			Results =
+			[
 				new CheckResultReport
 				{
 					Id = "androidsdk",
 					Title = "Android SDK",
-					Status = Status.Ok
+					Status = Status.Ok,
+					Details =
+					[
+						new CheckResultDetailReport
+						{
+							Message = "All good",
+							Status = Status.Ok
+						}
+					]
 				}
-			},
-			SkippedCheckups = new[]
-			{
+			],
+			SkippedCheckups =
+			[
 				new SkippedCheckReport
 				{
 					Id = "git",
 					Reason = "Not needed",
 					IsError = false
 				}
-			},
-			SkippedFixes = new[] { "androidsdk" },
+			],
+			SkippedFixes = ["androidsdk"],
 			HasErrors = false,
 			HasWarnings = false
 		};
@@ -170,6 +218,11 @@ public class ReportingTests
 			var firstResult = results[0];
 			Assert.Equal("androidsdk", firstResult.GetProperty("id").GetString());
 			Assert.Equal("ok", firstResult.GetProperty("status").GetString());
+
+			var resultDetails = firstResult.GetProperty("details");
+			Assert.Equal(JsonValueKind.Array, resultDetails.ValueKind);
+			Assert.Equal("All good", resultDetails[0].GetProperty("message").GetString());
+			Assert.Equal("ok", resultDetails[0].GetProperty("status").GetString());
 
 			var skipped = root.GetProperty("skippedCheckups");
 			Assert.Equal("git", skipped[0].GetProperty("id").GetString());
