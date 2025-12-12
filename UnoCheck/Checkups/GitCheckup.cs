@@ -26,7 +26,7 @@ namespace DotNetCheck.Checkups
 			{
 				if (Util.IsWindows)
 				{
-					if (!Util.CI && (await VisualStudioWindowsCheckup.GetWindowsInfo()).Any())
+					if (!Util.CI && VisualStudioWindowsCheckup.GetWindowsInfo().Count > 0)
 					{
 						return new DiagnosticResult(Status.Error, this, "Git is not installed.", new Suggestion("Install Git with VS installer", new GitSolution()));
 					}

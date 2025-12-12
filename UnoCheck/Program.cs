@@ -33,6 +33,7 @@ namespace DotNetCheck
 				new VisualStudioWindowsCheckup(),
 				new VSWinWorkloadsCheckup(),
 				new HttpsDevCertCheckup(),
+				new VSPluginInstallationCheckup(),
 				new AndroidSdkPackagesCheckup(),
 				new XCodeCheckup(),
 				new DotNetCheckup()
