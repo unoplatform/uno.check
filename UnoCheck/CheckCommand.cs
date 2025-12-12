@@ -1,4 +1,5 @@
 ﻿using DotNetCheck.Models;
+using DotNetCheck.Reporting;
 using NuGet.Versioning;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -17,8 +18,11 @@ namespace DotNetCheck.Cli
 {
 	public class CheckCommand : AsyncCommand<CheckSettings>
 	{
+		private readonly Dictionary<string, List<CheckResultDetailReport>> _checkupDetails = new(StringComparer.OrdinalIgnoreCase);
+
 		public override async Task<int> ExecuteAsync(CommandContext context, CheckSettings settings)
 		{
+			var checkStartedAtUtc = DateTimeOffset.UtcNow;
 			var sw = Stopwatch.StartNew();
 			TelemetryClient.TrackStartCheck(settings.Frameworks);
 
@@ -67,12 +71,17 @@ namespace DotNetCheck.Cli
 
 			var checkupStatus = new Dictionary<string, Models.Status>();
 			var sharedState = new SharedState();
+			_checkupDetails.Clear();
 
 			var results = new Dictionary<string, DiagnosticResult>();
 			var consoleStatus = AnsiConsole.Status();
 
-            var skippedChecks = new List<string>();
-            var skippedFix = new List<string>();
+            var skippedCheckups = new List<SkipInfo>();
+            var skippedFixes = new List<string>();
+			var skippedFixReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            bool IsSkipped(string checkupId) =>
+	            skippedCheckups.Any(s => s.CheckupId.Equals(checkupId, StringComparison.OrdinalIgnoreCase));
 
             AnsiConsole.Markup($"[bold blue]{Icon.Thinking} Synchronizing configuration...[/]");
 
@@ -160,6 +169,18 @@ namespace DotNetCheck.Cli
 				// Track the last used id so we can detect retry
 				checkupId = checkup.Id;
 
+				if (isRetry)
+				{
+					if (_checkupDetails.TryGetValue(checkup.Id, out var retryDetails))
+					{
+						retryDetails.Clear();
+					}
+				}
+				else
+				{
+					_checkupDetails.Remove(checkup.Id);
+				}
+
 				if (!checkup.ShouldExamine(sharedState))
 				{
 					checkupStatus[checkup.Id] = Models.Status.Ok;
@@ -201,7 +222,7 @@ namespace DotNetCheck.Cli
 
 				if (skipCheckup is not null)
 				{
-					skippedChecks.Add(checkup.Id);
+					skippedCheckups.Add(skipCheckup);
 					checkupStatus[checkup.Id] = skipCheckup.isError ? Models.Status.Error : Models.Status.Ok;
 					AnsiConsole.WriteLine();
 
@@ -246,6 +267,8 @@ namespace DotNetCheck.Cli
 
 				if (diagnosis.HasSuggestion)
 				{
+					var hasAutoFix = diagnosis.Suggestion.HasSolution;
+
 					Console.WriteLine();
 					AnsiConsole.Write(new Rule());
 					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {diagnosis.Suggestion.Name}[/]");
@@ -258,17 +281,21 @@ namespace DotNetCheck.Cli
 
 					// See if we should fix
 					// needs to have a remedy available to even bother asking/trying
-					var doFix = diagnosis.Suggestion.HasSolution
+					var doFix = hasAutoFix
 						&& (
 							// --fix + --non-interactive == auto fix, no prompt
-							(settings.NonInteractive && settings.Fix)
+							settings is { NonInteractive: true, Fix: true }
 							// interactive (default) + prompt/confirm they want to fix
 							|| (!settings.NonInteractive && AnsiConsole.Confirm($"[bold]{Icon.Bell} Attempt to fix?[/]"))
 						);
 
-					if(!doFix && !isRetry)
+					if (!doFix && !isRetry && hasAutoFix)
 					{
-						skippedFix.Add(checkup.Id);
+						skippedFixes.Add(checkup.Id);
+						var reason = settings.NonInteractive
+							? "Automatic fix was not attempted in non-interactive mode."
+							: "User declined automatic fix.";
+						skippedFixReasons[checkup.Id] = reason;
 					}
 
 					if (doFix && !isRetry)
@@ -328,21 +355,25 @@ namespace DotNetCheck.Cli
 			AnsiConsole.Write(new Rule());
 			AnsiConsole.WriteLine();
 
-			var erroredChecks = results.Values.Where(d => d.Status == Models.Status.Error && !skippedChecks.Contains(d.Checkup.Id));
+			var erroredChecks = results.Values
+				.Where(d => d.Status == Models.Status.Error && !IsSkipped(d.Checkup.Id))
+				.ToList();
 
 			foreach (var ec in erroredChecks)
 				Util.Log($"Checkup had Error status: {ec.Checkup.Id}");
 
 			var hasErrors = erroredChecks.Any();
 
-			var warningChecks = results.Values.Where(d => d.Status == Models.Status.Warning && !skippedChecks.Contains(d.Checkup.Id));
+			var warningChecks = results.Values
+				.Where(d => d.Status == Models.Status.Warning && !IsSkipped(d.Checkup.Id))
+				.ToList();
 			var hasWarnings = warningChecks.Any();
 
 			if (hasErrors)
 			{
 				TelemetryClient.TrackCheckFail(
 					sw.Elapsed,
-					string.Join(",", erroredChecks.Select(c => (skippedFix.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
+					string.Join(",", erroredChecks.Select(c => (skippedFixes.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
 
 				AnsiConsole.Console.WriteLine();
 
@@ -370,12 +401,45 @@ namespace DotNetCheck.Cli
                 AnsiConsole.MarkupLine($"[bold blue]{Icon.Success} Congratulations, everything looks great![/]");
 			}
 
+			sw.Stop();
+			var exitCode = hasErrors ? 1 : 0;
+
+			try
+			{
+				var checkupDetailsSnapshot = _checkupDetails.Count == 0
+					? null
+					: _checkupDetails.ToDictionary(
+						kvp => kvp.Key, IReadOnlyList<CheckResultDetailReport> (kvp) => kvp.Value.ToArray(),
+						StringComparer.OrdinalIgnoreCase);
+
+				var report = CheckReportFactory.Create(
+					results,
+					skippedCheckups,
+					skippedFixes,
+					settings,
+					manifest,
+					channel,
+					checkStartedAtUtc,
+					sw.Elapsed,
+					Util.Platform,
+					exitCode,
+					checkupDetailsSnapshot,
+					skippedFixReasons);
+
+				await CheckReportWriter.WriteReportAsync(report, System.Threading.CancellationToken.None);
+			}
+			catch (Exception ex)
+			{
+				Util.Exception(ex);
+				AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to write check report: {ex.Message}[/]");
+				exitCode = 1;
+			}
+
 			Console.Title = ToolInfo.ToolName;
 
 			ToolInfo.ExitPrompt(settings.NonInteractive);
 
 			Util.Log($"Has Errors? {hasErrors}");
-			var exitCode = hasErrors ? 1 : 0;
 			Environment.ExitCode = exitCode;
 
 			return exitCode;
@@ -446,6 +510,17 @@ namespace DotNetCheck.Cli
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
+			if (e.Checkup is not null)
+			{
+				if (!_checkupDetails.TryGetValue(e.Checkup.Id, out var details))
+				{
+					details = [];
+					_checkupDetails[e.Checkup.Id] = details;
+				}
+
+				details.Add(new CheckResultDetailReport(e.Message, e.Status));
+			}
+
 			var msg = "";
 			if (e.Status == Models.Status.Error)
 				msg = $"[red]{Icon.Error} {e.Message}[/]";
