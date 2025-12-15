@@ -48,6 +48,9 @@ namespace DotNetCheck.Cli
 				return 1;
 			}
 
+			// Show interactive selection prompts if appropriate
+			InteractiveSelector.ApplyInteractiveSelections(settings);
+
 			if (!Util.IsAdmin() && Util.IsWindows)
 			{
 				var suTxt = Util.IsWindows ? "Administrator" : "Superuser (su)";
