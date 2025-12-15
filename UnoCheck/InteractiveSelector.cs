@@ -157,6 +157,8 @@ namespace DotNetCheck
 			}
 			else
 			{
+				// When nothing is selected, use "none" to skip IDE checks
+				settings.Ide = "none";
 				AnsiConsole.MarkupLine("[grey]No IDE selected - IDE checks will be skipped[/]");
 			}
 
