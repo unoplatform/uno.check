@@ -76,6 +76,9 @@ namespace DotNetCheck
 		/// <summary>
 		/// Prompts user to select target platforms
 		/// </summary>
+		/// <returns>
+		/// Array of platform identifiers. If empty, all platforms will be targeted.
+		/// </returns>
 		public static string[] PromptForTargetPlatforms()
 		{
 			var platformChoices = new List<string>();
@@ -128,7 +131,8 @@ namespace DotNetCheck
 				"WebAssembly" => "webassembly",
 				"Linux" => "linux",
 				"Desktop (Skia)" => "desktop",
-				_ => p.ToLowerInvariant()
+				// Fallback should not happen with controlled selection list
+				_ => throw new InvalidOperationException($"Unexpected platform selection: {p}")
 			}).ToArray();
 		}
 
