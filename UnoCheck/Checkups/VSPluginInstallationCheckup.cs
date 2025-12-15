@@ -22,40 +22,37 @@ public sealed class VSPluginInstallationCheckup : Checkup
     public override async Task<DiagnosticResult> Examine(SharedState state)
     {
         var windowsInfo = VisualStudioWindowsCheckup.GetWindowsInfo();
-        if (windowsInfo is { Count: > 0 })
+        if (windowsInfo is not { Count: > 0 } ||
+            !VisualStudioInstanceSelector.TryGetLatestSupportedInstance(windowsInfo, out var vsInfo))
         {
-            var vsInfo = windowsInfo.FirstOrDefault(x => x.Version.Major == 17);
-            if (!string.IsNullOrEmpty(vsInfo.Path))
-            {
-                var extensionsPath = GetExtensionsPath(vsInfo);
-                if (Directory.Exists(extensionsPath))
-                {
-                    using var marketplace = new UnoPlatformMarketplaceService();
-                    var marketplaceDetails = await marketplace.GetExtensionDetailsAsync();
-                    
-                    var installedVersion = FindInstalledUnoVsixVersion(extensionsPath);
-                    if (string.IsNullOrEmpty(installedVersion))
-                    {
-                        return SuggestVsixInstall();
-                    }
-                    
-                    if (NuGetVersion.TryParse(installedVersion, out var localVer) &&
-                        NuGetVersion.TryParse(marketplaceDetails.Version, out var marketVer) &&
-                        localVer < marketVer)
-                    {
-                        return new DiagnosticResult(
-                            Status.Error,
-                            this,
-                            new Suggestion($"Installed version {localVer} is out-of-date (latest is {marketVer}).",
-                                new VsixInstallSolution()));
-                    }
-
-                    return DiagnosticResult.Ok(this);
-                }
-
-                return SuggestVsixInstall();
-            }
+            return DiagnosticResult.Ok(this);
         }
+
+        var extensionsPath = GetExtensionsPath(vsInfo);
+        if (!Directory.Exists(extensionsPath))
+        {
+            return SuggestVsixInstall();
+        }
+
+        var installedVersion = FindInstalledUnoVsixVersion(extensionsPath);
+        if (string.IsNullOrWhiteSpace(installedVersion))
+        {
+            return SuggestVsixInstall();
+        }
+
+        var marketplaceVersion = await TryGetMarketplaceVersionAsync();
+        if (!string.IsNullOrWhiteSpace(marketplaceVersion) &&
+            NuGetVersion.TryParse(installedVersion, out var localVer) &&
+            NuGetVersion.TryParse(marketplaceVersion, out var marketVer) &&
+            localVer < marketVer)
+        {
+            return new DiagnosticResult(
+                Status.Error,
+                this,
+                new Suggestion($"Installed version {localVer} is out-of-date (latest is {marketVer}).",
+                    new VsixInstallSolution()));
+        }
+
         return DiagnosticResult.Ok(this);
     }
 
@@ -63,7 +60,7 @@ public sealed class VSPluginInstallationCheckup : Checkup
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Microsoft", "VisualStudio", 
-            $"{vsInfo.Version.Version.Major}.0_{vsInfo.InstanceId}", 
+            $"{vsInfo.Version.Major}.0_{vsInfo.InstanceId}", 
             "Extensions");
 
     private DiagnosticResult SuggestVsixInstall()
@@ -77,24 +74,42 @@ public sealed class VSPluginInstallationCheckup : Checkup
     
     private static string FindInstalledUnoVsixVersion(string extensionsDir)
     {
-        foreach (var vsixDir in Directory.GetDirectories(extensionsDir, "*", SearchOption.AllDirectories))
+        foreach (var manifestPath in Directory.EnumerateFiles(extensionsDir, "*.vsixmanifest", SearchOption.AllDirectories))
         {
-            var manifestPath = Directory.GetFiles(vsixDir, "*.vsixmanifest").FirstOrDefault();
-            if (manifestPath == null)
-                continue;
-
             var manifestXml = XDocument.Load(manifestPath);
-            var metadata = manifestXml.Descendants().FirstOrDefault(e => e.Name.LocalName == "Metadata");
 
-            var identity = metadata?.Descendants().FirstOrDefault(e => e.Name.LocalName == "Identity");
-            if (identity == null || identity.Attribute("Publisher")?.Value != "Uno Platform")
+            var identity = manifestXml.Descendants().FirstOrDefault(e => e.Name.LocalName == "Identity");
+            if (identity == null)
+            {
                 continue;
-            
-            var versionAttr = identity.Attribute("Version");
-            
-            return versionAttr?.Value;
+            }
+
+            if (!string.Equals(identity.Attribute("Publisher")?.Value, "Uno Platform", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return identity.Attribute("Version")?.Value;
         }
 
         return null;
+    }
+
+    private async Task<string?> TryGetMarketplaceVersionAsync()
+    {
+        try
+        {
+            using var marketplace = new UnoPlatformMarketplaceService();
+            var marketplaceDetails = await marketplace.GetExtensionDetailsAsync();
+            return marketplaceDetails.Version;
+        }
+        catch (Exception ex)
+        {
+            Util.Log($"Marketplace query failed: {ex.Message}");
+            Util.Exception(ex);
+            ReportStatus("Could not query Visual Studio Marketplace for latest Uno extension version (skipping update check).", null);
+
+            return null;
+        }
     }
 }

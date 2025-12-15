@@ -65,8 +65,10 @@ namespace DotNetCheck.Checkups
 
 
 			if (!File.Exists(path))
-				Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-				"Microsoft Visual Studio", "Installer", "vswhere.exe");
+			{
+				path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+					"Microsoft Visual Studio", "Installer", "vswhere.exe");
+			}
 
 			if (!File.Exists(path))
 				return [];
@@ -76,7 +78,7 @@ namespace DotNetCheck.Checkups
 
 			var str = r.GetOutput();
 
-			var json = JsonDocument.Parse(str);
+			using var json = JsonDocument.Parse(str);
 
 			foreach (var vsjson in json.RootElement.EnumerateArray())
 			{
