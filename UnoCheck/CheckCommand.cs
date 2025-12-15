@@ -131,6 +131,8 @@ namespace DotNetCheck.Cli
 							"rider" => Util.RiderSkips,
 							"vs" => Util.VSSkips,
 							"vscode" => Util.VSCodeSkips,
+							"none" => Util.NoneSkips,
+							"other" => Util.OtherSkips,
 							_ => []
 						}
 					)
