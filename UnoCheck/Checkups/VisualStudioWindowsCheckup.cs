@@ -31,7 +31,7 @@ namespace DotNetCheck.Checkups
 		{
 			var vsinfo = await GetWindowsInfo();
 
-			// Defensive null check
+			// Defensive null check (should not occur with current implementation, but guards against future changes)
 			if (vsinfo == null)
 			{
 				ReportStatus("Visual Studio is not installed", Status.Warning);
