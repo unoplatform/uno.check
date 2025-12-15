@@ -29,7 +29,7 @@ namespace DotNetCheck.Checkups
 
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var vsinfo = await GetWindowsInfo();
+			var vsinfo = GetWindowsInfo();
 
 			foreach (var vi in vsinfo)
 			{
@@ -56,7 +56,7 @@ namespace DotNetCheck.Checkups
 			}
 		}
 
-		public static Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo(string requires = "")
+		public static List<VisualStudioInfo> GetWindowsInfo(string requires = "")
 		{
 			var items = new List<VisualStudioInfo>();
 
@@ -65,18 +65,20 @@ namespace DotNetCheck.Checkups
 
 
 			if (!File.Exists(path))
-				Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-				"Microsoft Visual Studio", "Installer", "vswhere.exe");
+			{
+				path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+					"Microsoft Visual Studio", "Installer", "vswhere.exe");
+			}
 
 			if (!File.Exists(path))
-				return default;
+				return [];
 
 			var r = ShellProcessRunner.Run(path,
 				$"-all -requires Microsoft.Component.MSBuild {requires} -format json -prerelease");
 
 			var str = r.GetOutput();
 
-			var json = JsonDocument.Parse(str);
+			using var json = JsonDocument.Parse(str);
 
 			foreach (var vsjson in json.RootElement.EnumerateArray())
 			{
@@ -88,15 +90,19 @@ namespace DotNetCheck.Checkups
 
 				if (!vsjson.TryGetProperty("installationPath", out var installPath))
 					continue;
+				
+				if (!vsjson.TryGetProperty("instanceId", out var instanceId))
+					continue;
 
 				items.Add(new VisualStudioInfo
 				{
 					Version = semVer,
-					Path = installPath.GetString()
+					Path = installPath.GetString(),
+					InstanceId = instanceId.GetString()
 				});
 			}
 
-			return Task.FromResult<IEnumerable<VisualStudioInfo>>(items);
+			return items;
 		}
 	}
 
@@ -105,5 +111,7 @@ namespace DotNetCheck.Checkups
 		public string Path { get; set; }
 
 		public NuGetVersion Version { get; set; }
+		
+		public string InstanceId { get; set; }
 	}
 }
