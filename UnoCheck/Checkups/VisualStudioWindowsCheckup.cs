@@ -11,6 +11,9 @@ namespace DotNetCheck.Checkups
 {
 	public class VisualStudioWindowsCheckup : Checkup
 	{
+		private static readonly Task<IEnumerable<VisualStudioInfo>> EmptyResult = 
+			Task.FromResult(Enumerable.Empty<VisualStudioInfo>());
+
 		public override bool IsPlatformSupported(Platform platform)
 			=> platform == Platform.Windows;
 
@@ -76,7 +79,7 @@ namespace DotNetCheck.Checkups
 				"Microsoft Visual Studio", "Installer", "vswhere.exe");
 
 			if (!File.Exists(path))
-				return Task.FromResult(Enumerable.Empty<VisualStudioInfo>());
+				return EmptyResult;
 
 			var r = ShellProcessRunner.Run(path,
 				$"-all -requires Microsoft.Component.MSBuild {requires} -format json -prerelease");
