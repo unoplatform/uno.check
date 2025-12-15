@@ -37,9 +37,12 @@ namespace DotNetCheck
 		}
 
 		/// <summary>
-		/// Prompts user to select their IDE
+		/// Prompts user to select their IDE(s)
 		/// </summary>
-		public static string PromptForIde()
+		/// <returns>
+		/// Array of IDE identifiers. If empty, no IDE-specific checks will be skipped.
+		/// </returns>
+		public static string[] PromptForIde()
 		{
 			var ideChoices = new List<string>();
 
@@ -53,24 +56,28 @@ namespace DotNetCheck
 			ideChoices.Add("VS Code");
 			ideChoices.Add("Rider");
 			ideChoices.Add("Other");
-			ideChoices.Add("None");
 
-			var selectedIde = AnsiConsole.Prompt(
-				new SelectionPrompt<string>()
-					.Title("[bold blue]Which IDE do you plan to use?[/]")
+			var selectedIdes = AnsiConsole.Prompt(
+				new MultiSelectionPrompt<string>()
+					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
+					.PageSize(10)
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none to skip no IDE checks)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
-			// Map friendly name to internal identifier
-			return selectedIde switch
+			// If no IDEs selected, return empty array
+			if (!selectedIdes.Any())
+				return Array.Empty<string>();
+
+			// Map friendly names to internal identifiers
+			return selectedIdes.Select(ide => ide switch
 			{
 				"Visual Studio" => "vs",
 				"VS Code" => "vscode",
 				"Rider" => "rider",
 				"Other" => "other",
-				"None" => "none",
 				_ => "other"
-			};
+			}).ToArray();
 		}
 
 		/// <summary>
@@ -83,31 +90,29 @@ namespace DotNetCheck
 		{
 			var platformChoices = new List<string>();
 
-			// Add OS-specific platforms first
-			if (Util.IsWindows)
-			{
-				platformChoices.Add("Windows App SDK");
-			}
-
-			// Desktop is available on all platforms (macOS, Linux, Windows)
+			// Platform order: desktop, wasm, ios, android, winappsdk
 			platformChoices.Add("Desktop");
-
+			platformChoices.Add("WebAssembly");
+			
 			// iOS is available on Windows and Mac only (not on Linux)
 			if (Util.IsWindows || Util.IsMac)
 			{
 				platformChoices.Add("iOS");
 			}
-
-			// Common platforms on all operating systems
+			
 			platformChoices.Add("Android");
-			platformChoices.Add("WebAssembly");
+			
+			// Windows App SDK only on Windows
+			if (Util.IsWindows)
+			{
+				platformChoices.Add("Windows App SDK");
+			}
 
 			var selectedPlatforms = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which platforms do you want to target?[/]")
 					.PageSize(10)
-					.MoreChoicesText("[grey](Move up and down to reveal more platforms)[/]")
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none to target all platforms)[/]")
 					.AddChoices(platformChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
@@ -118,11 +123,11 @@ namespace DotNetCheck
 			// Map friendly names to internal identifiers
 			return selectedPlatforms.Select(p => p switch
 			{
-				"Windows App SDK" => "windows",
 				"Desktop" => "desktop",
+				"WebAssembly" => "webassembly",
 				"iOS" => "ios",
 				"Android" => "android",
-				"WebAssembly" => "webassembly",
+				"Windows App SDK" => "windows",
 				// Fallback should not happen with controlled selection list
 				_ => throw new InvalidOperationException($"Unexpected platform selection: {p}")
 			}).ToArray();
@@ -141,9 +146,19 @@ namespace DotNetCheck
 			AnsiConsole.MarkupLine("[grey]Let's customize the checks for your development environment.[/]");
 			AnsiConsole.WriteLine();
 
-			// Prompt for IDE
-			var ide = PromptForIde();
-			settings.Ide = ide;
+			// Prompt for IDE(s)
+			var ides = PromptForIde();
+			
+			// Apply IDE selection - use the first one as the primary IDE
+			if (ides.Any())
+			{
+				settings.Ide = ides[0];
+				AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
+			}
+			else
+			{
+				AnsiConsole.MarkupLine("[grey]No IDE selected - no IDE-specific checks will be skipped[/]");
+			}
 
 			AnsiConsole.WriteLine();
 
@@ -152,6 +167,11 @@ namespace DotNetCheck
 			if (platforms.Any())
 			{
 				settings.TargetPlatforms = platforms;
+				AnsiConsole.MarkupLine($"[grey]Selected platforms: {string.Join(", ", platforms)}[/]");
+			}
+			else
+			{
+				AnsiConsole.MarkupLine("[grey]No platforms selected - all platforms will be targeted[/]");
 			}
 
 			AnsiConsole.WriteLine();
