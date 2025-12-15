@@ -44,6 +44,18 @@ namespace DotNetCheck
 		/// </returns>
 		public static string[] PromptForIde()
 		{
+			// First, ask if they want to select IDEs or skip IDE checks
+			var initialChoice = AnsiConsole.Prompt(
+				new SelectionPrompt<string>()
+					.Title("[bold blue]IDE Selection:[/]")
+					.AddChoices(new[] { "Select one or more IDEs", "None (skip all IDE checks)" })
+					.HighlightStyle(new Style(Color.Green)));
+
+			// If they choose "None", return immediately
+			if (initialChoice == "None (skip all IDE checks)")
+				return new[] { "none" };
+
+			// Otherwise, show the multi-select for IDEs
 			var ideChoices = new List<string>();
 
 			// Show platform-appropriate IDEs
@@ -56,7 +68,6 @@ namespace DotNetCheck
 			ideChoices.Add("VS Code");
 			ideChoices.Add("Rider");
 			ideChoices.Add("Other");
-			ideChoices.Add("None");
 
 			var selectedIdes = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
@@ -69,10 +80,6 @@ namespace DotNetCheck
 			// If no IDEs selected, return empty array
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
-
-			// If "None" is selected, return only "none" to skip all IDE checks
-			if (selectedIdes.Contains("None"))
-				return new[] { "none" };
 
 			// Map friendly names to internal identifiers
 			return selectedIdes.Select(ide => ide switch
