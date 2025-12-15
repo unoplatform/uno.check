@@ -47,25 +47,13 @@ namespace DotNetCheck
 			if (Util.IsWindows)
 			{
 				ideChoices.Add("Visual Studio");
-				ideChoices.Add("VS Code");
-				ideChoices.Add("Rider");
-				ideChoices.Add("Other");
-				ideChoices.Add("None");
 			}
-			else if (Util.IsMac)
-			{
-				ideChoices.Add("VS Code");
-				ideChoices.Add("Rider");
-				ideChoices.Add("Other");
-				ideChoices.Add("None");
-			}
-			else // Linux
-			{
-				ideChoices.Add("VS Code");
-				ideChoices.Add("Rider");
-				ideChoices.Add("Other");
-				ideChoices.Add("None");
-			}
+			
+			// Common IDEs across all platforms
+			ideChoices.Add("VS Code");
+			ideChoices.Add("Rider");
+			ideChoices.Add("Other");
+			ideChoices.Add("None");
 
 			var selectedIde = AnsiConsole.Prompt(
 				new SelectionPrompt<string>()
@@ -92,29 +80,30 @@ namespace DotNetCheck
 		{
 			var platformChoices = new List<string>();
 
-			// Show platform-appropriate targets
+			// Add OS-specific platform first
 			if (Util.IsWindows)
 			{
 				platformChoices.Add("Windows");
-				platformChoices.Add("Android");
-				platformChoices.Add("iOS");
-				platformChoices.Add("WebAssembly");
-				platformChoices.Add("Desktop (Skia)");
 			}
 			else if (Util.IsMac)
 			{
 				platformChoices.Add("macOS");
 				platformChoices.Add("iOS");
-				platformChoices.Add("Android");
-				platformChoices.Add("WebAssembly");
-				platformChoices.Add("Desktop (Skia)");
 			}
 			else // Linux
 			{
 				platformChoices.Add("Linux");
-				platformChoices.Add("Android");
-				platformChoices.Add("WebAssembly");
-				platformChoices.Add("Desktop (Skia)");
+			}
+
+			// Common platforms across all platforms
+			platformChoices.Add("Android");
+			platformChoices.Add("WebAssembly");
+			platformChoices.Add("Desktop (Skia)");
+			
+			// iOS is available on Windows and Mac only
+			if (Util.IsWindows)
+			{
+				platformChoices.Add("iOS");
 			}
 
 			var selectedPlatforms = AnsiConsole.Prompt(
