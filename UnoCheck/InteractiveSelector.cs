@@ -86,18 +86,13 @@ namespace DotNetCheck
 			// Add OS-specific platforms first
 			if (Util.IsWindows)
 			{
-				platformChoices.Add("Windows");
-			}
-			else if (Util.IsMac)
-			{
-				platformChoices.Add("macOS");
-			}
-			else // Linux
-			{
-				platformChoices.Add("Linux");
+				platformChoices.Add("Windows App SDK");
 			}
 
-			// iOS is available on Windows and Mac
+			// Desktop is available on all platforms (macOS, Linux, Windows)
+			platformChoices.Add("Desktop");
+
+			// iOS is available on Windows and Mac only (not on Linux)
 			if (Util.IsWindows || Util.IsMac)
 			{
 				platformChoices.Add("iOS");
@@ -106,7 +101,6 @@ namespace DotNetCheck
 			// Common platforms on all operating systems
 			platformChoices.Add("Android");
 			platformChoices.Add("WebAssembly");
-			platformChoices.Add("Desktop (Skia)");
 
 			var selectedPlatforms = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
@@ -124,13 +118,11 @@ namespace DotNetCheck
 			// Map friendly names to internal identifiers
 			return selectedPlatforms.Select(p => p switch
 			{
-				"Windows" => "windows",
-				"macOS" => "macos",
+				"Windows App SDK" => "windows",
+				"Desktop" => "desktop",
 				"iOS" => "ios",
 				"Android" => "android",
 				"WebAssembly" => "webassembly",
-				"Linux" => "linux",
-				"Desktop (Skia)" => "desktop",
 				// Fallback should not happen with controlled selection list
 				_ => throw new InvalidOperationException($"Unexpected platform selection: {p}")
 			}).ToArray();
