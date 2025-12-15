@@ -40,22 +40,10 @@ namespace DotNetCheck
 		/// Prompts user to select their IDE(s)
 		/// </summary>
 		/// <returns>
-		/// Array of IDE identifiers. If "none" is selected, returns array with "none" to skip all IDE checks.
+		/// Array of IDE identifiers. If no IDEs selected, returns empty array and no IDE checks will be skipped.
 		/// </returns>
 		public static string[] PromptForIde()
 		{
-			// First, ask if they want to select IDEs or skip IDE checks
-			var initialChoice = AnsiConsole.Prompt(
-				new SelectionPrompt<string>()
-					.Title("[bold blue]IDE Selection:[/]")
-					.AddChoices(new[] { "Select one or more IDEs", "None (skip all IDE checks)" })
-					.HighlightStyle(new Style(Color.Green)));
-
-			// If they choose "None", return immediately
-			if (initialChoice == "None (skip all IDE checks)")
-				return new[] { "none" };
-
-			// Otherwise, show the multi-select for IDEs
 			var ideChoices = new List<string>();
 
 			// Show platform-appropriate IDEs
@@ -73,11 +61,11 @@ namespace DotNetCheck
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Selecting nothing will skip IDE checks)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
-			// If no IDEs selected, return empty array
+			// If no IDEs selected, return empty array (no IDE-specific checks will be skipped)
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
 
@@ -165,18 +153,11 @@ namespace DotNetCheck
 			if (ides.Any())
 			{
 				settings.Ide = ides[0];
-				if (ides[0] == "none")
-				{
-					AnsiConsole.MarkupLine("[grey]Selected IDE: None - all IDE-specific checks will be skipped[/]");
-				}
-				else
-				{
-					AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
-				}
+				AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
 			}
 			else
 			{
-				AnsiConsole.MarkupLine("[grey]No IDE selected - no IDE-specific checks will be skipped[/]");
+				AnsiConsole.MarkupLine("[grey]No IDE selected - IDE checks will be skipped[/]");
 			}
 
 			AnsiConsole.WriteLine();
