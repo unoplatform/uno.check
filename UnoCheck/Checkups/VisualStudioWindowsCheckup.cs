@@ -31,6 +31,13 @@ namespace DotNetCheck.Checkups
 		{
 			var vsinfo = await GetWindowsInfo();
 
+			// Defensive null check
+			if (vsinfo == null)
+			{
+				ReportStatus("Visual Studio is not installed", Status.Warning);
+				return new DiagnosticResult(Status.Warning, this);
+			}
+
 			foreach (var vi in vsinfo)
 			{
 				if (vi.Version.IsCompatible(MinimumVersion, ExactVersion))
@@ -65,11 +72,11 @@ namespace DotNetCheck.Checkups
 
 
 			if (!File.Exists(path))
-				Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+				path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
 				"Microsoft Visual Studio", "Installer", "vswhere.exe");
 
 			if (!File.Exists(path))
-				return default;
+				return Task.FromResult(Enumerable.Empty<VisualStudioInfo>());
 
 			var r = ShellProcessRunner.Run(path,
 				$"-all -requires Microsoft.Component.MSBuild {requires} -format json -prerelease");
