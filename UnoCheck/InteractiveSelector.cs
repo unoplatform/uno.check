@@ -40,7 +40,7 @@ namespace DotNetCheck
 		/// Prompts user to select their IDE(s)
 		/// </summary>
 		/// <returns>
-		/// Array of IDE identifiers. If empty, no IDE-specific checks will be skipped.
+		/// Array of IDE identifiers. If "none" is selected, returns array with "none" to skip all IDE checks.
 		/// </returns>
 		public static string[] PromptForIde()
 		{
@@ -56,18 +56,23 @@ namespace DotNetCheck
 			ideChoices.Add("VS Code");
 			ideChoices.Add("Rider");
 			ideChoices.Add("Other");
+			ideChoices.Add("None");
 
 			var selectedIdes = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none to skip no IDE checks)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
 			// If no IDEs selected, return empty array
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
+
+			// If "None" is selected, return only "none" to skip all IDE checks
+			if (selectedIdes.Contains("None"))
+				return new[] { "none" };
 
 			// Map friendly names to internal identifiers
 			return selectedIdes.Select(ide => ide switch
@@ -149,11 +154,18 @@ namespace DotNetCheck
 			// Prompt for IDE(s)
 			var ides = PromptForIde();
 			
-			// Apply IDE selection - use the first one as the primary IDE
+			// Apply IDE selection
 			if (ides.Any())
 			{
 				settings.Ide = ides[0];
-				AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
+				if (ides[0] == "none")
+				{
+					AnsiConsole.MarkupLine("[grey]Selected IDE: None - all IDE-specific checks will be skipped[/]");
+				}
+				else
+				{
+					AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
+				}
 			}
 			else
 			{
