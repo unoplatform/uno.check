@@ -80,7 +80,7 @@ namespace DotNetCheck
 		{
 			var platformChoices = new List<string>();
 
-			// Add OS-specific platform first
+			// Add OS-specific platforms first
 			if (Util.IsWindows)
 			{
 				platformChoices.Add("Windows");
@@ -88,23 +88,22 @@ namespace DotNetCheck
 			else if (Util.IsMac)
 			{
 				platformChoices.Add("macOS");
-				platformChoices.Add("iOS");
 			}
 			else // Linux
 			{
 				platformChoices.Add("Linux");
 			}
 
-			// Common platforms across all platforms
-			platformChoices.Add("Android");
-			platformChoices.Add("WebAssembly");
-			platformChoices.Add("Desktop (Skia)");
-			
-			// iOS is available on Windows and Mac only
-			if (Util.IsWindows)
+			// iOS is available on Windows and Mac
+			if (Util.IsWindows || Util.IsMac)
 			{
 				platformChoices.Add("iOS");
 			}
+
+			// Common platforms on all operating systems
+			platformChoices.Add("Android");
+			platformChoices.Add("WebAssembly");
+			platformChoices.Add("Desktop (Skia)");
 
 			var selectedPlatforms = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
