@@ -133,6 +133,10 @@ namespace DotNetCheck.Cli
 							"vscode" => Util.VSCodeSkips,
 							"none" => Util.NoneSkips,
 							"other" => Util.OtherSkips,
+							// CLI variants (from interactive selection)
+							"vs-cli" => Util.VSCliSkips,
+							"vscode-cli" => Util.VSCodeCliSkips,
+							"rider-cli" => Util.RiderCliSkips,
 							_ => []
 						}
 					)

@@ -16,6 +16,11 @@ namespace DotNetCheck
         public static string[] VSSkips = ["vswin","vswinworkloads"];
         public static string[] NoneSkips = ["vswin","vswinworkloads"]; // Skip all IDE-specific checks when "none" is selected
         public static string[] OtherSkips = ["vswin","vswinworkloads"]; // Skip IDE-specific checks for "other" IDE
+        
+        // CLI variants for interactive selection (when user is running from command line, not from within IDE)
+        public static string[] VSCliSkips = []; // VS selected from CLI - don't skip VS checks, user wants to use VS
+        public static string[] VSCodeCliSkips = ["vswin","vswinworkloads"]; // VSCode selected from CLI - skip VS checks
+        public static string[] RiderCliSkips = ["vswin","vswinworkloads"]; // Rider selected from CLI - skip VS checks
 
         public static void UpdateSkips(CheckSettings settings, string[] skips)
         {

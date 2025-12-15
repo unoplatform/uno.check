@@ -69,12 +69,13 @@ namespace DotNetCheck
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
 
-			// Map friendly names to internal identifiers
+			// Map friendly names to internal identifiers with -cli suffix
+			// These are for when user is running from command line (not from within IDE)
 			return selectedIdes.Select(ide => ide switch
 			{
-				"Visual Studio" => "vs",
-				"VS Code" => "vscode",
-				"Rider" => "rider",
+				"Visual Studio" => "vs-cli",
+				"VS Code" => "vscode-cli",
+				"Rider" => "rider-cli",
 				"Other" => "other",
 				_ => "other"
 			}).ToArray();
