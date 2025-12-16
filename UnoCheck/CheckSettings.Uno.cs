@@ -29,7 +29,7 @@ Targets: webassembly ios android macos linux windows"
         
         /// <summary>
         /// IDE choice from interactive selection (CLI usage). Used when user selects IDE from command-line prompts.
-        /// Unlike the Ide property (which assumes IDE is already installed), this determines which checks to run.
+        /// Unlike the Ide property (which assumes IDE is already installed and skips its checks), this property reflects the user's IDE selection and determines whether IDE installation checks should be skipped.
         /// </summary>
         public string? IdeCliChoice { get; set; }
         

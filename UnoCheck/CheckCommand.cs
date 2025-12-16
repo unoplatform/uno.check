@@ -150,8 +150,7 @@ namespace DotNetCheck.Cli
 					.Select(s => s.Trim())
 					.ToArray();
 				
-				// If VS is selected (among possibly other IDEs), don't skip VS checks
-				// Otherwise, skip VS checks for non-VS IDEs
+				// Only skip VS checks if VS is not among the selected IDEs (VS selection takes precedence).
 				if (!selectedIdes.Contains("vs"))
 				{
 					// VS is not selected, so apply appropriate skip lists
