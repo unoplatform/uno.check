@@ -55,13 +55,12 @@ namespace DotNetCheck
 			// Common IDEs across all platforms
 			ideChoices.Add("VS Code");
 			ideChoices.Add("Rider");
-			ideChoices.Add("Other");
+			ideChoices.Add("Other / None");
 
 			var selectedIdes = AnsiConsole.Prompt(
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Selecting nothing will skip IDE checks)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
@@ -75,7 +74,7 @@ namespace DotNetCheck
 				"Visual Studio" => "vs",
 				"VS Code" => "vscode",
 				"Rider" => "rider",
-				"Other" => "other",
+				"Other / None" => "other",
 				_ => "other"
 			}).ToArray();
 		}
