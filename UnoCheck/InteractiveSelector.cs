@@ -40,7 +40,7 @@ namespace DotNetCheck
 		/// Prompts user to select their IDE(s)
 		/// </summary>
 		/// <returns>
-		/// Array of IDE identifiers. If no IDEs selected, returns empty array and no IDE checks will be skipped.
+		/// Array of IDE identifiers. Returns empty array if no IDEs selected.
 		/// </returns>
 		public static string[] PromptForIde()
 		{
@@ -61,10 +61,11 @@ namespace DotNetCheck
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
 					.PageSize(10)
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select [yellow]Other / None[/] if not using any listed IDE)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
-			// If no IDEs selected, return empty array (no IDE-specific checks will be skipped)
+			// If no IDEs selected, return empty array
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
 
@@ -74,8 +75,8 @@ namespace DotNetCheck
 				"Visual Studio" => "vs",
 				"VS Code" => "vscode",
 				"Rider" => "rider",
-				"Other / None" => "other",
-				_ => "other"
+				"Other / None" => "none",
+				_ => "none"
 			}).ToArray();
 		}
 
@@ -111,7 +112,7 @@ namespace DotNetCheck
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which platforms do you want to target?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none to target all platforms)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none of them to target all platforms)[/]")
 					.AddChoices(platformChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
@@ -157,9 +158,9 @@ namespace DotNetCheck
 			}
 			else
 			{
-				// When nothing is selected, use "none" to skip IDE checks
+				// When nothing is selected, use "none" to skip all IDE checks
 				settings.IdeCliChoice = "none";
-				AnsiConsole.MarkupLine("[grey]No IDE selected - IDE checks will be skipped[/]");
+				AnsiConsole.MarkupLine("[grey]No IDE selected - all IDE checks will be skipped[/]");
 			}
 
 			AnsiConsole.WriteLine();

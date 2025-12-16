@@ -158,7 +158,6 @@ namespace DotNetCheck.Cli
 					{
 						"vscode" => Util.VSCodeCliChoiceSkips,
 						"rider" => Util.RiderCliChoiceSkips,
-						"other" => Util.OtherCliChoiceSkips,
 						"none" => Util.NoneCliChoiceSkips,
 						_ => []
 					}).Distinct();
