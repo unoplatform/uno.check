@@ -69,13 +69,12 @@ namespace DotNetCheck
 			if (!selectedIdes.Any())
 				return Array.Empty<string>();
 
-			// Map friendly names to internal identifiers with -cli suffix
-			// These are for when user is running from command line (not from within IDE)
+			// Map friendly names to internal identifiers
 			return selectedIdes.Select(ide => ide switch
 			{
-				"Visual Studio" => "vs-cli",
-				"VS Code" => "vscode-cli",
-				"Rider" => "rider-cli",
+				"Visual Studio" => "vs",
+				"VS Code" => "vscode",
+				"Rider" => "rider",
 				"Other" => "other",
 				_ => "other"
 			}).ToArray();
@@ -150,16 +149,16 @@ namespace DotNetCheck
 			// Prompt for IDE(s)
 			var ides = PromptForIde();
 			
-			// Apply IDE selection
+			// Apply IDE selection to IdeCliChoice (separate from Ide which is for --ide flag)
 			if (ides.Any())
 			{
-				settings.Ide = ides[0];
+				settings.IdeCliChoice = ides[0];
 				AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
 			}
 			else
 			{
 				// When nothing is selected, use "none" to skip IDE checks
-				settings.Ide = "none";
+				settings.IdeCliChoice = "none";
 				AnsiConsole.MarkupLine("[grey]No IDE selected - IDE checks will be skipped[/]");
 			}
 

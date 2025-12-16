@@ -122,6 +122,7 @@ namespace DotNetCheck.Cli
             if (settings.Frameworks is { Length: > 0 })
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
 
+            // Handle --ide flag (when running from within IDE, IDE is already installed)
             if (!string.IsNullOrEmpty(settings.Ide))
             {
                 skipList = skipList.Concat(
@@ -131,12 +132,27 @@ namespace DotNetCheck.Cli
 							"rider" => Util.RiderSkips,
 							"vs" => Util.VSSkips,
 							"vscode" => Util.VSCodeSkips,
-							"none" => Util.NoneSkips,
-							"other" => Util.OtherSkips,
-							// CLI variants (from interactive selection)
-							"vs-cli" => Util.VSCliSkips,
-							"vscode-cli" => Util.VSCodeCliSkips,
-							"rider-cli" => Util.RiderCliSkips,
+							_ => []
+						}
+					)
+					.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
+				)
+				.Distinct(SkipInfo.NameOnlyComparer)
+				.ToArray();
+            }
+            
+            // Handle IdeCliChoice (from interactive selection, determines which IDE checks to run)
+            if (!string.IsNullOrEmpty(settings.IdeCliChoice))
+            {
+                skipList = skipList.Concat(
+					(
+						settings.IdeCliChoice.ToLowerInvariant() switch
+						{
+							"vs" => Util.VSCliChoiceSkips,
+							"vscode" => Util.VSCodeCliChoiceSkips,
+							"rider" => Util.RiderCliChoiceSkips,
+							"other" => Util.OtherCliChoiceSkips,
+							"none" => Util.NoneCliChoiceSkips,
 							_ => []
 						}
 					)

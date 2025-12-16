@@ -24,8 +24,14 @@ Targets: webassembly ios android macos linux windows"
         
         [CommandOption("--ide <IDE_NAME>")]
         [Description(
-            @"This parameter skips some checks based on the IDE which is used to run the Uno.Check.")]
+            @"Skips IDE-specific checks when running from within the IDE (assumes the IDE is already installed). For command-line usage, use the interactive prompt instead.")]
         public string? Ide { get; set; }
+        
+        /// <summary>
+        /// IDE choice from interactive selection (CLI usage). Used when user selects IDE from command-line prompts.
+        /// Unlike the Ide property (which assumes IDE is already installed), this determines which checks to run.
+        /// </summary>
+        public string? IdeCliChoice { get; set; }
         
         [CommandOption("--unoSdkVersion <UNO_SDK_VERSION>")]
         [Description(

@@ -11,16 +11,18 @@ namespace DotNetCheck
 	public class Util
 	{
 		public static string[] BaseSkips = ["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"];
+        
+        // IDE skip lists (for --ide flag, when running from within IDE - IDE is already installed)
         public static string[] RiderSkips = ["vswin","vswinworkloads"];
         public static string[] VSCodeSkips = ["vswin","vswinworkloads"];
         public static string[] VSSkips = ["vswin","vswinworkloads"];
-        public static string[] NoneSkips = ["vswin","vswinworkloads"]; // Skip all IDE-specific checks when "none" is selected
-        public static string[] OtherSkips = ["vswin","vswinworkloads"]; // Skip IDE-specific checks for "other" IDE
         
-        // CLI variants for interactive selection (when user is running from command line, not from within IDE)
-        public static string[] VSCliSkips = []; // VS selected from CLI - don't skip VS checks, user wants to use VS
-        public static string[] VSCodeCliSkips = ["vswin","vswinworkloads"]; // VSCode selected from CLI - skip VS checks
-        public static string[] RiderCliSkips = ["vswin","vswinworkloads"]; // Rider selected from CLI - skip VS checks
+        // IdeCliChoice skip lists (for interactive selection from command line)
+        public static string[] VSCliChoiceSkips = []; // VS selected - don't skip VS checks, user wants VS installed
+        public static string[] VSCodeCliChoiceSkips = ["vswin","vswinworkloads"]; // VSCode selected - skip VS checks
+        public static string[] RiderCliChoiceSkips = ["vswin","vswinworkloads"]; // Rider selected - skip VS checks
+        public static string[] OtherCliChoiceSkips = ["vswin","vswinworkloads"]; // Other IDE - skip VS checks
+        public static string[] NoneCliChoiceSkips = ["vswin","vswinworkloads"]; // No IDE - skip all IDE checks
 
         public static void UpdateSkips(CheckSettings settings, string[] skips)
         {
