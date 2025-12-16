@@ -149,9 +149,10 @@ namespace DotNetCheck
 			var ides = PromptForIde();
 			
 			// Apply IDE selection to IdeCliChoice (separate from Ide which is for --ide flag)
+			// Store all selected IDEs as comma-separated string
 			if (ides.Any())
 			{
-				settings.IdeCliChoice = ides[0];
+				settings.IdeCliChoice = string.Join(",", ides);
 				AnsiConsole.MarkupLine($"[grey]Selected IDE(s): {string.Join(", ", ides)}[/]");
 			}
 			else

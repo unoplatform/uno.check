@@ -144,22 +144,33 @@ namespace DotNetCheck.Cli
             // Handle IdeCliChoice (from interactive selection, determines which IDE checks to run)
             if (!string.IsNullOrEmpty(settings.IdeCliChoice))
             {
-                skipList = skipList.Concat(
-					(
-						settings.IdeCliChoice.ToLowerInvariant() switch
-						{
-							"vs" => Util.VSCliChoiceSkips,
-							"vscode" => Util.VSCodeCliChoiceSkips,
-							"rider" => Util.RiderCliChoiceSkips,
-							"other" => Util.OtherCliChoiceSkips,
-							"none" => Util.NoneCliChoiceSkips,
-							_ => []
-						}
+				// Split multiple IDE selections (comma-separated) and trim whitespace
+				var selectedIdes = settings.IdeCliChoice.ToLowerInvariant()
+					.Split(',', StringSplitOptions.RemoveEmptyEntries)
+					.Select(s => s.Trim())
+					.ToArray();
+				
+				// If VS is selected (among possibly other IDEs), don't skip VS checks
+				// Otherwise, skip VS checks for non-VS IDEs
+				if (!selectedIdes.Contains("vs"))
+				{
+					// VS is not selected, so apply appropriate skip lists
+					var ideSkips = selectedIdes.SelectMany(ide => ide switch
+					{
+						"vscode" => Util.VSCodeCliChoiceSkips,
+						"rider" => Util.RiderCliChoiceSkips,
+						"other" => Util.OtherCliChoiceSkips,
+						"none" => Util.NoneCliChoiceSkips,
+						_ => []
+					}).Distinct();
+					
+					skipList = skipList.Concat(
+						ideSkips.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
 					)
-					.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
-				)
-				.Distinct(SkipInfo.NameOnlyComparer)
-				.ToArray();
+					.Distinct(SkipInfo.NameOnlyComparer)
+					.ToArray();
+				}
+				// If VS is selected, don't add any IDE-related skips (VS checks should run)
             }
 
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.Skips, skipList);
