@@ -48,6 +48,9 @@ namespace DotNetCheck.Cli
 				return 1;
 			}
 
+			// Show interactive selection prompts if appropriate
+			InteractiveSelector.ApplyInteractiveSelections(settings);
+
 			if (!Util.IsAdmin() && Util.IsWindows)
 			{
 				var suTxt = Util.IsWindows ? "Administrator" : "Superuser (su)";
@@ -119,6 +122,7 @@ namespace DotNetCheck.Cli
             if (settings.Frameworks is { Length: > 0 })
                 settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
 
+            // Handle --ide flag (when running from within IDE, IDE is already installed)
             if (!string.IsNullOrEmpty(settings.Ide))
             {
                 skipList = skipList.Concat(
@@ -135,6 +139,36 @@ namespace DotNetCheck.Cli
 				)
 				.Distinct(SkipInfo.NameOnlyComparer)
 				.ToArray();
+            }
+            
+            // Handle IdeCliChoice (from interactive selection, determines which IDE checks to run)
+            if (!string.IsNullOrEmpty(settings.IdeCliChoice))
+            {
+				// Split multiple IDE selections (comma-separated) and trim whitespace
+				var selectedIdes = settings.IdeCliChoice.ToLowerInvariant()
+					.Split(',', StringSplitOptions.RemoveEmptyEntries)
+					.Select(s => s.Trim())
+					.ToArray();
+				
+				// Only skip VS checks if VS is not among the selected IDEs (VS selection takes precedence).
+				if (!selectedIdes.Contains("vs"))
+				{
+					// VS is not selected, so apply appropriate skip lists
+					var ideSkips = selectedIdes.SelectMany(ide => ide switch
+					{
+						"vscode" => Util.VSCodeCliChoiceSkips,
+						"rider" => Util.RiderCliChoiceSkips,
+						"none" => Util.NoneCliChoiceSkips,
+						_ => []
+					}).Distinct();
+					
+					skipList = skipList.Concat(
+						ideSkips.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
+					)
+					.Distinct(SkipInfo.NameOnlyComparer)
+					.ToArray();
+				}
+				// If VS is selected, don't add any IDE-related skips (VS checks should run)
             }
 
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.Skips, skipList);
