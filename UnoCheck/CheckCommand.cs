@@ -76,8 +76,7 @@ namespace DotNetCheck.Cli
 			var results = new Dictionary<string, DiagnosticResult>();
 			var consoleStatus = AnsiConsole.Status();
 
-            var skippedCheckups = new List<SkipInfo>();
-            var skippedFixes = new List<string>();
+			var skippedCheckups = new List<SkipInfo>();
 			var skippedFixReasons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             bool IsSkipped(string checkupId) =>
@@ -291,7 +290,6 @@ namespace DotNetCheck.Cli
 
 					if (!doFix && !isRetry && hasAutoFix)
 					{
-						skippedFixes.Add(checkup.Id);
 						var reason = settings.NonInteractive
 							? "Automatic fix was not attempted in non-interactive mode."
 							: "User declined automatic fix.";
@@ -373,7 +371,7 @@ namespace DotNetCheck.Cli
 			{
 				TelemetryClient.TrackCheckFail(
 					sw.Elapsed,
-					string.Join(",", erroredChecks.Select(c => (skippedFixes.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
+					string.Join(",", erroredChecks.Select(c => (skippedFixReasons.ContainsKey(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
 
 				AnsiConsole.Console.WriteLine();
 
@@ -415,7 +413,7 @@ namespace DotNetCheck.Cli
 				var report = CheckReportFactory.Create(
 					results,
 					skippedCheckups,
-					skippedFixes,
+					skippedFixReasons.Keys,
 					settings,
 					manifest,
 					channel,
