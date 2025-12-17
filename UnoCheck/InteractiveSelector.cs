@@ -61,13 +61,14 @@ namespace DotNetCheck
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which IDE(s) do you plan to use?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select [yellow]Other / None[/] if not using any listed IDE)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
 					.AddChoices(ideChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
-			// If no IDEs selected, return empty array
+			// Note: Spectre requires at least one selection, so empty array case won't occur
+			// Users should select "Other / None" if not using any listed IDE
 			if (!selectedIdes.Any())
-				return Array.Empty<string>();
+				return new[] { "none" };
 
 			// Map friendly names to internal identifiers
 			return selectedIdes.Select(ide => ide switch
@@ -112,11 +113,12 @@ namespace DotNetCheck
 				new MultiSelectionPrompt<string>()
 					.Title("[bold blue]Which platforms do you want to target?[/]")
 					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept. Select none of them to target all platforms)[/]")
+					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
 					.AddChoices(platformChoices)
 					.HighlightStyle(new Style(Color.Green)));
 
-			// If no platforms selected, return empty array (will target all)
+			// Note: Spectre requires at least one selection
+			// If somehow no platforms selected, return empty array (will target all)
 			if (!selectedPlatforms.Any())
 				return Array.Empty<string>();
 
