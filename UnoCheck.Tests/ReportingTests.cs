@@ -218,4 +218,53 @@ public class ReportingTests
 			}
 		}
 	}
+
+	[Fact]
+	public async Task CheckReportWriter_TrimsOldReports()
+	{
+		var reportDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(reportDirectory);
+
+		try
+		{
+			var startedAtUtc = DateTimeOffset.Parse("2024-01-01T00:00:00Z");
+
+			for (var i = 0; i < 60; i++)
+			{
+				var report = CreateReport(startedAtUtc.AddMinutes(i));
+				var reportPath = Path.Combine(reportDirectory, $"report-{i:D4}.json");
+
+				await CheckReportWriter.WriteReportAsync(report, reportPath, enableCleanup: true);
+			}
+
+			var reportFiles = Directory.GetFiles(reportDirectory, "report-*.json");
+			Assert.Equal(50, reportFiles.Length);
+		}
+		finally
+		{
+			if (Directory.Exists(reportDirectory))
+			{
+				Directory.Delete(reportDirectory, true);
+			}
+		}
+	}
+
+	private static CheckReport CreateReport(DateTimeOffset startedAtUtc) =>
+		new(
+			ToolVersion: "1.2.3",
+			ManifestVersion: "9.9.9",
+			ManifestChannel: "preview",
+			StartedAtUtc: startedAtUtc,
+			CompletedAtUtc: startedAtUtc.AddSeconds(5),
+			DurationSeconds: 5,
+			ExitCode: 0,
+			Platform: Platform.Windows,
+			Frameworks: ["net8.0-android"],
+			TargetPlatforms: ["android"],
+			Results: Array.Empty<CheckResultReport>(),
+			SkippedCheckups: Array.Empty<SkippedCheckReport>(),
+			SkippedFixes: Array.Empty<string>(),
+			UnresolvedCheckups: Array.Empty<UnresolvedCheckReport>(),
+			HasErrors: false,
+			HasWarnings: false);
 }
