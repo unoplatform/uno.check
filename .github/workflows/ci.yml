@@ -280,16 +280,25 @@ jobs:
         if: ${{ matrix.use_homebrew }}
         shell: bash
         run: |
+          # Remove pre-existing .NET from runner to ensure Homebrew scenario is tested properly
+          if [ -d "/Users/runner/.dotnet" ]; then
+            echo "Removing pre-existing .NET from /Users/runner/.dotnet"
+            sudo rm -rf /Users/runner/.dotnet
+          fi
+          
           # Ensure Homebrew is up to date
           brew update
           # Install .NET via Homebrew (this will be an older version like 9.x)
           brew install dotnet
-          # Verify installation
-          dotnet --version
-          dotnet --list-sdks
-          # Show where Homebrew installed dotnet
+          
+          # Verify Homebrew installation
+          echo "Homebrew dotnet location:"
           which dotnet
           ls -la $(which dotnet)
+          echo "Homebrew dotnet version:"
+          dotnet --version
+          echo "Homebrew dotnet SDKs:"
+          dotnet --list-sdks
 
       # Preinstall .NET as it may fail on some build agents (skip if using Homebrew)
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
@@ -328,6 +337,22 @@ jobs:
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
+
+      - name: Verify Homebrew Scenario Fix
+        if: ${{ matrix.use_homebrew }}
+        shell: bash
+        run: |
+          echo "Verifying .NET installation after uno-check fix..."
+          echo "Current dotnet location:"
+          which dotnet
+          echo "SDKs in ~/.dotnet:"
+          if [ -d "$HOME/.dotnet/sdk" ]; then
+            ls -la "$HOME/.dotnet/sdk"
+          else
+            echo "~/.dotnet/sdk does not exist"
+          fi
+          echo "All available SDKs:"
+          dotnet --list-sdks
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
