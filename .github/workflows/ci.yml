@@ -255,6 +255,12 @@ jobs:
            os: macos-15
            dotnet_version: 8.0.300
 
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Homebrew Scenario
+           os: macos-14
+           dotnet_version: 9.0.100
+           use_homebrew: true
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -269,8 +275,25 @@ jobs:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
 
-      # Preinstall .NET as it may fail on some build agents
+      # For Homebrew scenario: Install .NET via Homebrew instead of setup-dotnet action
+      - name: Install .NET via Homebrew
+        if: ${{ matrix.use_homebrew }}
+        shell: bash
+        run: |
+          # Ensure Homebrew is up to date
+          brew update
+          # Install .NET via Homebrew (this will be an older version like 9.x)
+          brew install dotnet
+          # Verify installation
+          dotnet --version
+          dotnet --list-sdks
+          # Show where Homebrew installed dotnet
+          which dotnet
+          ls -la $(which dotnet)
+
+      # Preinstall .NET as it may fail on some build agents (skip if using Homebrew)
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
+        if: ${{ !matrix.use_homebrew }}
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '${{ matrix.dotnet_version }}'
