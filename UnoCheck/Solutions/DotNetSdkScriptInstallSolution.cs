@@ -31,7 +31,12 @@ namespace DotNetCheck.Solutions
 			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
 			{
 				// Check if DOTNET_ROOT points to a Homebrew location (which we shouldn't modify)
-				if (Directory.Exists(envSdkRoot) && !envSdkRoot.Contains("/homebrew/", StringComparison.OrdinalIgnoreCase))
+				// Homebrew on Apple Silicon uses /opt/homebrew, Intel Macs use /usr/local/Cellar
+				bool isHomebrewLocation = !string.IsNullOrEmpty(envSdkRoot) && 
+					(envSdkRoot.StartsWith("/opt/homebrew", StringComparison.OrdinalIgnoreCase) ||
+					 envSdkRoot.Contains("/Cellar/dotnet/", StringComparison.OrdinalIgnoreCase));
+				
+				if (Directory.Exists(envSdkRoot) && !isHomebrewLocation)
 					sdkRoot = envSdkRoot;
 			}
 
