@@ -255,6 +255,12 @@ jobs:
            os: macos-15
            dotnet_version: 8.0.300
 
+         - manifest: 'manifests/uno.ui-preview-major.manifest.json'
+           manifest_name: Homebrew Scenario
+           os: macos-14
+           dotnet_version: 9.0.100
+           use_homebrew: true
+
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -269,22 +275,54 @@ jobs:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
 
-      # Preinstall .NET as it may fail on some build agents
+      # Preinstall .NET as it may fail on some build agents (skip if using Homebrew)
       - name: Setup .NET Core ${{ matrix.dotnet_version }}
+        if: ${{ !matrix.use_homebrew }}
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '${{ matrix.dotnet_version }}'
 
-      # - name: MANUAL WORKLOAD INSTALL
-      #   shell: pwsh
-      #   run: |
-      #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
-
+      # Run nbgv BEFORE removing .NET for Homebrew scenario (nbgv needs a working .NET)
       - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
         id: nbgv
         with:
           toolVersion: 3.6.139
           setAllVars: true
+
+      # For Homebrew scenario: Install .NET via Homebrew instead of setup-dotnet action
+      - name: Install .NET via Homebrew
+        if: ${{ matrix.use_homebrew }}
+        shell: bash
+        run: |
+          # Remove SDK directories from runner to ensure Homebrew scenario is tested properly
+          # Keep /Users/runner/.dotnet/tools intact so dotnet tools (nbgv, uno-check) can still run
+          if [ -d "/Users/runner/.dotnet/sdk" ]; then
+            echo "Removing SDK directories from /Users/runner/.dotnet/sdk"
+            sudo rm -rf /Users/runner/.dotnet/sdk
+          fi
+          
+          # Ensure Homebrew is up to date
+          brew update
+          # Install .NET via Homebrew (this will be an older version like 9.x)
+          brew install dotnet
+          
+          # Set DOTNET_ROOT to Homebrew location so uno-check will use Homebrew's dotnet
+          echo "DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec" >> $GITHUB_ENV
+          
+          # Verify Homebrew installation
+          echo "Homebrew dotnet location:"
+          which dotnet
+          ls -la $(which dotnet)
+          echo "Homebrew dotnet version:"
+          dotnet --version
+          echo "Homebrew dotnet SDKs:"
+          dotnet --list-sdks
+          echo "DOTNET_ROOT set to: /opt/homebrew/opt/dotnet/libexec"
+
+      # - name: MANUAL WORKLOAD INSTALL
+      #   shell: pwsh
+      #   run: |
+      #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
@@ -305,6 +343,22 @@ jobs:
           & dotnet --list-sdks
           & dotnet tool install --global --version ${{ steps.nbgv.outputs.SemVer2 }} --add-source NuGet/ uno.check
           & uno-check --ci --fix --non-interactive --verbose --skip xcode --skip vswin --skip vsmac --skip wsl --skip edgewebview2 --manifest ${{ matrix.manifest }} ${{ matrix.tool_params }}
+
+      - name: Verify Homebrew Scenario Fix
+        if: ${{ matrix.use_homebrew }}
+        shell: bash
+        run: |
+          echo "Verifying .NET installation after uno-check fix..."
+          echo "Current dotnet location:"
+          which dotnet
+          echo "SDKs in ~/.dotnet:"
+          if [ -d "$HOME/.dotnet/sdk" ]; then
+            ls -la "$HOME/.dotnet/sdk"
+          else
+            echo "~/.dotnet/sdk does not exist"
+          fi
+          echo "All available SDKs:"
+          dotnet --list-sdks
 
   testlinux:
     name: Validate Tool - Linux - ${{ matrix.manifest_name }}
