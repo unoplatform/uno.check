@@ -294,16 +294,20 @@ jobs:
         if: ${{ matrix.use_homebrew }}
         shell: bash
         run: |
-          # Remove pre-existing .NET from runner to ensure Homebrew scenario is tested properly
-          if [ -d "/Users/runner/.dotnet" ]; then
-            echo "Removing pre-existing .NET from /Users/runner/.dotnet"
-            sudo rm -rf /Users/runner/.dotnet
+          # Remove SDK directories from runner to ensure Homebrew scenario is tested properly
+          # Keep /Users/runner/.dotnet/tools intact so dotnet tools (nbgv, uno-check) can still run
+          if [ -d "/Users/runner/.dotnet/sdk" ]; then
+            echo "Removing SDK directories from /Users/runner/.dotnet/sdk"
+            sudo rm -rf /Users/runner/.dotnet/sdk
           fi
           
           # Ensure Homebrew is up to date
           brew update
           # Install .NET via Homebrew (this will be an older version like 9.x)
           brew install dotnet
+          
+          # Set DOTNET_ROOT to Homebrew location so uno-check will use Homebrew's dotnet
+          echo "DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec" >> $GITHUB_ENV
           
           # Verify Homebrew installation
           echo "Homebrew dotnet location:"
@@ -313,6 +317,7 @@ jobs:
           dotnet --version
           echo "Homebrew dotnet SDKs:"
           dotnet --list-sdks
+          echo "DOTNET_ROOT set to: /opt/homebrew/opt/dotnet/libexec"
 
       # - name: MANUAL WORKLOAD INSTALL
       #   shell: pwsh
