@@ -275,6 +275,20 @@ jobs:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
 
+      # Preinstall .NET as it may fail on some build agents (skip if using Homebrew)
+      - name: Setup .NET Core ${{ matrix.dotnet_version }}
+        if: ${{ !matrix.use_homebrew }}
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '${{ matrix.dotnet_version }}'
+
+      # Run nbgv BEFORE removing .NET for Homebrew scenario (nbgv needs a working .NET)
+      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+        id: nbgv
+        with:
+          toolVersion: 3.6.139
+          setAllVars: true
+
       # For Homebrew scenario: Install .NET via Homebrew instead of setup-dotnet action
       - name: Install .NET via Homebrew
         if: ${{ matrix.use_homebrew }}
@@ -300,23 +314,10 @@ jobs:
           echo "Homebrew dotnet SDKs:"
           dotnet --list-sdks
 
-      # Preinstall .NET as it may fail on some build agents (skip if using Homebrew)
-      - name: Setup .NET Core ${{ matrix.dotnet_version }}
-        if: ${{ !matrix.use_homebrew }}
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '${{ matrix.dotnet_version }}'
-
       # - name: MANUAL WORKLOAD INSTALL
       #   shell: pwsh
       #   run: |
       #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
-
-      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
-        id: nbgv
-        with:
-          toolVersion: 3.6.139
-          setAllVars: true
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}
