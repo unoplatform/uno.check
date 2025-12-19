@@ -30,7 +30,8 @@ namespace DotNetCheck.Solutions
 
 			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
 			{
-				if (Directory.Exists(envSdkRoot))
+				// Check if DOTNET_ROOT points to a Homebrew location (which we shouldn't modify)
+				if (Directory.Exists(envSdkRoot) && !envSdkRoot.Contains("/homebrew/", StringComparison.OrdinalIgnoreCase))
 					sdkRoot = envSdkRoot;
 			}
 
@@ -65,6 +66,13 @@ namespace DotNetCheck.Solutions
 
 			// Launch the process
 			await Util.WrapShellCommandWithSudo(exe, [args]);
+
+			// Update DOTNET_ROOT to point to where we installed, so subsequent checks use the correct location
+			if (sharedState != null)
+			{
+				sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
+				Util.Log($"Updated DOTNET_ROOT to: {sdkRoot}");
+			}
 		}
 	}
 }

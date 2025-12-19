@@ -43,6 +43,8 @@ namespace DotNetCheck.DotNet
 				Platform.OSX => new string[]
 				{
 					"/usr/local/share/dotnet/dotnet",
+					"/opt/homebrew/bin/dotnet", // Apple Silicon Homebrew
+					Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", DotNetExeName), // dotnet-install.sh default
 				},
 				Platform.Linux => new string[]
 				{
