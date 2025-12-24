@@ -168,17 +168,7 @@ namespace DotNetCheck.Cli
 				// Track the last used id so we can detect retry
 				checkupId = checkup.Id;
 
-				if (isRetry)
-				{
-					if (_checkupDetails.TryGetValue(checkup.Id, out var retryDetails))
-					{
-						retryDetails.Clear();
-					}
-				}
-				else
-				{
-					_checkupDetails.Remove(checkup.Id);
-				}
+				ResetCheckupDetailsForRun(checkup, isRetry);
 
 				if (!checkup.ShouldExamine(sharedState))
 				{
@@ -404,11 +394,7 @@ namespace DotNetCheck.Cli
 
 			try
 			{
-				var checkupDetailsSnapshot = _checkupDetails.Count == 0
-					? null
-					: _checkupDetails.ToDictionary(
-						kvp => kvp.Key, IReadOnlyList<CheckResultDetailReport> (kvp) => kvp.Value.ToArray(),
-						StringComparer.OrdinalIgnoreCase);
+				var checkupDetailsSnapshot = SnapshotCheckupDetails();
 
 				var report = CheckReportFactory.Create(
 					results,
@@ -442,7 +428,7 @@ namespace DotNetCheck.Cli
 			return exitCode;
 		}
         
-        internal static string[] ParseTfmsToTargetPlatforms(CheckSettings settings)
+		internal static string[] ParseTfmsToTargetPlatforms(CheckSettings settings)
         {
             var targetPlatforms = new List<string>();
             foreach (var tfm in settings.Frameworks!)
@@ -505,7 +491,31 @@ namespace DotNetCheck.Cli
             return targetPlatforms.ToArray();
         }
 
-		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
+		internal void ResetCheckupDetailsForRun(Checkup checkup, bool isRetry)
+		{
+			if (isRetry)
+			{
+				if (_checkupDetails.TryGetValue(checkup.Id, out var retryDetails))
+				{
+					retryDetails.Clear();
+				}
+			}
+			else
+			{
+				_checkupDetails.Remove(checkup.Id);
+			}
+		}
+
+		internal IDictionary<string, IReadOnlyList<CheckResultDetailReport>> SnapshotCheckupDetails()
+		{
+			return _checkupDetails.Count == 0
+				? null
+				: _checkupDetails.ToDictionary(
+					kvp => kvp.Key, IReadOnlyList<CheckResultDetailReport> (kvp) => kvp.Value.ToArray(),
+					StringComparer.OrdinalIgnoreCase);
+		}
+
+		internal void HandleCheckupStatusUpdated(CheckupStatusEventArgs e)
 		{
 			if (e.Checkup is not null)
 			{
@@ -517,6 +527,11 @@ namespace DotNetCheck.Cli
 
 				details.Add(new CheckResultDetailReport(e.Message, e.Status));
 			}
+		}
+
+		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
+		{
+			HandleCheckupStatusUpdated(e);
 
 			var msg = "";
 			if (e.Status == Models.Status.Error)
