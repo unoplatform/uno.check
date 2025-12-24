@@ -33,6 +33,18 @@ public class ReportingTests
 	{
 	}
 
+	private sealed record CheckReportFactoryInputs(
+		IDictionary<string, DiagnosticResult> Results,
+		IEnumerable<SkipInfo> SkippedCheckups,
+		IEnumerable<string> SkippedFixes,
+		CheckSettings Settings,
+		Manifest Manifest,
+		ManifestChannel ManifestChannel,
+		DateTimeOffset StartedAtUtc,
+		TimeSpan Duration,
+		Platform Platform,
+		int ExitCode);
+
 	[Fact]
 	public void CheckReportFactory_CreatesExpectedReport()
 	{
@@ -141,6 +153,98 @@ public class ReportingTests
 	}
 
 	[Fact]
+	public void CheckReportFactory_Create_ThrowsWhenResultsNull()
+	{
+		// Arrange
+		var inputs = CreateFactoryInputs();
+
+		// Act
+		var exception = Assert.Throws<ArgumentNullException>(() => CheckReportFactory.Create(
+			null!,
+			inputs.SkippedCheckups,
+			inputs.SkippedFixes,
+			inputs.Settings,
+			inputs.Manifest,
+			inputs.ManifestChannel,
+			inputs.StartedAtUtc,
+			inputs.Duration,
+			inputs.Platform,
+			inputs.ExitCode));
+
+		// Assert
+		Assert.Equal("results", exception.ParamName);
+	}
+
+	[Fact]
+	public void CheckReportFactory_Create_ThrowsWhenSkippedCheckupsNull()
+	{
+		// Arrange
+		var inputs = CreateFactoryInputs();
+
+		// Act
+		var exception = Assert.Throws<ArgumentNullException>(() => CheckReportFactory.Create(
+			inputs.Results,
+			null!,
+			inputs.SkippedFixes,
+			inputs.Settings,
+			inputs.Manifest,
+			inputs.ManifestChannel,
+			inputs.StartedAtUtc,
+			inputs.Duration,
+			inputs.Platform,
+			inputs.ExitCode));
+
+		// Assert
+		Assert.Equal("skippedCheckups", exception.ParamName);
+	}
+
+	[Fact]
+	public void CheckReportFactory_Create_ThrowsWhenSkippedFixesNull()
+	{
+		// Arrange
+		var inputs = CreateFactoryInputs();
+
+		// Act
+		var exception = Assert.Throws<ArgumentNullException>(() => CheckReportFactory.Create(
+			inputs.Results,
+			inputs.SkippedCheckups,
+			null!,
+			inputs.Settings,
+			inputs.Manifest,
+			inputs.ManifestChannel,
+			inputs.StartedAtUtc,
+			inputs.Duration,
+			inputs.Platform,
+			inputs.ExitCode));
+
+		// Assert
+		Assert.Equal("skippedFixes", exception.ParamName);
+	}
+
+	[Fact]
+	public void CheckReportFactory_Create_ThrowsWhenSettingsNull()
+	{
+		// Arrange
+		var inputs = CreateFactoryInputs();
+
+		// Act
+		var exception = Assert.Throws<ArgumentNullException>(() => CheckReportFactory.Create(
+			inputs.Results,
+			inputs.SkippedCheckups,
+			inputs.SkippedFixes,
+			null!,
+			inputs.Manifest,
+			inputs.ManifestChannel,
+			inputs.StartedAtUtc,
+			inputs.Duration,
+			inputs.Platform,
+			inputs.ExitCode));
+
+		// Assert
+		Assert.Equal("settings", exception.ParamName);
+	}
+
+	[Fact]
 	public async Task CheckReportWriter_WritesReportToDisk()
 	{
 		// Arrange
@@ -220,6 +324,48 @@ public class ReportingTests
 	}
 
 	[Fact]
+	public async Task CheckReportWriter_WriteReportAsync_ThrowsWhenReportNull()
+	{
+		// Arrange
+		CheckReport? report = null;
+
+		// Act
+		var exception = await Assert.ThrowsAsync<ArgumentNullException>(
+			() => CheckReportWriter.WriteReportAsync(report!));
+
+		// Assert
+		Assert.Equal("report", exception.ParamName);
+	}
+
+	[Fact]
+	public async Task CheckReportWriter_WriteReportAsync_ThrowsWhenReportPathEmpty()
+	{
+		// Arrange
+		var report = CreateReport(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
+
+		// Act
+		var exception = await Assert.ThrowsAsync<ArgumentException>(
+			() => CheckReportWriter.WriteReportAsync(report, string.Empty));
+
+		// Assert
+		Assert.Equal("reportPath", exception.ParamName);
+	}
+
+	[Fact]
+	public async Task CheckReportWriter_WriteReportAsync_ThrowsWhenReportPathHasNoDirectory()
+	{
+		// Arrange
+		var report = CreateReport(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
+
+		// Act
+		var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+			() => CheckReportWriter.WriteReportAsync(report, "report.json"));
+
+		// Assert
+		Assert.Contains("report.json", exception.Message);
+	}
+
+	[Fact]
 	public async Task CheckReportWriter_TrimsOldReports()
 	{
 		var reportDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -267,4 +413,34 @@ public class ReportingTests
 			UnresolvedCheckups: Array.Empty<UnresolvedCheckReport>(),
 			HasErrors: false,
 			HasWarnings: false);
+
+	private static CheckReportFactoryInputs CreateFactoryInputs()
+	{
+		var checkup = new TestCheckup("test", "Test Checkup");
+
+		return new CheckReportFactoryInputs(
+			new Dictionary<string, DiagnosticResult>
+			{
+				[checkup.Id] = DiagnosticResult.Ok(checkup)
+			},
+			[],
+			[],
+			new CheckSettings
+			{
+				Frameworks = [],
+				TargetPlatforms = []
+			},
+			new Manifest
+			{
+				Check = new Check
+				{
+					ToolVersion = "1.0.0"
+				}
+			},
+			ManifestChannel.Default,
+			DateTimeOffset.Parse("2024-01-01T00:00:00Z"),
+			TimeSpan.FromSeconds(1),
+			Platform.Windows,
+			0);
+	}
 }
