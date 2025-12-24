@@ -430,7 +430,6 @@ namespace DotNetCheck.Cli
 			{
 				Util.Exception(ex);
 				AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to write check report: {ex.Message}[/]");
-				exitCode = 1;
 			}
 
 			Console.Title = ToolInfo.ToolName;
