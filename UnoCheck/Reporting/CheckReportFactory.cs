@@ -9,6 +9,30 @@ namespace DotNetCheck.Reporting;
 
 internal static class CheckReportFactory
 {
+    /// <summary>
+    /// Builds a <see cref="CheckReport"/> from checkup results, settings, and execution metadata.
+    /// </summary>
+    /// <param name="results">The diagnostic results keyed by checkup ID.</param>
+    /// <param name="skippedCheckups">The checkups that were skipped during execution.</param>
+    /// <param name="skippedFixes">The fix IDs that were skipped during execution.</param>
+    /// <param name="settings">The settings used for the run.</param>
+    /// <param name="manifest">The manifest used to resolve tool versions.</param>
+    /// <param name="manifestChannel">The manifest channel used for the run.</param>
+    /// <param name="startedAtUtc">The UTC time the run started.</param>
+    /// <param name="duration">The total run duration.</param>
+    /// <param name="platform">The detected platform for the run.</param>
+    /// <param name="exitCode">The exit code returned by the run.</param>
+    /// <param name="checkupDetails">
+    /// Optional per-checkup detail reports keyed by checkup ID; when provided, details are attached to results.
+    /// </param>
+    /// <param name="skippedFixReasons">
+    /// Optional per-checkup skip reasons keyed by checkup ID; when provided, they override default skipped-fix messages.
+    /// </param>
+    /// <returns>A populated report for serialization or persistence.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="results"/>, <paramref name="skippedCheckups"/>, <paramref name="skippedFixes"/>,
+    /// or <paramref name="settings"/> is null.
+    /// </exception>
     public static CheckReport Create(
         IDictionary<string, DiagnosticResult> results,
         IEnumerable<SkipInfo> skippedCheckups,

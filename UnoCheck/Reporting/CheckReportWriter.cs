@@ -40,16 +40,34 @@ internal static class CheckReportWriter
 
 	private static string CreateReportFileName(DateTimeOffset startedAtUtc)
 	{
-		var timestamp = startedAtUtc.ToString("yyyyMMddTHHmmssfffffffZ");
+		var timestamp = startedAtUtc.ToString("yyyyMMddTHHmmssfffZ");
 		return $"{ReportFilePrefix}{timestamp}-{Guid.NewGuid():N}{ReportFileExtension}";
 	}
 
+	/// <summary>
+	/// Writes the report payload to the default report directory with a generated file name.
+	/// </summary>
+	/// <param name="report">The report to serialize and write.</param>
+	/// <param name="cancellationToken">The cancellation token for the write operation.</param>
+	/// <returns>A task that completes when the report has been written.</returns>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="report"/> is null.</exception>
+	/// <exception cref="InvalidOperationException">Thrown when the default report directory cannot be resolved.</exception>
 	public static Task WriteReportAsync(CheckReport report, CancellationToken cancellationToken = default)
 	{
 		var path = GetDefaultReportPath(report);
 		return WriteReportAsync(report, path, enableCleanup: true, cancellationToken);
 	}
 
+	/// <summary>
+	/// Writes the report payload to the specified path, replacing any existing file.
+	/// </summary>
+	/// <param name="report">The report to serialize and write.</param>
+	/// <param name="reportPath">The destination path for the report file.</param>
+	/// <param name="cancellationToken">The cancellation token for the write operation.</param>
+	/// <returns>A task that completes when the report has been written.</returns>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="report"/> is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when <paramref name="reportPath"/> is empty or whitespace.</exception>
+	/// <exception cref="InvalidOperationException">Thrown when the report directory cannot be resolved.</exception>
 	public static Task WriteReportAsync(
 		CheckReport report,
 		string reportPath,
@@ -91,12 +109,23 @@ internal static class CheckReportWriter
 
 		await File.WriteAllTextAsync(tempPath, payload, cancellationToken).ConfigureAwait(false);
 
-		if (File.Exists(reportPath))
+		try
 		{
-			File.Delete(reportPath);
+			File.Move(tempPath, reportPath, overwrite: true);
 		}
+		catch
+		{
+			try
+			{
+				File.Delete(tempPath);
+			}
+			catch
+			{
+				// Best-effort cleanup; ignore issues.
+			}
 
-		File.Move(tempPath, reportPath);
+			throw;
+		}
 
 		if (enableCleanup)
 		{
