@@ -303,9 +303,18 @@ jobs:
           
           # Ensure Homebrew is up to date
           brew update
-          # Install specific .NET version via Homebrew
-          # For .NET 10, use dotnet@10 or install the latest dotnet which should be 10.x
-          brew install dotnet
+          
+          # Install .NET 10 via Homebrew
+          # Use isen-ng/dotnet-sdk-versions tap for specific .NET 10 version
+          brew tap isen-ng/dotnet-sdk-versions
+          # Install .NET 10.0.101 cask
+          brew install --cask dotnet-sdk10-0-101 || {
+            echo ".NET 10.0.101 cask not available, trying dotnet-sdk10-0-100"
+            brew install --cask dotnet-sdk10-0-100
+          } || {
+            echo "Specific .NET 10 cask not available, falling back to latest stable from Homebrew"
+            brew install dotnet
+          }
           
           # Set DOTNET_ROOT to Homebrew location so uno-check will use Homebrew's dotnet
           echo "DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec" >> $GITHUB_ENV
