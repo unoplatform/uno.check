@@ -336,6 +336,9 @@ jobs:
           # Set DOTNET_ROOT to the detected location
           echo "DOTNET_ROOT=$DOTNET_INSTALL_DIR" >> $GITHUB_ENV
           
+          # Add the dotnet installation to PATH so it takes precedence over the old symlink
+          echo "$DOTNET_INSTALL_DIR" >> $GITHUB_PATH
+          
           # Verify Homebrew installation
           echo "Homebrew dotnet location:"
           which dotnet
