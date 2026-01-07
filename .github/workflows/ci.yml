@@ -307,7 +307,7 @@ jobs:
           # Install .NET 10 via Homebrew
           # Use isen-ng/dotnet-sdk-versions tap for specific .NET 10 version
           brew tap isen-ng/dotnet-sdk-versions
-          # Install .NET 10.0.101 cask
+          # Install .NET 10.0.101 cask (installs to /usr/local/share/dotnet)
           brew install --cask dotnet-sdk10-0-101 || {
             echo ".NET 10.0.101 cask not available, trying dotnet-sdk10-0-100"
             brew install --cask dotnet-sdk10-0-100
@@ -316,18 +316,31 @@ jobs:
             brew install dotnet
           }
           
-          # Set DOTNET_ROOT to Homebrew location so uno-check will use Homebrew's dotnet
-          echo "DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec" >> $GITHUB_ENV
+          # Detect where .NET was installed
+          # Casks typically install to /usr/local/share/dotnet, while formula installs to /opt/homebrew
+          if [ -d "/usr/local/share/dotnet" ]; then
+            DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
+          elif [ -d "/opt/homebrew/opt/dotnet/libexec" ]; then
+            DOTNET_INSTALL_DIR="/opt/homebrew/opt/dotnet/libexec"
+          else
+            echo "Could not find .NET installation directory"
+            DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
+          fi
+          
+          echo "Detected .NET installation at: $DOTNET_INSTALL_DIR"
+          
+          # Set DOTNET_ROOT to the detected location
+          echo "DOTNET_ROOT=$DOTNET_INSTALL_DIR" >> $GITHUB_ENV
           
           # Verify Homebrew installation
           echo "Homebrew dotnet location:"
           which dotnet
-          ls -la $(which dotnet)
+          ls -la $(which dotnet) || true
+          echo "DOTNET_ROOT set to: $DOTNET_INSTALL_DIR"
           echo "Homebrew dotnet version:"
-          dotnet --version
+          DOTNET_ROOT=$DOTNET_INSTALL_DIR dotnet --version || echo "dotnet command failed"
           echo "Homebrew dotnet SDKs:"
-          dotnet --list-sdks
-          echo "DOTNET_ROOT set to: /opt/homebrew/opt/dotnet/libexec"
+          DOTNET_ROOT=$DOTNET_INSTALL_DIR dotnet --list-sdks || echo "dotnet --list-sdks failed"
 
       # - name: MANUAL WORKLOAD INSTALL
       #   shell: pwsh
