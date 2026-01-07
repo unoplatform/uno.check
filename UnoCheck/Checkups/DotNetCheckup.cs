@@ -35,6 +35,23 @@ namespace DotNetCheck.Checkups
 			if (!dn.Exists)
 				return missingDiagnosis;
 
+			// Check if .NET is installed via Homebrew formula (not supported for Uno development)
+			if (Util.Platform == Platform.OSX && dn.DotNetExeLocation != null)
+			{
+				var dotnetPath = dn.DotNetExeLocation.FullName;
+				// Homebrew formula installs to /opt/homebrew/Cellar/dotnet or /usr/local/Cellar/dotnet
+				// This won't work properly with uno-check SDK installation to ~/.dotnet
+				if (dotnetPath.Contains("/Cellar/dotnet/", StringComparison.OrdinalIgnoreCase))
+				{
+					ReportStatus($"⚠️  WARNING: .NET is installed via Homebrew formula at {dotnetPath}", Status.Warning);
+					ReportStatus($"   Homebrew formula installation may not detect SDKs installed by uno-check to ~/.dotnet", Status.Warning);
+					ReportStatus($"   For best compatibility, consider using:", Status.Warning);
+					ReportStatus($"   1. Uninstall formula: brew uninstall dotnet", Status.Warning);
+					ReportStatus($"   2. Install via cask: brew install --cask dotnet-sdk (for stable versions)", Status.Warning);
+					ReportStatus($"   3. Or use dotnet-install.sh script: https://dot.net/v1/dotnet-install.sh", Status.Warning);
+				}
+			}
+
 			var sdks = await dn.GetSdks();
 
 			var missingSdks = new List<Manifest.DotNetSdk>();
