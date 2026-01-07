@@ -43,6 +43,8 @@ namespace DotNetCheck.DotNet
 				Platform.OSX => new string[]
 				{
 					"/usr/local/share/dotnet/dotnet",
+					"/opt/homebrew/bin/dotnet", // Apple Silicon Homebrew
+					Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", DotNetExeName), // dotnet-install.sh default
 				},
 				Platform.Linux => new string[]
 				{
@@ -57,19 +59,25 @@ namespace DotNetCheck.DotNet
 			};
 
 			string sdkRoot = null;
+			bool isHomebrewRoot = false;
 
 			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
 			{
-				if (Directory.Exists(envSdkRoot))
+				// Check if this is a Homebrew location - if so, preserve it even if directory structure differs
+				isHomebrewRoot = !string.IsNullOrEmpty(envSdkRoot) && 
+					(envSdkRoot.StartsWith("/opt/homebrew", StringComparison.OrdinalIgnoreCase) ||
+					 envSdkRoot.Contains("/Cellar/dotnet/", StringComparison.OrdinalIgnoreCase));
+				
+				if (Directory.Exists(envSdkRoot) || isHomebrewRoot)
 					sdkRoot = envSdkRoot;
 			}
 
-			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			if (string.IsNullOrEmpty(sdkRoot) || (!Directory.Exists(sdkRoot) && !isHomebrewRoot))
 			{
 				sdkRoot = Microsoft.DotNet.NativeWrapper.EnvironmentProvider.GetDotnetExeDirectory();
 			}
 
-			if (string.IsNullOrEmpty(sdkRoot) || !Directory.Exists(sdkRoot))
+			if (string.IsNullOrEmpty(sdkRoot) || (!Directory.Exists(sdkRoot) && !isHomebrewRoot))
 			{
 				var l = FindDotNetLocations();
 				if (l != default)
@@ -78,7 +86,9 @@ namespace DotNetCheck.DotNet
 				}
 			}
 
-			sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
+			// Only update DOTNET_ROOT if it wasn't already set to a Homebrew location
+			if (!isHomebrewRoot)
+				sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
 
 			// First try and use the actual resolver logic
 			DotNetSdkLocation = new DirectoryInfo(sdkRoot);

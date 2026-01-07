@@ -30,7 +30,13 @@ namespace DotNetCheck.Solutions
 
 			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
 			{
-				if (Directory.Exists(envSdkRoot))
+				// Check if DOTNET_ROOT points to a Homebrew location (which we shouldn't modify)
+				// Homebrew on Apple Silicon uses /opt/homebrew, Intel Macs use /usr/local/Cellar
+				bool isHomebrewLocation = !string.IsNullOrEmpty(envSdkRoot) && 
+					(envSdkRoot.StartsWith("/opt/homebrew", StringComparison.OrdinalIgnoreCase) ||
+					 envSdkRoot.Contains("/Cellar/dotnet/", StringComparison.OrdinalIgnoreCase));
+				
+				if (Directory.Exists(envSdkRoot) && !isHomebrewLocation)
 					sdkRoot = envSdkRoot;
 			}
 
@@ -65,6 +71,13 @@ namespace DotNetCheck.Solutions
 
 			// Launch the process
 			await Util.WrapShellCommandWithSudo(exe, [args]);
+
+			// Update DOTNET_ROOT to point to where we installed, so subsequent checks use the correct location
+			if (sharedState != null)
+			{
+				sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
+				Util.Log($"Updated DOTNET_ROOT to: {sdkRoot}");
+			}
 		}
 	}
 }
