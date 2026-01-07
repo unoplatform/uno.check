@@ -318,12 +318,16 @@ jobs:
           
           # Detect where .NET was installed
           # Casks typically install to /usr/local/share/dotnet, while formula installs to /opt/homebrew
-          if [ -d "/usr/local/share/dotnet" ]; then
+          echo "Checking for .NET installations..."
+          ls -la /usr/local/share/ | grep dotnet || true
+          ls -la /usr/local/share/dotnet/ || true
+          
+          if [ -d "/usr/local/share/dotnet/sdk" ] && [ "$(ls -A /usr/local/share/dotnet/sdk)" ]; then
             DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
           elif [ -d "/opt/homebrew/opt/dotnet/libexec" ]; then
             DOTNET_INSTALL_DIR="/opt/homebrew/opt/dotnet/libexec"
           else
-            echo "Could not find .NET installation directory"
+            echo "Could not find .NET installation directory with SDKs"
             DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
           fi
           
@@ -337,10 +341,14 @@ jobs:
           which dotnet
           ls -la $(which dotnet) || true
           echo "DOTNET_ROOT set to: $DOTNET_INSTALL_DIR"
+          echo "Contents of DOTNET_ROOT:"
+          ls -la $DOTNET_INSTALL_DIR || true
+          echo "SDKs in DOTNET_ROOT/sdk:"
+          ls -la $DOTNET_INSTALL_DIR/sdk || true
           echo "Homebrew dotnet version:"
-          DOTNET_ROOT=$DOTNET_INSTALL_DIR dotnet --version || echo "dotnet command failed"
+          DOTNET_ROOT=$DOTNET_INSTALL_DIR $DOTNET_INSTALL_DIR/dotnet --version || echo "dotnet command failed"
           echo "Homebrew dotnet SDKs:"
-          DOTNET_ROOT=$DOTNET_INSTALL_DIR dotnet --list-sdks || echo "dotnet --list-sdks failed"
+          DOTNET_ROOT=$DOTNET_INSTALL_DIR $DOTNET_INSTALL_DIR/dotnet --list-sdks || echo "dotnet --list-sdks failed"
 
       # - name: MANUAL WORKLOAD INSTALL
       #   shell: pwsh
