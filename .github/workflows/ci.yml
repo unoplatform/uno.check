@@ -304,31 +304,45 @@ jobs:
           # Ensure Homebrew is up to date
           brew update
           
-          # Install .NET 10 via Homebrew
-          # Use isen-ng/dotnet-sdk-versions tap for specific .NET 10 version
+          # Install .NET 10 via Homebrew CASK (not formula)
+          # IMPORTANT: Must use cask installation, NOT `brew install dotnet` formula
+          # Casks install to /usr/local/share/dotnet which works with our detection logic
+          # Formula installs to /opt/homebrew which has PATH issues with our test setup
           brew tap isen-ng/dotnet-sdk-versions
-          # Install .NET 10.0.101 cask (installs to /usr/local/share/dotnet)
-          brew install --cask dotnet-sdk10-0-101 || {
-            echo ".NET 10.0.101 cask not available, trying dotnet-sdk10-0-100"
-            brew install --cask dotnet-sdk10-0-100
-          } || {
-            echo "Specific .NET 10 cask not available, falling back to latest stable from Homebrew"
-            brew install dotnet
-          }
           
-          # Detect where .NET was installed
-          # Casks typically install to /usr/local/share/dotnet, while formula installs to /opt/homebrew
+          # Try installing .NET 10 cask
+          if brew install --cask dotnet-sdk10-0-101; then
+            echo "Successfully installed dotnet-sdk10-0-101 cask"
+          elif brew install --cask dotnet-sdk10-0-100; then
+            echo "Successfully installed dotnet-sdk10-0-100 cask"
+          else
+            echo "ERROR: Could not install .NET 10 via cask"
+            echo "The Homebrew formula 'brew install dotnet' is NOT supported for this test"
+            echo "Please ensure isen-ng/dotnet-sdk-versions tap provides .NET 10 casks"
+            exit 1
+          fi
+          
+          # Detect where .NET was installed and validate it's from a cask
+          # Casks install to /usr/local/share/dotnet
+          # Formula installs to /opt/homebrew - NOT SUPPORTED for this test
           echo "Checking for .NET installations..."
           ls -la /usr/local/share/ | grep dotnet || true
           ls -la /usr/local/share/dotnet/ || true
           
           if [ -d "/usr/local/share/dotnet/sdk" ] && [ "$(ls -A /usr/local/share/dotnet/sdk)" ]; then
             DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
+            echo "✓ Found cask installation with SDKs at: $DOTNET_INSTALL_DIR"
           elif [ -d "/opt/homebrew/opt/dotnet/libexec" ]; then
-            DOTNET_INSTALL_DIR="/opt/homebrew/opt/dotnet/libexec"
+            echo "ERROR: Found Homebrew formula installation at /opt/homebrew"
+            echo "This test requires .NET to be installed via CASK, not formula"
+            echo "Formula installation: brew install dotnet → /opt/homebrew (NOT SUPPORTED)"
+            echo "Cask installation: brew install --cask dotnet-sdkX-X-XXX → /usr/local/share/dotnet (REQUIRED)"
+            exit 1
           else
-            echo "Could not find .NET installation directory with SDKs"
-            DOTNET_INSTALL_DIR="/usr/local/share/dotnet"
+            echo "ERROR: Could not find .NET installation with SDKs"
+            echo "Expected location: /usr/local/share/dotnet/sdk"
+            ls -la /usr/local/share/dotnet/sdk || echo "Directory does not exist"
+            exit 1
           fi
           
           echo "Detected .NET installation at: $DOTNET_INSTALL_DIR"
