@@ -91,6 +91,9 @@ namespace DotNetCheck
 		{
 			var platformChoices = new List<string>();
 
+			// Add "All" option first (selected by default)
+			platformChoices.Add("All");
+
 			// Platform order: desktop, wasm, ios, android, winappsdk
 			platformChoices.Add("Desktop");
 			platformChoices.Add("WebAssembly");
@@ -109,13 +112,21 @@ namespace DotNetCheck
 				platformChoices.Add("Windows App SDK");
 			}
 
-			var selectedPlatforms = AnsiConsole.Prompt(
-				new MultiSelectionPrompt<string>()
-					.Title("[bold blue]Which platforms do you want to target?[/]")
-					.PageSize(10)
-					.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
-					.AddChoices(platformChoices)
-					.HighlightStyle(new Style(Color.Green)));
+			var prompt = new MultiSelectionPrompt<string>()
+				.Title("[bold blue]Which platforms do you want to target?[/]")
+				.PageSize(10)
+				.InstructionsText("[grey](Press [blue]<space>[/] to toggle, [green]<enter>[/] to accept)[/]")
+				.AddChoices(platformChoices)
+				.HighlightStyle(new Style(Color.Green));
+			
+			// Default to "All" selected
+			prompt = prompt.Select("All");
+			
+			var selectedPlatforms = AnsiConsole.Prompt(prompt);
+
+			// If "All" is selected, target all platforms (return empty array)
+			if (selectedPlatforms.Contains("All"))
+				return Array.Empty<string>();
 
 			// Note: Spectre requires at least one selection
 			// If somehow no platforms selected, return empty array (will target all)
