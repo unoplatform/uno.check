@@ -5,3 +5,5 @@ items:
   href: xref:UnoCheck.Configuration
 - name: Troubleshooting
   href: xref:UnoCheck.Troubleshooting
+- name: Telemetry
+  href: xref:UnoCheck.Telemetry

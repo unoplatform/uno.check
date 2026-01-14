@@ -25,7 +25,13 @@ uno-check
 
 ![uno-check running](https://github.com/unoplatform/uno/raw/master/doc/articles/Assets/uno-check-running.gif)
 
-Visit our [documentation](doc/using-uno-check.md) for more details.
+## Documentation
+
+Visit our documentation for more details:
+- [Using uno-check](doc/using-uno-check.md)
+- [Configuring uno-check](doc/configuring-uno-check.md)
+- [Troubleshooting](doc/troubleshooting-uno-check.md)
+- [Telemetry](doc/Telemetry.md)
 
 ## Contributing
 
