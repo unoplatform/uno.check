@@ -63,11 +63,8 @@ namespace DotNetCheck.DotNet
 
 			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
 			{
-				// Check if this is a Homebrew location - if so, preserve it even if directory structure differs
-				isHomebrewRoot = !string.IsNullOrEmpty(envSdkRoot) && 
-					(envSdkRoot.StartsWith("/opt/homebrew", StringComparison.OrdinalIgnoreCase) ||
-					 envSdkRoot.Contains("/Cellar/dotnet/", StringComparison.OrdinalIgnoreCase));
-				
+				isHomebrewRoot = DotNetHomebrewDetector.IsHomebrewInstall(envSdkRoot);
+
 				if (Directory.Exists(envSdkRoot) || isHomebrewRoot)
 					sdkRoot = envSdkRoot;
 			}
@@ -87,7 +84,7 @@ namespace DotNetCheck.DotNet
 			}
 
 			// Only update DOTNET_ROOT if it wasn't already set to a Homebrew location
-			if (!isHomebrewRoot)
+			if (!isHomebrewRoot && sharedState != null && !string.IsNullOrEmpty(sdkRoot))
 				sharedState.SetEnvironmentVariable("DOTNET_ROOT", sdkRoot);
 
 			// First try and use the actual resolver logic
