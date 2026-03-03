@@ -158,11 +158,23 @@ namespace DotNetCheck
 			{
 				Options.CancellationToken.Register(() =>
 				{
-					try { process.Kill(); }
-					catch { }
-
-					try { process?.Dispose(); }
-					catch { }
+					try
+					{
+						if (process?.HasExited == false)
+						{
+							if (!Util.IsWindows && Options.UseSystemShell)
+							{
+								process.Kill(entireProcessTree: true);
+							}
+							else
+							{
+								process.Kill();
+							}
+						}
+					}
+					catch
+					{
+					}
 				});
 			}
 		}
@@ -181,15 +193,36 @@ namespace DotNetCheck
 
 		public ShellProcessResult WaitForExit()
 		{
+			var exitCode = -1;
+
 			try
 			{
 				process.WaitForExit();
 			} catch (Exception ex) { Util.Exception(ex); }
 
+			try
+			{
+				exitCode = process.ExitCode;
+			}
+			catch (ObjectDisposedException)
+			{
+				exitCode = -1;
+			}
+			finally
+			{
+				try
+				{
+					process.Dispose();
+				}
+				catch
+				{
+				}
+			}
+
 			if (standardError?.Any(l => l?.Contains("error: more than one device/emulator") ?? false) ?? false)
 				throw new Exception("More than one Device/Emulator detected, you must specify which Serial to target.");
 
-			return new ShellProcessResult(standardOutput, standardError, process.ExitCode);
+			return new ShellProcessResult(standardOutput, standardError, exitCode);
 		}
 
 		public class ShellProcessResult

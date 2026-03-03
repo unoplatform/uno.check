@@ -1,17 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
 using NuGet.Versioning;
+using Spectre.Console;
+using CheckStatus = DotNetCheck.Models.Status;
 
 namespace DotNetCheck.Checkups
 {
 	public class DotNetWorkloadsCheckup
 		: Checkup
 	{
+		private static readonly string[] HeartbeatFrames = ["|", "/", "-", "\\"];
+
 		private bool _skipMaui = false;
 
         public DotNetWorkloadsCheckup() : base()
@@ -78,6 +84,100 @@ namespace DotNetCheck.Checkups
 
 		public override string Title => $".NET SDK - Workloads ({SdkVersion})";
 
+		internal static bool ShouldUseLiveSpinnerFor(bool verbose, bool ci, bool nonInteractive, bool outputRedirected, bool errorRedirected)
+			=> !verbose
+				&& !ci
+				&& !nonInteractive
+				&& !outputRedirected
+				&& !errorRedirected;
+
+		private static bool ShouldUseLiveSpinner()
+			=> ShouldUseLiveSpinnerFor(Util.Verbose, Util.CI, Util.NonInteractive, Console.IsOutputRedirected, Console.IsErrorRedirected);
+
+		private static string FormatElapsed(TimeSpan duration)
+			=> $"{(int)duration.TotalHours:00}:{duration:mm\\:ss}";
+
+		private static async Task RunWithHeartbeat(Solution solution, string operationName, CancellationToken cancellationToken, Func<CancellationToken, Task> operation)
+		{
+			var elapsed = Stopwatch.StartNew();
+
+			if (ShouldUseLiveSpinner())
+			{
+				using var spinnerCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+				await AnsiConsole.Status()
+					.Spinner(Spinner.Known.Dots)
+					.StartAsync($"{operationName}... elapsed 00:00:00", async context =>
+					{
+						var spinnerTask = Task.Run(async () =>
+						{
+							while (!spinnerCancellation.IsCancellationRequested)
+							{
+								await Task.Delay(TimeSpan.FromSeconds(1), spinnerCancellation.Token);
+								if (spinnerCancellation.IsCancellationRequested)
+								{
+									break;
+								}
+
+								context.Status($"{operationName}... elapsed {FormatElapsed(elapsed.Elapsed)}");
+							}
+						}, CancellationToken.None);
+
+						try
+						{
+							await operation(cancellationToken);
+						}
+						finally
+						{
+							spinnerCancellation.Cancel();
+							try
+							{
+								await spinnerTask;
+							}
+							catch (OperationCanceledException)
+							{
+							}
+						}
+					});
+
+				return;
+			}
+
+			using var heartbeatCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+			var heartbeatTask = Task.Run(async () =>
+			{
+				var frameIndex = 0;
+				while (!heartbeatCancellation.IsCancellationRequested)
+				{
+					await Task.Delay(TimeSpan.FromSeconds(10), heartbeatCancellation.Token);
+					if (heartbeatCancellation.IsCancellationRequested)
+					{
+						break;
+					}
+
+					var frame = HeartbeatFrames[frameIndex++ % HeartbeatFrames.Length];
+					solution.ReportStatus($"{frame} {operationName} is still running... elapsed {FormatElapsed(elapsed.Elapsed)}.");
+				}
+			}, CancellationToken.None);
+
+			try
+			{
+				await operation(cancellationToken);
+			}
+			finally
+			{
+				heartbeatCancellation.Cancel();
+				try
+				{
+					await heartbeatTask;
+				}
+				catch (OperationCanceledException)
+				{
+				}
+			}
+		}
+
 		static bool wasForceRunAlready = false;
 
 		public override async Task<DiagnosticResult> Examine(SharedState history)
@@ -126,11 +226,11 @@ namespace DotNetCheck.Checkups
 					&& installedWorkloads.Contains(rp.Id)
 				)
 				{
-					ReportStatus($"{available.id} ({available.version}/{available.sdkVersion}) is installed.", Status.Ok);
+					ReportStatus($"{available.id} ({available.version}/{available.sdkVersion}) is installed.", CheckStatus.Ok);
 				}
 				else
 				{
-					ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) is not installed.", Status.Error);
+					ReportStatus($"{rp.Id} ({rp.PackageId} : {rp.Version}) is not installed.", CheckStatus.Error);
 					missingWorkloads.Add(rp);
 				}
 			}
@@ -141,24 +241,40 @@ namespace DotNetCheck.Checkups
 			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
 
 			return new DiagnosticResult(
-				Status.Error,
+				CheckStatus.Error,
 				this,
 				new Suggestion("Install or Update SDK Workloads",
 				new ActionSolution(async (sln, cancel) =>
 				{
+					sln.ReportStatus("Installing .NET workloads. This can take a long time depending on network speed, cache state, and package source availability.");
+
 					if (history.GetEnvironmentVariableFlagSet("DOTNET_FORCE"))
 					{
 						try
 						{
-							await genericWorkloadManager.Repair();
+							await RunWithHeartbeat(sln, "Repairing workloads", cancel, token => genericWorkloadManager.Repair(token));
 						}
-						catch (Exception ex)
+						catch (OperationCanceledException)
 						{
-							ReportStatus("Warning: Workload repair failed", Status.Warning);
+							sln.ReportStatus("Workload repair was canceled. You can rerun `uno-check --fix` when you're ready to continue.");
+							throw;
+						}
+						catch (Exception)
+						{
+							ReportStatus("Warning: Workload repair failed", CheckStatus.Warning);
 						}
 					}
 
-					await genericWorkloadManager.Install(RequiredWorkloads);
+					try
+					{
+						await RunWithHeartbeat(sln, "Installing workloads", cancel, token => genericWorkloadManager.Install(RequiredWorkloads, token));
+					}
+					catch (OperationCanceledException)
+					{
+						sln.ReportStatus("Workload installation was canceled. You can rerun `uno-check --fix` to resume later.");
+						throw;
+					}
+
 					history.ContributeState(StateKey.EntryPoint, StateKey.ShouldRestartVs, true);
 				})));
 		}

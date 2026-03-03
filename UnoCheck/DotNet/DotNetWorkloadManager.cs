@@ -50,16 +50,63 @@ namespace DotNetCheck.DotNet
 
 		readonly string DotNetCliWorkingDir;
 
-		public async Task Repair()
+		public async Task Repair(CancellationToken cancellationToken = default)
 		{
-			await CliRepair();
+			await CliRepair(cancellationToken);
 		}
 
-		public async Task Install(Manifest.DotNetWorkload[] workloads)
+		public async Task Install(Manifest.DotNetWorkload[] workloads, CancellationToken cancellationToken = default)
 		{
 			var rollbackFile = WriteRollbackFile(workloads);
 
-			await CliInstallWithRollback(rollbackFile, workloads.Where(w => !w.Abstract).Select(w => w.Id));
+			await CliInstallWithRollback(rollbackFile, workloads.Where(w => !w.Abstract).Select(w => w.Id), cancellationToken);
+		}
+
+		internal static string[] BuildInstallArgs(string sdkVersion, string rollbackFile, IEnumerable<string> workloadIds, IEnumerable<string> packageSources, bool verbose)
+		{
+			var addSourceArg = "--source";
+			if (NuGetVersion.Parse(sdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
+				addSourceArg = "--add-source";
+
+			var args = new List<string>
+			{
+				"workload",
+				"install",
+				"--from-rollback-file",
+				$"\"{rollbackFile}\""
+			};
+			args.AddRange(workloadIds);
+			args.AddRange(packageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+
+			if (verbose)
+			{
+				args.Add("--verbosity");
+				args.Add("detailed");
+			}
+
+			return args.ToArray();
+		}
+
+		internal static string[] BuildRepairArgs(string sdkVersion, IEnumerable<string> packageSources, bool verbose)
+		{
+			var addSourceArg = "--source";
+			if (NuGetVersion.Parse(sdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
+				addSourceArg = "--add-source";
+
+			var args = new List<string>
+			{
+				"workload",
+				"repair"
+			};
+			args.AddRange(packageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+
+			if (verbose)
+			{
+				args.Add("--verbosity");
+				args.Add("detailed");
+			}
+
+			return args.ToArray();
 		}
 
 		string WriteRollbackFile(Manifest.DotNetWorkload[] workloads)
@@ -149,51 +196,34 @@ namespace DotNetCheck.DotNet
 				.ToArray();
 		}
 
-		async Task CliInstallWithRollback(string rollbackFile, IEnumerable<string> workloadIds)
+		async Task CliInstallWithRollback(string rollbackFile, IEnumerable<string> workloadIds, CancellationToken cancellationToken)
 		{
 			// dotnet workload install id --skip-manifest-update --add-source x
 			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-			// Arg switched to --source in >= preview 7
-			var addSourceArg = "--source";
-			if (NuGetVersion.Parse(SdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
-				addSourceArg = "--add-source";
+			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			var args = new List<string>
-			{
-				"workload",
-				"install",
-				"--from-rollback-file",
-				$"\"{rollbackFile}\""
-			};
-			args.AddRange(workloadIds);
-			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+			if (cancellationToken.IsCancellationRequested)
+				throw new OperationCanceledException(cancellationToken);
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
 				throw new Exception("Workload Install failed: `dotnet " + string.Join(' ', args) + "`");
 		}
 
-		async Task CliRepair()
+		async Task CliRepair(CancellationToken cancellationToken)
 		{
 			// dotnet workload install id --skip-manifest-update --add-source x
 			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-			// Arg switched to --source in >= preview 7
-			var addSourceArg = "--source";
-			if (NuGetVersion.Parse(SdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
-				addSourceArg = "--add-source";
+			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			var args = new List<string>
-			{
-				"workload",
-				"repair"
-			};
-			args.AddRange(NuGetPackageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+			if (cancellationToken.IsCancellationRequested)
+				throw new OperationCanceledException(cancellationToken);
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
