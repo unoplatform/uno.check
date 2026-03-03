@@ -63,7 +63,25 @@ namespace DotNetCheck.Cli
 				}
 			}
 
-			var cts = new System.Threading.CancellationTokenSource();
+			using var cts = new System.Threading.CancellationTokenSource();
+			ConsoleCancelEventHandler cancelHandler = (sender, args) =>
+			{
+				if (!cts.IsCancellationRequested)
+				{
+					args.Cancel = true;
+					cts.Cancel();
+					AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Cancellation requested. Stopping current operation...[/]");
+					AnsiConsole.MarkupLine($"[yellow]You can resume later by rerunning {ToolInfo.ToolCommand} --fix.[/]");
+				}
+				else
+				{
+					args.Cancel = false;
+				}
+			};
+			Console.CancelKeyPress += cancelHandler;
+
+			try
+			{
 
 			var checkupStatus = new Dictionary<string, Models.Status>();
 			var sharedState = new SharedState();
@@ -299,6 +317,12 @@ namespace DotNetCheck.Cli
 								Util.Exception(x);
 								AnsiConsole.Markup(adminMsg);
 							}
+							catch (OperationCanceledException)
+							{
+								AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Operation canceled by user.[/]");
+								Environment.ExitCode = 130;
+								return 130;
+							}
 							catch (Exception ex)
 							{
 								Util.Exception(ex);
@@ -380,6 +404,11 @@ namespace DotNetCheck.Cli
 			Environment.ExitCode = exitCode;
 
 			return exitCode;
+			}
+			finally
+			{
+				Console.CancelKeyPress -= cancelHandler;
+			}
 		}
         
         internal static string[] ParseTfmsToTargetPlatforms(CheckSettings settings)

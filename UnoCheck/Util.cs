@@ -204,15 +204,21 @@ namespace DotNetCheck
 		}
 
 		public static Task<ShellProcessRunner.ShellProcessResult> ShellCommand(string cmd, string workingDir, bool verbose, string[] args)
+			=> ShellCommand(cmd, workingDir, verbose, System.Threading.CancellationToken.None, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> ShellCommand(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
-			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(cmd, string.Join(" ", args)) { WorkingDirectory = workingDir, Verbose = verbose } );
+			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(cmd, string.Join(" ", args), cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
 			return Task.FromResult(cli.WaitForExit());
 		}
 
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string[] args)
-			=> WrapShellCommandWithSudo(cmd, null, false, args);
+			=> WrapShellCommandWithSudo(cmd, null, false, System.Threading.CancellationToken.None, args);
 
-        public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
 			var actualCmd = cmd;
 			var actualArgs = string.Join(" ", args);
@@ -223,7 +229,7 @@ namespace DotNetCheck
 				actualArgs = $"-c 'sudo {cmd} {actualArgs}'"; 
 			}
 
-			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs) { WorkingDirectory = workingDir, Verbose = verbose } );
+			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
 			return Task.FromResult(cli.WaitForExit());
 		}
 
