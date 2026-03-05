@@ -253,6 +253,7 @@ namespace DotNetCheck.Checkups
 						try
 						{
 							await RunWithHeartbeat(sln, "Repairing workloads", cancel, token => genericWorkloadManager.Repair(token));
+							sln.ReportStatus("Workload repair completed.");
 						}
 						catch (OperationCanceledException)
 						{
@@ -268,6 +269,7 @@ namespace DotNetCheck.Checkups
 					try
 					{
 						await RunWithHeartbeat(sln, "Installing workloads", cancel, token => genericWorkloadManager.Install(RequiredWorkloads, token));
+						sln.ReportStatus("Workload installation completed.");
 					}
 					catch (OperationCanceledException)
 					{

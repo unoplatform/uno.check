@@ -210,7 +210,7 @@ namespace DotNetCheck.DotNet
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
-				throw new Exception("Workload Install failed: `dotnet " + string.Join(' ', args) + "`");
+				throw new Exception(BuildCliFailureMessage("Workload Install", "dotnet " + string.Join(' ', args), r.GetOutput()));
 		}
 
 		async Task CliRepair(CancellationToken cancellationToken)
@@ -227,7 +227,51 @@ namespace DotNetCheck.DotNet
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
-				throw new Exception("Workload Repair failed: `dotnet " + string.Join(' ', args) + "`");
+				throw new Exception(BuildCliFailureMessage("Workload Repair", "dotnet " + string.Join(' ', args), r.GetOutput()));
+		}
+
+		internal static string BuildCliFailureMessage(string operationName, string command, string output)
+		{
+			if (!string.IsNullOrWhiteSpace(output))
+			{
+				if (output.IndexOf("No space left on device", StringComparison.OrdinalIgnoreCase) >= 0
+					|| output.IndexOf("There is not enough space on the disk", StringComparison.OrdinalIgnoreCase) >= 0
+					|| output.IndexOf("disk full", StringComparison.OrdinalIgnoreCase) >= 0
+					|| output.IndexOf("ENOSPC", StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					return $"{operationName} failed: Insufficient disk space detected. Free disk space (including temporary folders and package caches) and rerun `uno-check --fix`. Command: `{command}`";
+				}
+
+				var lines = output
+					.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(line => line.Trim())
+					.Where(line => !string.IsNullOrWhiteSpace(line))
+					.ToArray();
+
+				if (lines.Length > 0)
+				{
+					string keyLine = null;
+
+					for (var i = lines.Length - 1; i >= 0; i--)
+					{
+						var line = lines[i];
+						if (line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
+							|| line.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0
+							|| line.IndexOf("exception", StringComparison.OrdinalIgnoreCase) >= 0)
+						{
+							keyLine = line;
+							break;
+						}
+					}
+
+					keyLine ??= lines[^1];
+					keyLine = keyLine.TrimEnd('.');
+
+					return $"{operationName} failed: {keyLine}. Command: `{command}`";
+				}
+			}
+
+			return $"{operationName} failed: `{command}`";
 		}
 
 		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)

@@ -48,6 +48,8 @@ namespace DotNetCheck
 
 	public class ShellProcessRunner
 	{
+		private static readonly TimeSpan StreamDrainTimeout = TimeSpan.FromSeconds(2);
+
 		public static string MacOSShell
 			=> File.Exists("/bin/zsh") ? "/bin/zsh" : "/bin/bash";
 
@@ -61,6 +63,8 @@ namespace DotNetCheck
 		readonly List<string> standardError;
 		readonly Process process;
 		readonly bool verbose;
+		readonly TaskCompletionSource<bool> outputReadCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		readonly TaskCompletionSource<bool> errorReadCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		public readonly ShellProcessRunnerOptions Options;
 
@@ -122,25 +126,31 @@ namespace DotNetCheck
 
 			process.OutputDataReceived += (s, e) =>
 			{
-				if (e.Data != null)
+				if (e.Data == null)
 				{
-					if (verbose)
-						Console.WriteLine(e.Data);
-
-					standardOutput.Add(e.Data);
-					Options?.OutputCallback?.Invoke(e.Data);
+					outputReadCompleted.TrySetResult(true);
+					return;
 				}
+
+				if (verbose)
+					Console.WriteLine(e.Data);
+
+				standardOutput.Add(e.Data);
+				Options?.OutputCallback?.Invoke(e.Data);
 			};
 			process.ErrorDataReceived += (s, e) =>
 			{
-				if (e.Data != null)
+				if (e.Data == null)
 				{
-					if (verbose)
-						Console.WriteLine(e.Data);
-
-					standardError.Add(e.Data);
-					Options?.OutputCallback?.Invoke(e.Data);
+					errorReadCompleted.TrySetResult(true);
+					return;
 				}
+
+				if (verbose)
+					Console.WriteLine(e.Data);
+
+				standardError.Add(e.Data);
+				Options?.OutputCallback?.Invoke(e.Data);
 			};
 
 			if (verbose)
@@ -153,6 +163,11 @@ namespace DotNetCheck
 				process.BeginOutputReadLine();
 				process.BeginErrorReadLine();
 			}
+			else
+			{
+				outputReadCompleted.TrySetResult(true);
+				errorReadCompleted.TrySetResult(true);
+			}
 
 			if (Options.CancellationToken != System.Threading.CancellationToken.None)
 			{
@@ -162,11 +177,11 @@ namespace DotNetCheck
 					{
 						if (process?.HasExited == false)
 						{
-							if (!Util.IsWindows && Options.UseSystemShell)
+							try
 							{
 								process.Kill(entireProcessTree: true);
 							}
-							else
+							catch
 							{
 								process.Kill();
 							}
@@ -197,8 +212,48 @@ namespace DotNetCheck
 
 			try
 			{
-				process.WaitForExit();
-			} catch (Exception ex) { Util.Exception(ex); }
+				while (process?.HasExited == false)
+				{
+					process.WaitForExit(250);
+				}
+			}
+			catch (Exception ex)
+			{
+				Util.Exception(ex);
+			}
+
+			if (Options.RedirectOutput)
+			{
+				var drainCompleted = false;
+
+				try
+				{
+					drainCompleted = Task.WhenAll(outputReadCompleted.Task, errorReadCompleted.Task)
+						.Wait(StreamDrainTimeout);
+				}
+				catch
+				{
+				}
+
+				if (!drainCompleted)
+				{
+					try
+					{
+						process.CancelOutputRead();
+					}
+					catch
+					{
+					}
+
+					try
+					{
+						process.CancelErrorRead();
+					}
+					catch
+					{
+					}
+				}
+			}
 
 			try
 			{
