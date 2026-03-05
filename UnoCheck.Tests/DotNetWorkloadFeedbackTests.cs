@@ -68,4 +68,42 @@ public class DotNetWorkloadFeedbackTests
         Assert.Contains("--verbosity", args);
         Assert.Contains("detailed", args);
     }
+
+    [Fact]
+    public void BuildCliFailureMessage_WhenDiskIsFull_IncludesActionableGuidance()
+    {
+        var message = DotNetWorkloadManager.BuildCliFailureMessage(
+            operationName: "Workload Install",
+            command: "dotnet workload install ...",
+            output: "Workload installation failed: One or more errors occurred. (No space left on device : '/tmp/foo')");
+
+        Assert.Contains("Insufficient disk space", message);
+        Assert.Contains("temporary folders", message);
+        Assert.Contains("uno-check --fix", message);
+    }
+
+    [Fact]
+    public void BuildCliFailureMessage_WhenDiskIsFullOnWindowsStyleError_IncludesActionableGuidance()
+    {
+        var message = DotNetWorkloadManager.BuildCliFailureMessage(
+            operationName: "Workload Install",
+            command: "dotnet workload install ...",
+            output: "ERROR: There is not enough space on the disk.");
+
+        Assert.Contains("Insufficient disk space", message);
+        Assert.Contains("uno-check --fix", message);
+    }
+
+    [Fact]
+    public void BuildCliFailureMessage_WhenGenericFailure_UsesRelevantFailureLine()
+    {
+        var message = DotNetWorkloadManager.BuildCliFailureMessage(
+            operationName: "Workload Install",
+            command: "dotnet workload install ...",
+            output: "line one\nline two\nWorkload installation failed with exit code 1");
+
+        Assert.Contains("Workload Install failed", message);
+        Assert.Contains("Workload installation failed with exit code 1", message);
+        Assert.Contains("dotnet workload install", message);
+    }
 }
