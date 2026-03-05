@@ -124,9 +124,30 @@ The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](htt
 uno-check --pre-major
 ```
 
+### `--dev-manifest` (alias: `--main`) Development manifest channel
+
+This uses the latest manifest from the `main` branch of the
+`uno.check` repository.
+
+The manifest is hosted by default here:
+[uno.ui.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui.manifest.json)
+
+If the remote manifest cannot be loaded (for example due to network
+restrictions), `uno-check` falls back to the embedded stable manifest and prints a warning.
+
+```bash
+uno-check --dev-manifest
+```
+
 ### `--ci` Continuous Integration
 
 Uses the dotnet-install powershell / bash scripts for installing the dotnet SDK version from the manifest instead of the global installer.
+
+In CI mode, manifest/tool support validation runs in strict mode. In this mode,
+the command fails fast if the manifest omits `check.toolVersion`, if
+`check.toolVersion` has an invalid format, or if the current `uno-check`
+version is older than the manifest minimum tool version, and prints an explicit
+error or update message.
 
 ```bash
 uno-check --ci

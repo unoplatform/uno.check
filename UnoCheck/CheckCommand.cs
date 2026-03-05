@@ -104,7 +104,9 @@ namespace DotNetCheck.Cli
 
 			var manifest = await ToolInfo.LoadManifest(settings.Manifest, channel);
 
-			if (!ToolInfo.Validate(manifest))
+			var strictManifest = settings.CI;
+
+			if (!ToolInfo.Validate(manifest, strictManifest))
 			{
 				ToolInfo.ExitPrompt(settings.NonInteractive);
 				return -1;

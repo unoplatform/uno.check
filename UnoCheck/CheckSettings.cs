@@ -24,7 +24,7 @@ namespace DotNetCheck
         [CommandOption("--pre-major|--preview-major")]
         public bool PreviewMajor { get; set; }
 
-        [CommandOption("--main")]
+		[CommandOption("--dev-manifest|--main")]
 		public bool Main { get; set; }
 
 		[CommandOption("--dotnet <SDK_ROOT>")]
