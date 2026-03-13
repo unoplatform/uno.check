@@ -45,11 +45,14 @@ internal static class TelemetryClient
                     .Select(s => s[..32])
                     .Take(10) ?? []);
 
+            // Only include RequestedFrameworks property if there are actual frameworks to report
+            var properties = string.IsNullOrEmpty(frameworks)
+                ? new (string, string)[] { }
+                : new (string, string)[] { ("RequestedFrameworks", frameworks) };
+
             _telemetry.TrackEvent(
                 "check-start",
-                [
-                    ("RequestedFrameworks", frameworks),
-                ],
+                properties,
                 []
             );
         }
