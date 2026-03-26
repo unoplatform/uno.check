@@ -481,9 +481,9 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("  " + BuildCheckupStatusMarkup(e.Message, e.Status));
 		}
 
-		internal static string BuildCheckupStatusMarkup(string message, Models.Status? status)
+		internal static string BuildCheckupStatusMarkup(string? message, Models.Status? status)
 		{
-			var escaped = Markup.Escape(message);
+			var escaped = Markup.Escape(message ?? string.Empty);
 			if (status == Models.Status.Error)
 				return $"[red]{Icon.Error} {escaped}[/]";
 			if (status == Models.Status.Warning)
