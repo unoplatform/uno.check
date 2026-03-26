@@ -54,7 +54,7 @@ internal static class ToolUpdater
 
         if (currentVersion < latestVersion)
         {
-            AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Your uno-check version is not up to date. The latest version is {latestVersion}. You can update with:[/]");
+            AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Your uno-check version is not up to date. The latest version is {Markup.Escape(latestVersion!.ToString())}. You can update with:[/]");
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {latestVersion}");
             AnsiConsole.WriteLine();

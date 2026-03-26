@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NuGet.Frameworks;
+using Spectre.Console.Rendering;
 
 [assembly: InternalsVisibleTo("UnoCheck.Tests")]
 
@@ -229,14 +230,14 @@ namespace DotNetCheck.Cli
 						? $"[bold red]{Icon.Error}"
 						: $"[bold gray]{Icon.Ignored}";
 
-					AnsiConsole.MarkupLine($"{icon} Skipped: {checkup.Title} ({skipCheckup.skipReason})[/]");
+					AnsiConsole.MarkupLine($"{icon} Skipped: {Markup.Escape(checkup.Title)} ({Markup.Escape(skipCheckup.skipReason)})[/]");
 					continue;
 				}
 
 				checkup.OnStatusUpdated += CheckupStatusUpdated;
 
 				AnsiConsole.WriteLine();
-				AnsiConsole.MarkupLine($"[bold]{Icon.Checking} " + checkup.Title + " Checkup[/]...");
+				AnsiConsole.MarkupLine($"[bold]{Icon.Checking} {Markup.Escape(checkup.Title)} Checkup[/]...");
 				Console.Title = checkup.Title;
 
 				DiagnosticResult diagnosis = null;
@@ -268,10 +269,10 @@ namespace DotNetCheck.Cli
 				{
 					Console.WriteLine();
 					AnsiConsole.Write(new Rule());
-					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {diagnosis.Suggestion.Name}[/]");
+					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {Markup.Escape(diagnosis.Suggestion.Name)}[/]");
 
 					if (!string.IsNullOrEmpty(diagnosis.Suggestion.Description))
-						AnsiConsole.MarkupLine("" + diagnosis.Suggestion.Description + "");
+						AnsiConsole.MarkupLine(Markup.Escape(diagnosis.Suggestion.Description));
 
 					AnsiConsole.Write(new Rule());
 					Console.WriteLine();
@@ -307,7 +308,7 @@ namespace DotNetCheck.Cli
 							{
 								remedy.OnStatusUpdated += RemedyStatusUpdated;
 
-								AnsiConsole.MarkupLine($"{Icon.Thinking} Attempting to fix: " + checkup.Title);
+								AnsiConsole.MarkupLine($"{Icon.Thinking} Attempting to fix: {Markup.Escape(checkup.Title)}");
 
 								await remedy.Implement(sharedState, cts.Token);
 
@@ -328,7 +329,7 @@ namespace DotNetCheck.Cli
 							catch (Exception ex)
 							{
 								Util.Exception(ex);
-								AnsiConsole.MarkupLine("[bold red]Fix failed - " + ex.Message + "[/]");
+								AnsiConsole.MarkupLine($"[bold red]Fix failed - {Markup.Escape(ex.Message)}[/]");
 							}
 							finally
 							{
@@ -345,7 +346,7 @@ namespace DotNetCheck.Cli
 				{
 					// Display error/warning message when there's no suggestion
 					Console.WriteLine();
-					AnsiConsole.MarkupLine($"[bold {statusColor}]{statusEmoji} {m}[/]");
+					AnsiConsole.MarkupLine($"[bold {statusColor}]{statusEmoji} {Markup.Escape(m)}[/]");
 				}
 
 				checkup.OnStatusUpdated -= CheckupStatusUpdated;
@@ -478,22 +479,24 @@ namespace DotNetCheck.Cli
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
-			var msg = "";
-			if (e.Status == Models.Status.Error)
-				msg = $"[red]{Icon.Error} {e.Message}[/]";
-			else if (e.Status == Models.Status.Warning)
-				msg = $"[darkorange3_1]{Icon.Warning} {e.Message}[/]";
-			else if (e.Status == Models.Status.Ok)
-				msg = $"[green]{Icon.Success} {e.Message}[/]";
-			else
-				msg = $"{Icon.ListItem} {e.Message}";
-
-			AnsiConsole.MarkupLine("  " + msg);
+			AnsiConsole.MarkupLine("  " + BuildCheckupStatusMarkup(e.Message, e.Status));
 		}
-        
+
+		internal static string BuildCheckupStatusMarkup(string message, Models.Status? status)
+		{
+			var escaped = Markup.Escape(message);
+			if (status == Models.Status.Error)
+				return $"[red]{Icon.Error} {escaped}[/]";
+			if (status == Models.Status.Warning)
+				return $"[darkorange3_1]{Icon.Warning} {escaped}[/]";
+			if (status == Models.Status.Ok)
+				return $"[green]{Icon.Success} {escaped}[/]";
+			return $"{Icon.ListItem} {escaped}";
+		}
+
 		private void RemedyStatusUpdated(object sender, RemedyStatusEventArgs e)
 		{
-			AnsiConsole.MarkupLine("  " + e.Message);
+			AnsiConsole.MarkupLine("  " + Markup.Escape(e.Message));
 		}
     }
 }

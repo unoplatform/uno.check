@@ -93,7 +93,7 @@ namespace DotNetCheck.Checkups
 					}
 
 					// If we do have a sdk version, it means the tools are installed but the iOS SDK runtime is missing
-					Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {sdkVersion}...");
+					Spectre.Console.AnsiConsole.MarkupLine($"Installing the missing iOS SDK runtime version {Spectre.Console.Markup.Escape(sdkVersion)}...");
 
 					var tempPath = Path.Combine(Path.GetTempPath(), $"Uno.Check.iOS-{Guid.NewGuid()}");
 					Directory.CreateDirectory(tempPath);
@@ -107,7 +107,7 @@ namespace DotNetCheck.Checkups
 								var result = ShellProcessRunner.Run("xcodebuild", $"-downloadPlatform iOS -exportPath {tempPath} -buildVersion {sdkVersion}");
 								if (result.ExitCode != 0)
 								{
-									Spectre.Console.AnsiConsole.MarkupLine($"[bold red]Failed to download iOS SDK runtime. Exit code: {result.ExitCode}[/]");
+									Spectre.Console.AnsiConsole.MarkupLine($"[bold red]Failed to download iOS SDK runtime. Exit code: {Spectre.Console.Markup.Escape(result.ExitCode.ToString())}[/]");
 								}
 								return Task.CompletedTask;
 							}))));
