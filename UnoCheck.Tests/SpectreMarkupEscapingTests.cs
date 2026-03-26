@@ -14,6 +14,19 @@ namespace UnoCheck.Tests;
 public class SpectreMarkupEscapingTests
 {
     /// <summary>
+    /// Verifies that the given markup string can be parsed by Spectre.Console without throwing.
+    /// </summary>
+    private static void AssertMarkupParses(string markup)
+    {
+        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
+        {
+            Out = new AnsiConsoleOutput(TextWriter.Null)
+        }).MarkupLine(markup));
+
+        Assert.Null(record);
+    }
+
+    /// <summary>
     /// Reproduces the exact CI crash scenario: a .NET 10 workload manifest path
     /// containing text that Spectre.Console interprets as a style/color tag.
     /// </summary>
@@ -25,17 +38,8 @@ public class SpectreMarkupEscapingTests
     [InlineData("C:\\hostedtoolcache\\windows\\dotnet\\sdk-manifests\\10.0.100\\microsoft.net.workload.mono.toolchain.current\\10.0.105\\WorkloadManifest.json")]
     public void BuildCheckupStatusMarkup_EscapesBracketsInMessages(string message)
     {
-        // Act — should not throw "Could not find color or style"
         var markup = CheckCommand.BuildCheckupStatusMarkup(message, Status.Ok);
-
-        // Assert — the markup should be valid and parseable by Spectre.Console
-        // This will throw if the markup is malformed
-        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Out = new AnsiConsoleOutput(TextWriter.Null)
-        }).MarkupLine(markup));
-
-        Assert.Null(record);
+        AssertMarkupParses(markup);
     }
 
     [Theory]
@@ -43,17 +47,11 @@ public class SpectreMarkupEscapingTests
     [InlineData(Status.Warning)]
     [InlineData(Status.Error)]
     [InlineData(null)]
-    public void BuildCheckupStatusMarkup_AllStatuses_HandleBracketsWithoutCrashing(Status? status)    {
+    public void BuildCheckupStatusMarkup_AllStatuses_HandleBracketsWithoutCrashing(Status? status)
+    {
         var message = "sdk-manifests\\10.0.100\\[toolchain]\\WorkloadManifest.json";
-
         var markup = CheckCommand.BuildCheckupStatusMarkup(message, status);
-
-        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Out = new AnsiConsoleOutput(TextWriter.Null)
-        }).MarkupLine(markup));
-
-        Assert.Null(record);
+        AssertMarkupParses(markup);
     }
 
     [Fact]
@@ -74,13 +72,7 @@ public class SpectreMarkupEscapingTests
     public void BuildCheckupStatusMarkup_SafeMessages_StillWork(string message)
     {
         var markup = CheckCommand.BuildCheckupStatusMarkup(message, Status.Ok);
-
-        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Out = new AnsiConsoleOutput(TextWriter.Null)
-        }).MarkupLine(markup));
-
-        Assert.Null(record);
+        AssertMarkupParses(markup);
     }
 
     [Fact]
@@ -129,12 +121,7 @@ public class SpectreMarkupEscapingTests
         Assert.DoesNotContain("]", escaped.Replace("]]", ""));
 
         // Should render without throwing
-        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Out = new AnsiConsoleOutput(TextWriter.Null)
-        }).MarkupLine(escaped));
-
-        Assert.Null(record);
+        AssertMarkupParses(escaped);
     }
 
     /// <summary>
@@ -148,12 +135,6 @@ public class SpectreMarkupEscapingTests
     public void BuildCheckupStatusMarkup_WslBracketPatterns_DoNotCrash(string message)
     {
         var markup = CheckCommand.BuildCheckupStatusMarkup(message, Status.Error);
-
-        var record = Record.Exception(() => AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Out = new AnsiConsoleOutput(TextWriter.Null)
-        }).MarkupLine(markup));
-
-        Assert.Null(record);
+        AssertMarkupParses(markup);
     }
 }
