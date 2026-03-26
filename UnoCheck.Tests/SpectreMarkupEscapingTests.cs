@@ -121,7 +121,7 @@ public class SpectreMarkupEscapingTests
     [Fact]
     public void MarkupEscape_HandlesWorkloadManifestPath()
     {
-        var path = @"C:\hostedtoolcache\windows\dotnet\sdk-manifests\10.0.100\microsoft.net.workload.mono.toolchain.current\10.0.105\WorkloadManifest.json";
+        var path = @"C:\hostedtoolcache\windows\dotnet\sdk-manifests\10.0.100\microsoft.net.workload.mono.toolchain.current\[10.0.105]\WorkloadManifest.json";
         var escaped = Markup.Escape(path);
 
         // Brackets in the path should be doubled for escaping

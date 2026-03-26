@@ -10,7 +10,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using NuGet.Frameworks;
-using Spectre.Console.Rendering;
 
 [assembly: InternalsVisibleTo("UnoCheck.Tests")]
 
@@ -269,10 +268,10 @@ namespace DotNetCheck.Cli
 				{
 					Console.WriteLine();
 					AnsiConsole.Write(new Rule());
-					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {Markup.Escape(diagnosis.Suggestion.Name)}[/]");
+					AnsiConsole.MarkupLine($"[bold blue]{Icon.Recommend} Recommendation:[/][blue] {diagnosis.Suggestion.Name}[/]");
 
 					if (!string.IsNullOrEmpty(diagnosis.Suggestion.Description))
-						AnsiConsole.MarkupLine(Markup.Escape(diagnosis.Suggestion.Description));
+						AnsiConsole.MarkupLine(diagnosis.Suggestion.Description);
 
 					AnsiConsole.Write(new Rule());
 					Console.WriteLine();

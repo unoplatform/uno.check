@@ -67,14 +67,14 @@ namespace DotNetCheck
 				{
 					Util.Log($"Setting version in global.json: {manifestDotNetSdk.Version}");
 					globaljson.Sdk.Version = manifestDotNetSdk.Version;
-						AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'version': {Markup.Escape(manifestDotNetSdk.Version)}[/]");
+					AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'version': {Markup.Escape(manifestDotNetSdk.Version)}[/]");
 				}
 
 				if (settings?.DotNetAllowPrerelease.HasValue ?? false)
 				{
 					Util.Log($"Setting allowPrerelease in global.json: {settings.DotNetAllowPrerelease.Value}");
 					globaljson.Sdk.AllowPrerelease = settings.DotNetAllowPrerelease.Value;
-						AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'allowPrerelease': {Markup.Escape(settings.DotNetAllowPrerelease.Value.ToString())}[/]");
+					AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'allowPrerelease': {Markup.Escape(settings.DotNetAllowPrerelease.Value.ToString())}[/]");
 				}
 
 				if (!string.IsNullOrEmpty(settings.DotNetRollForward))
@@ -84,7 +84,7 @@ namespace DotNetCheck
 
 					Util.Log($"Setting rollForward in global.json: {settings.DotNetRollForward}");
 					globaljson.Sdk.RollForward = settings.DotNetRollForward;
-						AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'rollForward': {Markup.Escape(settings.DotNetRollForward)}[/]");
+					AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'rollForward': {Markup.Escape(settings.DotNetRollForward)}[/]");
 				}
 
 				File.WriteAllText(globalJsonFile, JsonConvert.SerializeObject(globaljson, Formatting.Indented));
