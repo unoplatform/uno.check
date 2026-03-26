@@ -136,7 +136,7 @@ internal static class ToolUpdater
                 Util.Exception(ex);
                 AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to execute update script. Please update manually and relaunch.[/]");
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
+                AnsiConsole.WriteLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
                 Environment.Exit(1);                
             }
             
@@ -158,7 +158,7 @@ internal static class ToolUpdater
             {
                 AnsiConsole.MarkupLine($"[bold red]{Icon.Error} Failed to execute update script. Please update manually and relaunch.[/]");
                 AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
+                AnsiConsole.WriteLine($"dotnet tool update --global {ToolInfo.ToolPackageId} --version {version}");
                 Environment.Exit(1);
             }
         }
