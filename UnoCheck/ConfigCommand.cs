@@ -67,7 +67,7 @@ namespace DotNetCheck
 				{
 					Util.Log($"Setting version in global.json: {manifestDotNetSdk.Version}");
 					globaljson.Sdk.Version = manifestDotNetSdk.Version;
-					AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'version': {Markup.Escape(manifestDotNetSdk.Version)}[/]");
+					AnsiConsole.MarkupLine($"[green]{Icon.Success} Set global.json 'version': {Markup.Escape(manifestDotNetSdk.Version ?? string.Empty)}[/]");
 				}
 
 				if (settings?.DotNetAllowPrerelease.HasValue ?? false)
@@ -126,7 +126,7 @@ namespace DotNetCheck
 					if (srcExists)
 					{
 						Util.Log($"PackageSource already exists in NuGet.config: {src}");
-						AnsiConsole.MarkupLine($"{Icon.ListItem} PackageSource exists in NuGet.config: {Markup.Escape(src)}");
+						AnsiConsole.MarkupLine($"{Icon.ListItem} PackageSource exists in NuGet.config: {Markup.Escape(src ?? string.Empty)}");
 					}
 					else
 					{
@@ -134,7 +134,7 @@ namespace DotNetCheck
 						packageSourceProvider.AddPackageSource(new PackageSource(src));
 						addedAny = true;
 
-						AnsiConsole.MarkupLine($"[green]{Icon.Success} Added PackageSource to NuGet.config: {Markup.Escape(src)}[/]");
+						AnsiConsole.MarkupLine($"[green]{Icon.Success} Added PackageSource to NuGet.config: {Markup.Escape(src ?? string.Empty)}[/]");
 					}
 				}
 

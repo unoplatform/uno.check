@@ -78,7 +78,7 @@ internal static class ToolUpdater
 
                 if (action == UserAction.Update)
                 {
-                    RelaunchWithUpdate(latestVersion!.ToString());
+                    RelaunchWithUpdate(latestVersion.ToString());
                 }
 
                 return action == UserAction.Stop;
