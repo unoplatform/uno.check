@@ -106,4 +106,18 @@ public class DotNetWorkloadFeedbackTests
         Assert.Contains("Workload installation failed with exit code 1", message);
         Assert.Contains("dotnet workload install", message);
     }
+
+    [Theory]
+    [InlineData("error: Permission denied", true)]
+    [InlineData("Access to the path '/usr/share/dotnet' is denied.", true)]
+    [InlineData("EACCES: permission denied, mkdir '/usr/share/dotnet'", true)]
+    [InlineData("Administrator privileges are required to perform this operation.", true)]
+    [InlineData("No space left on device", false)]
+    [InlineData("", false)]
+    public void ShouldRetryWithSudo_ReturnsExpectedValue(string output, bool expected)
+    {
+        var actual = DotNetWorkloadManager.ShouldRetryWithSudo(output);
+
+        Assert.Equal(expected, actual);
+    }
 }
