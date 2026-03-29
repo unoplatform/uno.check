@@ -221,6 +221,9 @@ namespace DotNetCheck
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoNoPrompt(string cmd, string workingDir, bool verbose, string[] args)
 			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, true, args);
 
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoNoPrompt(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, cancellationToken, true, args);
+
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, cancellationToken, false, args);
 

@@ -227,7 +227,7 @@ namespace DotNetCheck.DotNet
 
 			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
 			{
-				r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
 			}
 
 			if (cancellationToken.IsCancellationRequested)
@@ -249,7 +249,7 @@ namespace DotNetCheck.DotNet
 
 			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
 			{
-				r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
 			}
 
 			if (cancellationToken.IsCancellationRequested)
@@ -302,6 +302,20 @@ namespace DotNetCheck.DotNet
 			}
 
 			return $"{operationName} failed: `{command}`";
+		}
+
+		/// <summary>
+		/// Retries the command with sudo. Uses <c>sudo -n</c> (non-interactive) when running
+		/// in CI or non-interactive mode to avoid hanging on a password prompt.
+		/// </summary>
+		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
+		{
+			if (Util.NonInteractive || Util.CI)
+			{
+				return await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			}
+
+			return await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 		}
 
 		internal static bool ShouldRetryWithSudo(string output)
