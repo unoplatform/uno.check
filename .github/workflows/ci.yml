@@ -400,6 +400,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Free disk space (Linux)
+        uses: ./.github/actions/host-cleanup-linux
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
