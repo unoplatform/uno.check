@@ -314,7 +314,9 @@ namespace DotNetCheck.DotNet
 			return output.IndexOf("permission denied", StringComparison.OrdinalIgnoreCase) >= 0
 				|| output.IndexOf("access to the path", StringComparison.OrdinalIgnoreCase) >= 0
 				|| output.IndexOf("EACCES", StringComparison.OrdinalIgnoreCase) >= 0
-				|| output.IndexOf("are required to perform this operation", StringComparison.OrdinalIgnoreCase) >= 0;
+				|| output.IndexOf("are required to perform this operation", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("inadequate permissions", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("elevated privileges", StringComparison.OrdinalIgnoreCase) >= 0;
 		}
 
 		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)

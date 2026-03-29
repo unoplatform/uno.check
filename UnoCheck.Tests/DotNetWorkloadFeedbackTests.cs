@@ -112,6 +112,8 @@ public class DotNetWorkloadFeedbackTests
     [InlineData("Access to the path '/usr/share/dotnet' is denied.", true)]
     [InlineData("EACCES: permission denied, mkdir '/usr/share/dotnet'", true)]
     [InlineData("Administrator privileges are required to perform this operation.", true)]
+    [InlineData("Inadequate permissions. Run the command with elevated privileges.", true)]
+    [InlineData("Run the command with elevated privileges.", true)]
     [InlineData("No space left on device", false)]
     [InlineData("", false)]
     public void ShouldRetryWithSudo_ReturnsExpectedValue(string output, bool expected)
