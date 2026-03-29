@@ -159,8 +159,28 @@ namespace DotNetCheck.DotNet
 
 			// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
 			var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
+			if (workloads?.installed?.Length > 0)
+			{
+				return workloads.installed;
+			}
 
-			return workloads.installed;
+			// On Linux/macOS, workload installs may have happened under elevated context.
+			// Probe with `sudo -n` (no prompt) so checks don't get stuck waiting for credentials.
+			if (!Util.IsWindows)
+			{
+				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+				if (sudoResult.ExitCode == 0)
+				{
+					var sudoOutput = FilterWorkloadCommandOutput(string.Join(" ", sudoResult.StandardOutput), ListOutputMarker);
+					var sudoWorkloads = JsonSerializer.Deserialize<WorkloadListResult>(sudoOutput);
+					if (sudoWorkloads?.installed?.Length > 0)
+					{
+						return sudoWorkloads.installed;
+					}
+				}
+			}
+
+			return workloads?.installed ?? [];
 		}
 
 		public async Task<(string id, string version, string sdkVersion)[]> GetAvailableWorkloads()
@@ -203,7 +223,12 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			{
+				r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			}
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -220,7 +245,12 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			{
+				r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			}
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -272,6 +302,19 @@ namespace DotNetCheck.DotNet
 			}
 
 			return $"{operationName} failed: `{command}`";
+		}
+
+		internal static bool ShouldRetryWithSudo(string output)
+		{
+			if (string.IsNullOrWhiteSpace(output))
+			{
+				return false;
+			}
+
+			return output.IndexOf("permission denied", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("access to the path", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("EACCES", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("are required to perform this operation", StringComparison.OrdinalIgnoreCase) >= 0;
 		}
 
 		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)

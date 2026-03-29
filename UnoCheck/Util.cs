@@ -218,7 +218,13 @@ namespace DotNetCheck
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
 			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, args);
 
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoNoPrompt(string cmd, string workingDir, bool verbose, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, true, args);
+
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, cancellationToken, false, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, bool noPrompt, string[] args)
 		{
 			var actualCmd = cmd;
 			var actualArgs = string.Join(" ", args);
@@ -226,7 +232,8 @@ namespace DotNetCheck
 			if (!Util.IsWindows)
 			{
 				actualCmd = ShellProcessRunner.MacOSShell;
-				actualArgs = $"-c 'sudo {cmd} {actualArgs}'"; 
+				var sudoPrefix = noPrompt ? "sudo -n" : "sudo";
+				actualArgs = $"-c '{sudoPrefix} {cmd} {actualArgs}'";
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
