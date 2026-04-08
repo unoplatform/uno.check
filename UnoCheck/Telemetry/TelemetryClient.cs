@@ -42,7 +42,7 @@ internal static class TelemetryClient
                 requestedFrameworks?
                     .OrderBy(s => s)
                     .Where(f => System.Text.RegularExpressions.Regex.IsMatch(f, @"^net\d+(\.0)(?:-[a-zA-Z0-9.]+)*$"))
-                    .Select(s => s[..32])
+                    .Select(s => s.Length >= 32 ? s[..32] : s)
                     .Take(10) ?? []);
 
             _telemetry.TrackEvent(
