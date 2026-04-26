@@ -243,6 +243,25 @@ namespace DotNetCheck
 			return Task.FromResult(cli.WaitForExit());
 		}
 
+		/// <summary>
+		/// Runs the command with sudo and TTY access so the user can enter their password.
+		/// Output is not captured (goes directly to the terminal) — use exit code for success/failure.
+		/// </summary>
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoInteractive(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+		{
+			var actualCmd = cmd;
+			var actualArgs = string.Join(" ", args);
+
+			if (!Util.IsWindows)
+			{
+				actualCmd = ShellProcessRunner.MacOSShell;
+				actualArgs = $"-c 'sudo {cmd} {actualArgs}'";
+			}
+
+			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose, RedirectOutput = false });
+			return Task.FromResult(cli.WaitForExit());
+		}
+
 		public static async Task<bool> WrapCopyWithShellSudo(string destination, bool isFile, Func<string, Task<bool>> wrapping)
 		{
 			var intermediate = destination;
