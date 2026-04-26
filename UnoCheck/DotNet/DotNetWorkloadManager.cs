@@ -223,11 +223,24 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			ShellProcessRunner.ShellProcessResult r;
 
-			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			// On Linux/macOS, check if SDK path is writable before attempting user-level install.
+			// If not writable, use sudo directly to avoid doomed user-level attempts that
+			// fail with download/restore errors instead of clear permission-denied messages.
+			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
 			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
 				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+			else
+			{
+				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+				{
+					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+				}
 			}
 
 			if (cancellationToken.IsCancellationRequested)
@@ -245,11 +258,21 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			ShellProcessRunner.ShellProcessResult r;
 
-			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
 			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
 				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+			else
+			{
+				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+				{
+					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+				}
 			}
 
 			if (cancellationToken.IsCancellationRequested)
@@ -305,17 +328,25 @@ namespace DotNetCheck.DotNet
 		}
 
 		/// <summary>
-		/// Retries the command with sudo. Uses <c>sudo -n</c> (non-interactive) when running
-		/// in CI or non-interactive mode to avoid hanging on a password prompt.
+		/// Retries the command with sudo. Always tries <c>sudo -n</c> (non-interactive) first
+		/// to leverage cached credentials or NOPASSWD rules without hanging. In interactive mode,
+		/// falls back to a TTY-attached sudo that can prompt for a password.
 		/// </summary>
 		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
 		{
-			if (Util.NonInteractive || Util.CI)
-			{
-				return await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
-			}
+			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD)
+			var result = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 
-			return await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			if (result.ExitCode == 0)
+				return result;
+
+			// In CI/non-interactive mode, sudo -n is the only option
+			if (Util.NonInteractive || Util.CI)
+				return result;
+
+			// Interactive mode: run with TTY access so sudo can prompt for password
+			Util.Log("Elevated privileges required. You may be prompted for your password.");
+			return await Util.WrapShellCommandWithSudoInteractive(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 		}
 
 		internal static bool ShouldRetryWithSudo(string output)
@@ -331,6 +362,26 @@ namespace DotNetCheck.DotNet
 				|| output.IndexOf("are required to perform this operation", StringComparison.OrdinalIgnoreCase) >= 0
 				|| output.IndexOf("inadequate permissions", StringComparison.OrdinalIgnoreCase) >= 0
 				|| output.IndexOf("elevated privileges", StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+
+		/// <summary>
+		/// Checks whether the current user can write to the SDK directory.
+		/// Used to proactively decide whether sudo is needed before attempting workload install,
+		/// avoiding doomed user-level attempts that fail with download/restore errors
+		/// rather than clear permission-denied messages.
+		/// </summary>
+		internal static bool IsSdkPathWritable(string sdkRoot)
+		{
+			try
+			{
+				var testPath = Path.Combine(sdkRoot, ".uno-check-write-test");
+				using (File.Create(testPath, 1, FileOptions.DeleteOnClose)) { }
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
 		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)

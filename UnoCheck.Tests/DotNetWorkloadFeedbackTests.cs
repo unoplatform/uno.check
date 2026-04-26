@@ -122,4 +122,39 @@ public class DotNetWorkloadFeedbackTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData("Restoring NuGet packages...\nDetermining projects to restore...\nerror: Permission denied\nRestore failed.", true)]
+    [InlineData("Installing workload manifest microsoft.net.sdk.android...\nAccess to the path '/usr/local/share/dotnet/sdk-manifests' is denied.\nInstallation failed.", true)]
+    [InlineData("Downloading microsoft.android.sdk.linux version 35.0.105...\nEACCES: permission denied, open '/usr/share/dotnet/packs/foo'\nWorkload installation failed.", true)]
+    [InlineData("Downloading microsoft.android.sdk.linux version 35.0.105 failed\nThe feed 'https://api.nuget.org/v3/index.json' lists package", false)]
+    public void ShouldRetryWithSudo_WithVerboseOutput_MatchesPermissionPatterns(string output, bool expected)
+    {
+        var actual = DotNetWorkloadManager.ShouldRetryWithSudo(output);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void IsSdkPathWritable_WritableDirectory_ReturnsTrue()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "uno-check-test-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            Assert.True(DotNetWorkloadManager.IsSdkPathWritable(tempDir));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IsSdkPathWritable_NonExistentDirectory_ReturnsFalse()
+    {
+        var nonExistentDir = Path.Combine(Path.GetTempPath(), "uno-check-nonexistent-" + Guid.NewGuid().ToString("N"));
+
+        Assert.False(DotNetWorkloadManager.IsSdkPathWritable(nonExistentDir));
+    }
 }
