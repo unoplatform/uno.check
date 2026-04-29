@@ -246,6 +246,8 @@ namespace DotNetCheck
 		/// <summary>
 		/// Runs the command with sudo and TTY access so the user can enter their password.
 		/// Output is not captured (goes directly to the terminal) — use exit code for success/failure.
+		/// Uses sudo -S to read the password from stdin rather than the terminal, avoiding
+		/// the macOS sudo PTY relay that hangs indefinitely when started from .NET Process.Start.
 		/// </summary>
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoInteractive(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
@@ -254,12 +256,85 @@ namespace DotNetCheck
 
 			if (!Util.IsWindows)
 			{
-				actualCmd = ShellProcessRunner.MacOSShell;
-				actualArgs = $"-c 'sudo {cmd} {actualArgs}'";
+				// Prompt the user for the sudo password before starting the process.
+				var password = ReadPasswordFromConsole();
+				if (password == null)
+				{
+					return Task.FromResult(new ShellProcessRunner.ShellProcessResult(new List<string>(), new List<string>(), -1));
+				}
+
+				// sudo -S: read password from stdin (pipe) instead of /dev/tty.
+				// This avoids the macOS PTY relay (exec_pty) that hangs when the child
+				// process exits but the relay's stdin (the terminal) stays open.
+				// sudo -p "": suppress sudo's own "Password:" prompt since we already prompted.
+				actualCmd = "sudo";
+				actualArgs = $"-S -p \"\" {cmd} {actualArgs}";
+
+				var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken)
+				{
+					WorkingDirectory = workingDir,
+					Verbose = verbose,
+					RedirectInput = true,
+					RedirectOutput = false,
+					UseSystemShell = false
+				});
+
+				// Pipe the password to sudo's stdin, then close the stream so sudo
+				// (and any child processes) see EOF. This ensures the PTY relay's
+				// stdin side is closed, allowing it to exit after the child finishes.
+				try
+				{
+					cli.Write(password + "\n");
+					cli.FlushAndCloseInput();
+				}
+				catch (System.IO.IOException)
+				{
+					// Process exited before we could write (e.g., sudo not found).
+				}
+
+				return Task.FromResult(cli.WaitForExit());
 			}
 
-			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose, RedirectOutput = false });
-			return Task.FromResult(cli.WaitForExit());
+			var fallback = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose });
+			return Task.FromResult(fallback.WaitForExit());
+		}
+
+		/// <summary>
+		/// Reads a password from the console with masked input (characters are not echoed).
+		/// Returns null if the user enters an empty password.
+		/// </summary>
+		internal static string ReadPasswordFromConsole()
+		{
+			try
+			{
+				if (Console.IsInputRedirected)
+					return null;
+
+				Console.Write("Password: ");
+				var password = new System.Text.StringBuilder();
+				while (true)
+				{
+					var key = Console.ReadKey(intercept: true);
+					if (key.Key == ConsoleKey.Enter)
+						break;
+					if (key.Key == ConsoleKey.Backspace)
+					{
+						if (password.Length > 0)
+							password.Remove(password.Length - 1, 1);
+					}
+					else if (!char.IsControl(key.KeyChar))
+					{
+						password.Append(key.KeyChar);
+					}
+				}
+				Console.WriteLine();
+				return password.Length > 0 ? password.ToString() : null;
+			}
+			catch (InvalidOperationException)
+			{
+				// Console.ReadKey is unavailable (e.g., stdin redirected in a wrapper script).
+				return null;
+			}
 		}
 
 		public static async Task<bool> WrapCopyWithShellSudo(string destination, bool isFile, Func<string, Task<bool>> wrapping)

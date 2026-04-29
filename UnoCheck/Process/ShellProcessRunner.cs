@@ -197,6 +197,17 @@ namespace DotNetCheck
 		public void Write(string txt)
 			=> process.StandardInput.Write(txt);
 
+		/// <summary>
+		/// Flushes and closes the standard input stream. After this call the child
+		/// process sees EOF on stdin. Used by the sudo -S flow to send the password
+		/// and then signal "no more input".
+		/// </summary>
+		public void FlushAndCloseInput()
+		{
+			process.StandardInput.Flush();
+			process.StandardInput.Close();
+		}
+
 		public int ExitCode
 			=> process.HasExited ? process.ExitCode : -1;
 
