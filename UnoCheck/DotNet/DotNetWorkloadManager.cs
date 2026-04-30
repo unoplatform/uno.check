@@ -330,7 +330,7 @@ namespace DotNetCheck.DotNet
 		/// <summary>
 		/// Retries the command with sudo. Always tries <c>sudo -n</c> (non-interactive) first
 		/// to leverage cached credentials or NOPASSWD rules without hanging. In interactive mode,
-		/// falls back to a TTY-attached sudo that can prompt for a password.
+		/// falls back to prompting for the password in-process and piping it to <c>sudo -S</c>.
 		/// </summary>
 		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
 		{
@@ -344,7 +344,7 @@ namespace DotNetCheck.DotNet
 			if (Util.NonInteractive || Util.CI)
 				return result;
 
-			// Interactive mode: run with TTY access so sudo can prompt for password
+			// Interactive mode: prompt for password in-process and pipe to sudo -S
 			Util.Log("Elevated privileges required. You may be prompted for your password.");
 			return await Util.WrapShellCommandWithSudoInteractive(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
 		}
