@@ -374,7 +374,7 @@ namespace DotNetCheck.DotNet
 		{
 			try
 			{
-				var testPath = Path.Combine(sdkRoot, ".uno-check-write-test");
+				var testPath = Path.Combine(sdkRoot, $".uno-check-write-test-{Guid.NewGuid():N}");
 				using (File.Create(testPath, 1, FileOptions.DeleteOnClose)) { }
 				return true;
 			}

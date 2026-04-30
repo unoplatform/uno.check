@@ -236,7 +236,12 @@ namespace DotNetCheck
 			{
 				actualCmd = ShellProcessRunner.MacOSShell;
 				var sudoPrefix = noPrompt ? "sudo -n" : "sudo";
-				actualArgs = $"-c '{sudoPrefix} {cmd} {actualArgs}'";
+				// Escape single quotes in command and args to prevent shell injection
+				var escapedCmd = cmd.Replace("'", "'\\''")
+					;
+				var escapedArgs = actualArgs.Replace("'", "'\\''")
+					;
+				actualArgs = $"-c '{sudoPrefix} {escapedCmd} {escapedArgs}'";
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
@@ -260,7 +265,15 @@ namespace DotNetCheck
 				var password = ReadPasswordFromConsole();
 				if (password == null)
 				{
-					return Task.FromResult(new ShellProcessRunner.ShellProcessResult(new List<string>(), new List<string>(), -1));
+					return Task.FromResult(new ShellProcessRunner.ShellProcessResult(
+						new List<string>(),
+						new List<string>
+						{
+							"Unable to perform sudo elevation because no password could be read from the console. " +
+							"This can happen when standard input is redirected or the terminal is non-interactive. " +
+							"Please rerun this command in an interactive terminal or configure passwordless sudo."
+						},
+						-1));
 				}
 
 				// sudo -S: read password from stdin (pipe) instead of /dev/tty.

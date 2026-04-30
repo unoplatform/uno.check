@@ -204,6 +204,11 @@ namespace DotNetCheck
 		/// </summary>
 		public void FlushAndCloseInput()
 		{
+			if (process?.StartInfo?.RedirectStandardInput != true)
+			{
+				return;
+			}
+
 			process.StandardInput.Flush();
 			process.StandardInput.Close();
 		}
