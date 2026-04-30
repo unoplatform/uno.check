@@ -325,7 +325,8 @@ namespace DotNetCheck
 
 		/// <summary>
 		/// Reads a password from the console with masked input (characters are not echoed).
-		/// Returns null if the user enters an empty password.
+		/// Returns null if the user enters an empty password, if standard input is redirected,
+		/// or if the console is otherwise unavailable (e.g., non-interactive terminal).
 		/// </summary>
 		internal static string ReadPasswordFromConsole()
 		{
