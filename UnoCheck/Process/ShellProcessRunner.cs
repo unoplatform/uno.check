@@ -209,8 +209,25 @@ namespace DotNetCheck
 				return;
 			}
 
-			process.StandardInput.Flush();
-			process.StandardInput.Close();
+			try
+			{
+				if (process.HasExited)
+				{
+					return;
+				}
+
+				process.StandardInput.Flush();
+				process.StandardInput.Close();
+			}
+			catch (IOException)
+			{
+			}
+			catch (ObjectDisposedException)
+			{
+			}
+			catch (InvalidOperationException)
+			{
+			}
 		}
 
 		public int ExitCode

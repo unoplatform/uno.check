@@ -249,10 +249,11 @@ namespace DotNetCheck
 		}
 
 		/// <summary>
-		/// Runs the command with sudo and TTY access so the user can enter their password.
+		/// Runs the command with sudo by prompting for the password in-process first,
+		/// then piping it to <c>sudo -S</c> via stdin.
 		/// Output is not captured (goes directly to the terminal) — use exit code for success/failure.
-		/// Uses sudo -S to read the password from stdin rather than the terminal, avoiding
-		/// the macOS sudo PTY relay that hangs indefinitely when started from .NET Process.Start.
+		/// This does not rely on sudo prompting on <c>/dev/tty</c>; it avoids the macOS sudo PTY relay
+		/// that can hang indefinitely when started from <c>.NET Process.Start</c>.
 		/// </summary>
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoInteractive(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
@@ -303,6 +304,14 @@ namespace DotNetCheck
 				catch (System.IO.IOException)
 				{
 					// Process exited before we could write (e.g., sudo not found).
+				}
+				catch (ObjectDisposedException)
+				{
+					// Process was already disposed.
+				}
+				catch (InvalidOperationException)
+				{
+					// StandardInput not available.
 				}
 
 				return Task.FromResult(cli.WaitForExit());
