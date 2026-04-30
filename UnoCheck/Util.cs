@@ -262,6 +262,8 @@ namespace DotNetCheck
 
 			if (!Util.IsWindows)
 			{
+				cancellationToken.ThrowIfCancellationRequested();
+
 				// Prompt the user for the sudo password before starting the process.
 				var password = ReadPasswordFromConsole();
 				if (password == null)
