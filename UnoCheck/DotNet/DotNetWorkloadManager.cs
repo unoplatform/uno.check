@@ -62,6 +62,29 @@ namespace DotNetCheck.DotNet
 			await CliInstallWithRollback(rollbackFile, workloads.Where(w => !w.Abstract).Select(w => w.Id), cancellationToken);
 		}
 
+		/// <summary>
+		/// Pre-flight handshake before the install/repair spinner starts. On Linux/macOS,
+		/// when the SDK directory isn't writable by the current user, a sudo password
+		/// prompt would otherwise happen INSIDE the AnsiConsole.Status live spinner and
+		/// be hidden from the user (see issue #515). Pre-caching sudo credentials here
+		/// — while the plain console is still active — lets the in-spinner elevation use
+		/// <c>sudo -n</c> against cached credentials and avoid prompting at all.
+		/// </summary>
+		public Task PrepareForInstallAsync(CancellationToken cancellationToken = default)
+		{
+			if (Util.IsWindows)
+				return Task.CompletedTask;
+
+			if (IsSdkPathWritable(SdkRoot))
+				return Task.CompletedTask;
+
+			if (Util.NonInteractive || Util.CI)
+				return Task.CompletedTask;
+
+			Util.Log($"SDK path '{SdkRoot}' is not writable by the current user; pre-caching sudo credentials before install.");
+			return Util.EnsureSudoCredentialsCachedAsync(cancellationToken);
+		}
+
 		internal static string[] BuildInstallArgs(string sdkVersion, string rollbackFile, IEnumerable<string> workloadIds, IEnumerable<string> packageSources, bool verbose)
 		{
 			var addSourceArg = "--source";

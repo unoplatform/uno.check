@@ -157,4 +157,67 @@ public class DotNetWorkloadFeedbackTests
 
         Assert.False(DotNetWorkloadManager.IsSdkPathWritable(nonExistentDir));
     }
+
+    [Fact]
+    public async Task PrepareForInstallAsync_WhenSdkPathWritable_CompletesWithoutPrompt()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "uno-check-prep-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var manager = new DotNetWorkloadManager(tempDir, "10.0.103");
+
+            // The SDK path is writable, so PrepareForInstallAsync must early-return
+            // and never invoke sudo.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await manager.PrepareForInstallAsync(cts.Token);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareForInstallAsync_WhenSdkPathNotWritableAndNonInteractive_DoesNotPrompt()
+    {
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), "uno-check-noexist-" + Guid.NewGuid().ToString("N"));
+        var previous = DotNetCheck.Util.NonInteractive;
+        try
+        {
+            DotNetCheck.Util.NonInteractive = true;
+            var manager = new DotNetWorkloadManager(nonExistentPath, "10.0.103");
+
+            // Non-existent path → not writable. With NonInteractive=true, the helper
+            // must early-return rather than invoke `sudo -v`, which would block
+            // waiting for input on /dev/tty.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await manager.PrepareForInstallAsync(cts.Token);
+        }
+        finally
+        {
+            DotNetCheck.Util.NonInteractive = previous;
+        }
+    }
+
+    [Fact]
+    public async Task EnsureSudoCredentialsCachedAsync_NonInteractive_DoesNotBlockOnConsole()
+    {
+        var previous = DotNetCheck.Util.NonInteractive;
+        try
+        {
+            DotNetCheck.Util.NonInteractive = true;
+
+            // In non-interactive mode the helper must never invoke `sudo -v`
+            // (which would block on /dev/tty). Result depends on whether the
+            // `sudo -n true` probe finds cached creds on the runner — the
+            // assertion here is only that the call returns within the timeout.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await DotNetCheck.Util.EnsureSudoCredentialsCachedAsync(cts.Token);
+        }
+        finally
+        {
+            DotNetCheck.Util.NonInteractive = previous;
+        }
+    }
 }

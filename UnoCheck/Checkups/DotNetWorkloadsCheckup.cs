@@ -248,6 +248,12 @@ namespace DotNetCheck.Checkups
 				{
 					sln.ReportStatus("Installing .NET workloads. This can take a long time depending on network speed, cache state, and package source availability.");
 
+					// On Linux/macOS, pre-cache sudo credentials BEFORE the live spinner
+					// starts. Otherwise the password prompt issued from inside the
+					// AnsiConsole.Status block is overwritten by the spinner and the
+					// user never sees it (issue #515).
+					await genericWorkloadManager.PrepareForInstallAsync(cancel);
+
 					if (history.GetEnvironmentVariableFlagSet("DOTNET_FORCE"))
 					{
 						try
