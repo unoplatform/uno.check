@@ -324,6 +324,59 @@ namespace DotNetCheck
 		}
 
 		/// <summary>
+		/// Ensures sudo credentials are cached so subsequent <c>sudo -n</c> calls succeed
+		/// without prompting. Must be called BEFORE entering any AnsiConsole.Status/Live
+		/// block — otherwise sudo's password prompt is hidden by the live spinner.
+		///
+		/// Returns true on Windows (no-op), or when <c>sudo -n true</c> already succeeds
+		/// (cached credentials or NOPASSWD). Otherwise invokes <c>sudo -v</c> directly:
+		/// sudo prompts the user on <c>/dev/tty</c>, masks input, handles retries, and
+		/// refreshes its own credential cache — uno-check never touches the password.
+		///
+		/// Returns false in CI / non-interactive mode when credentials aren't already
+		/// cached, or when sudo exits non-zero (wrong password, sudo not installed).
+		/// Callers should proceed and let the actual elevated command surface a clear
+		/// error if elevation truly isn't available.
+		/// </summary>
+		public static async Task<bool> EnsureSudoCredentialsCachedAsync(System.Threading.CancellationToken cancellationToken = default)
+		{
+			if (IsWindows)
+				return true;
+
+			cancellationToken.ThrowIfCancellationRequested();
+
+			// Probe with `sudo -n true`. If it succeeds, creds are already cached or
+			// the user has NOPASSWD — no prompt required.
+			var probe = await WrapShellCommandWithSudoNoPrompt("true", null, false, cancellationToken, Array.Empty<string>());
+			if (probe.ExitCode == 0)
+				return true;
+
+			if (NonInteractive || CI)
+				return false;
+
+			Console.WriteLine("Elevated privileges are required to install .NET workloads.");
+
+			// `sudo -v`: validate (refresh cached credentials) without running a command.
+			// Sudo prompts the user directly on /dev/tty, masks input itself, and applies
+			// its own retry policy. We do NOT capture the password — RedirectInput is
+			// false so sudo reads the TTY, RedirectOutput is false so sudo's "Password:"
+			// prompt and any error messages go straight to the user's terminal.
+			//
+			// `sudo -v` exits quickly without launching a child, so the macOS PTY relay
+			// (exec_pty) hang that motivated `sudo -S` for long-running installs does
+			// not apply here.
+			var validate = new ShellProcessRunner(new ShellProcessRunnerOptions("sudo", "-v", cancellationToken)
+			{
+				RedirectInput = false,
+				RedirectOutput = false,
+				UseSystemShell = false
+			});
+
+			var result = validate.WaitForExit();
+			return result.ExitCode == 0;
+		}
+
+		/// <summary>
 		/// Reads a password from the console with masked input (characters are not echoed).
 		/// Returns null if the user enters an empty password, if standard input is redirected,
 		/// or if the console is otherwise unavailable (e.g., non-interactive terminal).
