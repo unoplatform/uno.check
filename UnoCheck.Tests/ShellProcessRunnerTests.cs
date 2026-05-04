@@ -139,6 +139,112 @@ public class ShellProcessRunnerTests
 	}
 
 	[Fact]
+	public void Write_ThenFlushAndCloseInput_DeliversBytesAndEofToChild()
+	{
+		// Repro for the sudo -S flow: child must receive the piped bytes AND see EOF
+		// on stdin so it can terminate. Using `cat` / `findstr` as a stand-in for sudo:
+		// they read stdin until EOF and echo to stdout.
+		var (executable, args) = GetStdinEchoCommand();
+
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions(executable, args)
+		{
+			UseSystemShell = false,
+			RedirectInput = true,
+			RedirectOutput = true,
+		});
+
+		sut.Write("hello-from-stdin\n");
+		sut.FlushAndCloseInput();
+
+		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+		while (!sut.HasExited && !cts.IsCancellationRequested)
+		{
+			Thread.Sleep(50);
+		}
+
+		var result = sut.WaitForExit();
+		var output = string.Join(Environment.NewLine, result.StandardOutput);
+
+		Assert.False(cts.IsCancellationRequested, "Child process did not terminate after EOF on stdin.");
+		Assert.Contains("hello-from-stdin", output);
+		Assert.Equal(0, result.ExitCode);
+	}
+
+	[Fact]
+	public void FlushAndCloseInput_WhenRedirectInputDisabled_IsNoOp()
+	{
+		// Caller without RedirectInput must not throw — the helper should detect the
+		// configuration and short-circuit before touching StandardInput.
+		var (executable, args) = GetShellCommand(
+			"echo done",
+			"echo done");
+
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions(executable, args)
+		{
+			UseSystemShell = false,
+			RedirectInput = false,
+			RedirectOutput = true,
+		});
+
+		var ex = Record.Exception(() => sut.FlushAndCloseInput());
+		var result = sut.WaitForExit();
+
+		Assert.Null(ex);
+		Assert.Equal(0, result.ExitCode);
+	}
+
+	[Fact]
+	public void FlushAndCloseInput_AfterProcessExited_IsNoOp()
+	{
+		// In the sudo -S flow the child can exit before we write the password
+		// (e.g., sudo not installed). FlushAndCloseInput must not throw in that case.
+		var (executable, args) = GetShellCommand(
+			"echo quick && exit 0",
+			"echo quick & exit /b 0");
+
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions(executable, args)
+		{
+			UseSystemShell = false,
+			RedirectInput = true,
+			RedirectOutput = true,
+		});
+
+		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		while (!sut.HasExited && !cts.IsCancellationRequested)
+		{
+			Thread.Sleep(50);
+		}
+
+		Assert.True(sut.HasExited, "Test precondition: child should have exited quickly.");
+
+		var ex = Record.Exception(() => sut.FlushAndCloseInput());
+
+		Assert.Null(ex);
+	}
+
+	[Fact]
+	public void FlushAndCloseInput_CalledTwice_DoesNotThrow()
+	{
+		// Defensive: a caller that double-invokes the helper (e.g., on cleanup paths)
+		// must not see the second call surface an ObjectDisposedException.
+		var (executable, args) = GetStdinEchoCommand();
+
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions(executable, args)
+		{
+			UseSystemShell = false,
+			RedirectInput = true,
+			RedirectOutput = true,
+		});
+
+		sut.Write("ping\n");
+		sut.FlushAndCloseInput();
+		var ex = Record.Exception(() => sut.FlushAndCloseInput());
+		sut.WaitForExit();
+
+		Assert.Null(ex);
+	}
+
+	[Fact]
 	public void Run_ReturnsSuccess_ForSimpleCommand()
 	{
 		var (executable, args) = GetShellCommand(
@@ -159,6 +265,18 @@ public class ShellProcessRunnerTests
 		}
 
 		return ("/bin/sh", $"-c \"{unixCommand}\"");
+	}
+
+	private static (string executable, string args) GetStdinEchoCommand()
+	{
+		// Reads stdin until EOF and echoes to stdout — a stand-in for sudo's
+		// "consume bytes piped via -S then run the child" behavior.
+		if (OperatingSystem.IsWindows())
+		{
+			return ("findstr.exe", "/R \".*\"");
+		}
+
+		return ("/bin/cat", string.Empty);
 	}
 
 	private static (string executable, string args) GetNeverEndingCommand()
