@@ -328,6 +328,36 @@ public class DotNetWorkloadFeedbackTests
             failingCommand: "dotnet workload list --machine-readable"));
     }
 
+    [Theory]
+    [InlineData("dotnet", "dotnet")]
+    [InlineData("/usr/local/share/dotnet/dotnet", "/usr/local/share/dotnet/dotnet")]
+    [InlineData("", "\"\"")]
+    public void QuoteForProcessArgs_LeavesArgumentsWithoutSpecialCharsUnchanged(string input, string expected)
+    {
+        Assert.Equal(expected, DotNetCheck.Util.QuoteForProcessArgs(input));
+    }
+
+    [Theory]
+    [InlineData("/Users/My Name/.dotnet/dotnet", "\"/Users/My Name/.dotnet/dotnet\"")]
+    [InlineData("path\twith tab", "\"path\twith tab\"")]
+    public void QuoteForProcessArgs_WrapsArgumentsContainingWhitespace(string input, string expected)
+    {
+        // Repro for the sudo-retry quoting bug: dotnet executable paths under directories
+        // that contain a space (e.g., "/Users/My Name/...") must be wrapped so the .NET
+        // argv tokenizer keeps them as a single token instead of splitting on whitespace.
+        Assert.Equal(expected, DotNetCheck.Util.QuoteForProcessArgs(input));
+    }
+
+    [Theory]
+    [InlineData("a\"b", "\"a\\\"b\"")]
+    [InlineData("a\\\"b", "\"a\\\\\\\"b\"")]
+    [InlineData("ends-with\\", "\"ends-with\\\\\"")]
+    [InlineData("trailing\\\\", "\"trailing\\\\\\\\\"")]
+    public void QuoteForProcessArgs_EscapesEmbeddedQuotesAndBackslashes(string input, string expected)
+    {
+        Assert.Equal(expected, DotNetCheck.Util.QuoteForProcessArgs(input));
+    }
+
     [Fact]
     public async Task EnsureSudoCredentialsCachedAsync_NonInteractive_DoesNotBlockOnConsole()
     {
