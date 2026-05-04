@@ -174,36 +174,50 @@ namespace DotNetCheck.DotNet
 
 			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
-			// Throw if this failed with a bad exit code
-			if (r.ExitCode != 0)
-				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+			var installed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			var userContextSucceeded = r.ExitCode == 0;
 
-			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
-
-			// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
-			var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
-			if (workloads?.installed?.Length > 0)
+			if (userContextSucceeded)
 			{
-				return workloads.installed;
+				var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
+
+				// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
+				var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
+				if (workloads?.installed is { Length: > 0 } userInstalled)
+				{
+					foreach (var id in userInstalled)
+						installed.Add(id);
+				}
 			}
 
-			// On Linux/macOS, workload installs may have happened under elevated context.
-			// Probe with `sudo -n` (no prompt) so checks don't get stuck waiting for credentials.
+			// On Linux/macOS, workload installs may be split between the current user and a previous
+			// elevated install, and the user-context call may also fail outright with "Inadequate
+			// permissions" when the SDK is root-owned. Probe with `sudo -n` (no prompt, fails fast
+			// without cached credentials) and union the results so mixed/elevated installs aren't
+			// reported as missing.
+			var sudoContextSucceeded = false;
 			if (!Util.IsWindows)
 			{
 				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 				if (sudoResult.ExitCode == 0)
 				{
+					sudoContextSucceeded = true;
 					var sudoOutput = FilterWorkloadCommandOutput(string.Join(" ", sudoResult.StandardOutput), ListOutputMarker);
 					var sudoWorkloads = JsonSerializer.Deserialize<WorkloadListResult>(sudoOutput);
-					if (sudoWorkloads?.installed?.Length > 0)
+					if (sudoWorkloads?.installed is { Length: > 0 } sudoInstalled)
 					{
-						return sudoWorkloads.installed;
+						foreach (var id in sudoInstalled)
+							installed.Add(id);
 					}
 				}
 			}
 
-			return workloads?.installed ?? [];
+			// Only throw if both the user and sudo probes failed; a sudo success on its own is
+			// enough to report the elevated workload state.
+			if (!userContextSucceeded && !sudoContextSucceeded)
+				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+
+			return installed.ToArray();
 		}
 
 		public async Task<(string id, string version, string sdkVersion)[]> GetAvailableWorkloads()
