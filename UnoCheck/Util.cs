@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using Spectre.Console;
 
@@ -286,8 +287,13 @@ namespace DotNetCheck
 				// This avoids the macOS PTY relay (exec_pty) that hangs when the child
 				// process exits but the relay's stdin (the terminal) stays open.
 				// sudo -p "": suppress sudo's own "Password:" prompt since we already prompted.
+				// Quote `cmd` because UseSystemShell=false means .NET (not the shell) tokenizes
+				// the args string with Windows-style rules — an unquoted dotnet path that contains
+				// spaces (e.g., a home directory like "/Users/My Name/.dotnet/dotnet") would
+				// otherwise be split into multiple tokens and the retry would fail with
+				// "command not found".
 				actualCmd = "sudo";
-				actualArgs = $"-S -p \"\" {cmd} {actualArgs}";
+				actualArgs = $"-S -p \"\" {QuoteForProcessArgs(cmd)} {actualArgs}";
 
 				// Mirror captured output to the console so the user can watch live progress.
 				// Skip the callback when verbose is on, since ShellProcessRunner already echoes
@@ -333,6 +339,64 @@ namespace DotNetCheck
 
 			var fallback = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose });
 			return Task.FromResult(fallback.WaitForExit());
+		}
+
+		/// <summary>
+		/// Quotes <paramref name="arg"/> for inclusion in a <c>ProcessStartInfo.Arguments</c> string
+		/// when <c>UseShellExecute</c> is false. Both Windows and Unix .NET parse that string with
+		/// Windows-style command-line rules, so an argument containing spaces, tabs, quotes, or
+		/// backslashes must be wrapped in double quotes with embedded quotes/backslashes escaped.
+		/// </summary>
+		internal static string QuoteForProcessArgs(string arg)
+		{
+			if (string.IsNullOrEmpty(arg))
+				return "\"\"";
+
+			var needsQuoting = false;
+			foreach (var c in arg)
+			{
+				if (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '"' || c == '\\')
+				{
+					needsQuoting = true;
+					break;
+				}
+			}
+
+			if (!needsQuoting)
+				return arg;
+
+			// Each backslash that precedes a literal quote (or the closing quote) must be doubled,
+			// and each embedded quote must be backslash-escaped. Lone backslashes that don't precede
+			// a quote are passed through as-is.
+			var sb = new StringBuilder(arg.Length + 2);
+			sb.Append('"');
+			var backslashes = 0;
+			foreach (var c in arg)
+			{
+				if (c == '\\')
+				{
+					backslashes++;
+				}
+				else if (c == '"')
+				{
+					sb.Append('\\', backslashes * 2 + 1);
+					sb.Append('"');
+					backslashes = 0;
+				}
+				else
+				{
+					if (backslashes > 0)
+					{
+						sb.Append('\\', backslashes);
+						backslashes = 0;
+					}
+					sb.Append(c);
+				}
+			}
+			if (backslashes > 0)
+				sb.Append('\\', backslashes * 2);
+			sb.Append('"');
+			return sb.ToString();
 		}
 
 		/// <summary>
