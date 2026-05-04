@@ -29,8 +29,11 @@ verbose is on, so no Status block is active and the prompt is plain.
 
 ## Decision
 
-Do the sudo handshake **before** the spinner starts, and **never capture
-the user's password** in our own process.
+Do the sudo handshake **before** the spinner starts, and on the happy path
+**never capture the user's password** in our own process. (The
+`WrapShellCommandWithSudoInteractive` fallback described below still does,
+for the narrow case where the pre-handshake's cached credentials expire
+before the install runs — see *What stays password-capturing*.)
 
 Concretely:
 
@@ -51,8 +54,12 @@ Concretely:
    `RetryWithSudo` path), which now succeeds against the freshly cached
    credentials and never prompts again.
 
-The key property: **uno-check never reads, stores, or pipes the user's
-password**.
+The key property of the happy path: **uno-check never reads, stores, or
+pipes the user's password** when the pre-handshake succeeds and the cached
+credentials are still valid by the time the install runs. The
+`WrapShellCommandWithSudoInteractive` fallback (see below) is the only
+shipping code path that still captures the password; with the
+pre-handshake in place it is rarely reached in practice.
 
 ## Rationale
 
@@ -62,7 +69,9 @@ user types their password into `sudo`, the program they already trust on
 their machine. Sudo handles masking, retries, lecture, syslog audit, and
 the tty-tickets cache.
 
-Capturing the password ourselves was strictly worse on three axes:
+Capturing the password ourselves on the *primary* path was strictly worse
+on three axes (the same trade-offs still apply to the fallback path, which
+is why we want to remove it once the pre-handshake is proven sufficient):
 
 - **Memory exposure.** A managed `string` lives on the GC heap and cannot
   be zeroed out. A core dump or attached debugger could read it after the
