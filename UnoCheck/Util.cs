@@ -251,9 +251,12 @@ namespace DotNetCheck
 		/// <summary>
 		/// Runs the command with sudo by prompting for the password in-process first,
 		/// then piping it to <c>sudo -S</c> via stdin.
-		/// Output is not captured (goes directly to the terminal) — use exit code for success/failure.
-		/// This does not rely on sudo prompting on <c>/dev/tty</c>; it avoids the macOS sudo PTY relay
-		/// that can hang indefinitely when started from <c>.NET Process.Start</c>.
+		/// Output is captured (so failure diagnostics survive in the returned result) and
+		/// also mirrored to the terminal so the user can watch live progress for long-running
+		/// installs/repairs. This does not rely on sudo prompting on <c>/dev/tty</c>; it avoids
+		/// the macOS sudo PTY relay that can hang indefinitely when started from
+		/// <c>.NET Process.Start</c>, because stdin is a pipe (not a TTY) and is closed after
+		/// the password write.
 		/// </summary>
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoInteractive(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
@@ -286,12 +289,21 @@ namespace DotNetCheck
 				actualCmd = "sudo";
 				actualArgs = $"-S -p \"\" {cmd} {actualArgs}";
 
+				// Mirror captured output to the console so the user can watch live progress.
+				// Skip the callback when verbose is on, since ShellProcessRunner already echoes
+				// every line under verbose mode and we'd otherwise double-print.
+				Action<string> echo = (Util.Verbose || verbose) ? null : static line => Console.WriteLine(line);
+
 				var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken)
 				{
 					WorkingDirectory = workingDir,
 					Verbose = verbose,
 					RedirectInput = true,
-					RedirectOutput = false,
+					// Capture stdout/stderr so failure diagnostics (disk full, specific error
+					// lines, etc.) reach BuildCliFailureMessage instead of being lost to the
+					// terminal.
+					RedirectOutput = true,
+					OutputCallback = echo,
 					UseSystemShell = false
 				});
 
