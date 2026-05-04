@@ -174,20 +174,13 @@ namespace DotNetCheck.DotNet
 
 			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
-			var installed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			string[] userInstalled = null;
 			var userContextSucceeded = r.ExitCode == 0;
 
 			if (userContextSucceeded)
 			{
 				var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
-
-				// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
-				var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
-				if (workloads?.installed is { Length: > 0 } userInstalled)
-				{
-					foreach (var id in userInstalled)
-						installed.Add(id);
-				}
+				userInstalled = ParseInstalledWorkloadIds(output);
 			}
 
 			// On Linux/macOS, workload installs may be split between the current user and a previous
@@ -195,28 +188,73 @@ namespace DotNetCheck.DotNet
 			// permissions" when the SDK is root-owned. Probe with `sudo -n` (no prompt, fails fast
 			// without cached credentials) and union the results so mixed/elevated installs aren't
 			// reported as missing.
+			string[] sudoInstalled = null;
+			var sudoContextAttempted = !Util.IsWindows;
 			var sudoContextSucceeded = false;
-			if (!Util.IsWindows)
+			if (sudoContextAttempted)
 			{
 				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 				if (sudoResult.ExitCode == 0)
 				{
 					sudoContextSucceeded = true;
 					var sudoOutput = FilterWorkloadCommandOutput(string.Join(" ", sudoResult.StandardOutput), ListOutputMarker);
-					var sudoWorkloads = JsonSerializer.Deserialize<WorkloadListResult>(sudoOutput);
-					if (sudoWorkloads?.installed is { Length: > 0 } sudoInstalled)
-					{
-						foreach (var id in sudoInstalled)
-							installed.Add(id);
-					}
+					sudoInstalled = ParseInstalledWorkloadIds(sudoOutput);
 				}
 			}
 
-			// Only throw if both the user and sudo probes failed; a sudo success on its own is
-			// enough to report the elevated workload state.
-			if (!userContextSucceeded && !sudoContextSucceeded)
-				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+			return CombineInstalledWorkloads(
+				userContextSucceeded,
+				userInstalled,
+				sudoContextAttempted,
+				sudoContextSucceeded,
+				sudoInstalled,
+				"dotnet " + string.Join(' ', args));
+		}
 
+		// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
+		internal static string[] ParseInstalledWorkloadIds(string json)
+		{
+			if (string.IsNullOrWhiteSpace(json))
+				return [];
+
+			try
+			{
+				var workloads = JsonSerializer.Deserialize<WorkloadListResult>(json);
+				return workloads?.installed ?? [];
+			}
+			catch (JsonException)
+			{
+				return [];
+			}
+		}
+
+		/// <summary>
+		/// Merges the user-context and sudo-context workload lists into a single deduplicated set.
+		/// Throws only when both probes failed — a successful sudo probe alone is sufficient to
+		/// report the elevated workload state on a permission-mismatched setup.
+		/// </summary>
+		internal static string[] CombineInstalledWorkloads(
+			bool userContextSucceeded,
+			string[] userInstalled,
+			bool sudoContextAttempted,
+			bool sudoContextSucceeded,
+			string[] sudoInstalled,
+			string failingCommand)
+		{
+			if (!userContextSucceeded && !(sudoContextAttempted && sudoContextSucceeded))
+				throw new Exception($"Workload command failed: `{failingCommand}`");
+
+			var installed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			if (userContextSucceeded && userInstalled != null)
+			{
+				foreach (var id in userInstalled)
+					installed.Add(id);
+			}
+			if (sudoContextAttempted && sudoContextSucceeded && sudoInstalled != null)
+			{
+				foreach (var id in sudoInstalled)
+					installed.Add(id);
+			}
 			return installed.ToArray();
 		}
 
