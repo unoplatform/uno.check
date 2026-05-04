@@ -201,6 +201,134 @@ public class DotNetWorkloadFeedbackTests
     }
 
     [Fact]
+    public void ParseInstalledWorkloadIds_ParsesMachineReadableJson()
+    {
+        var ids = DotNetWorkloadManager.ParseInstalledWorkloadIds(
+            "{\"installed\":[\"wasm-tools\",\"android\"],\"updateAvailable\":[]}");
+
+        Assert.Equal(["wasm-tools", "android"], ids);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not json at all")]
+    [InlineData("{\"installed\":null}")]
+    public void ParseInstalledWorkloadIds_ReturnsEmptyOnUnparseableInput(string json)
+    {
+        var ids = DotNetWorkloadManager.ParseInstalledWorkloadIds(json);
+
+        Assert.Empty(ids);
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_UserOnlySucceeds_ReturnsUserList()
+    {
+        var ids = DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: true,
+            userInstalled: ["wasm-tools"],
+            sudoContextAttempted: true,
+            sudoContextSucceeded: false,
+            sudoInstalled: null,
+            failingCommand: "dotnet workload list --machine-readable");
+
+        Assert.Equal(["wasm-tools"], ids);
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_SudoOnlySucceeds_ReturnsSudoList()
+    {
+        // Repro for the "Inadequate permissions" case: user-context call returns
+        // non-zero before producing parseable JSON, but the sudo-context probe
+        // discovers the root-owned workloads.
+        var ids = DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: false,
+            userInstalled: null,
+            sudoContextAttempted: true,
+            sudoContextSucceeded: true,
+            sudoInstalled: ["android", "ios"],
+            failingCommand: "dotnet workload list --machine-readable");
+
+        Assert.Equal(["android", "ios"], ids.OrderBy(x => x).ToArray());
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_MixedUserAndSudoInstalls_UnionsBoth()
+    {
+        // Repro for mixed installs: one workload installed for the current user,
+        // another previously installed via sudo. The combined result must include
+        // both, otherwise the checkup flags the root-owned workload as missing.
+        var ids = DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: true,
+            userInstalled: ["wasm-tools", "maui"],
+            sudoContextAttempted: true,
+            sudoContextSucceeded: true,
+            sudoInstalled: ["maui", "android"],
+            failingCommand: "dotnet workload list --machine-readable");
+
+        Assert.Equal(["android", "maui", "wasm-tools"], ids.OrderBy(x => x).ToArray());
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_DeduplicatesCaseInsensitively()
+    {
+        var ids = DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: true,
+            userInstalled: ["WASM-tools"],
+            sudoContextAttempted: true,
+            sudoContextSucceeded: true,
+            sudoInstalled: ["wasm-tools"],
+            failingCommand: "dotnet workload list --machine-readable");
+
+        Assert.Single(ids);
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_WindowsSkipsSudo_ReturnsUserList()
+    {
+        // On Windows the sudo probe is never attempted; combining must still
+        // return the user list rather than throwing.
+        var ids = DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: true,
+            userInstalled: ["wasm-tools"],
+            sudoContextAttempted: false,
+            sudoContextSucceeded: false,
+            sudoInstalled: null,
+            failingCommand: "dotnet workload list --machine-readable");
+
+        Assert.Equal(["wasm-tools"], ids);
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_BothProbesFail_ThrowsWithCommand()
+    {
+        var ex = Assert.Throws<Exception>(() => DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: false,
+            userInstalled: null,
+            sudoContextAttempted: true,
+            sudoContextSucceeded: false,
+            sudoInstalled: null,
+            failingCommand: "dotnet workload list --machine-readable"));
+
+        Assert.Contains("Workload command failed", ex.Message);
+        Assert.Contains("dotnet workload list --machine-readable", ex.Message);
+    }
+
+    [Fact]
+    public void CombineInstalledWorkloads_UserFailsOnWindows_Throws()
+    {
+        // Windows has no sudo fallback; if the user-context call fails, the
+        // method must throw rather than silently returning an empty list.
+        Assert.Throws<Exception>(() => DotNetWorkloadManager.CombineInstalledWorkloads(
+            userContextSucceeded: false,
+            userInstalled: null,
+            sudoContextAttempted: false,
+            sudoContextSucceeded: false,
+            sudoInstalled: null,
+            failingCommand: "dotnet workload list --machine-readable"));
+    }
+
+    [Fact]
     public async Task EnsureSudoCredentialsCachedAsync_NonInteractive_DoesNotBlockOnConsole()
     {
         var previous = DotNetCheck.Util.NonInteractive;
