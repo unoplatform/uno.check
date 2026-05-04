@@ -237,16 +237,43 @@ namespace DotNetCheck
 			{
 				actualCmd = ShellProcessRunner.MacOSShell;
 				var sudoPrefix = noPrompt ? "sudo -n" : "sudo";
-				// Escape single quotes in command and args to prevent shell injection
-				var escapedCmd = cmd.Replace("'", "'\\''")
-					;
-				var escapedArgs = actualArgs.Replace("'", "'\\''")
-					;
-				actualArgs = $"-c '{sudoPrefix} {escapedCmd} {escapedArgs}'";
+				// Wrap `cmd` in shell double quotes so a DOTNET_ROOT or SDK path that contains
+				// spaces (e.g., "/Users/me/My SDK/dotnet") survives tokenization by the inner
+				// shell once the outer `'...'` block is unwrapped. Without this, sudo retries on
+				// such installs fail with "command not found".
+				var quotedCmd = ShellDoubleQuote(cmd);
+				// Args are interpolated raw into the outer single-quoted block, so escape any
+				// embedded single quotes so they don't terminate the block early. Per-arg spaces
+				// are the caller's responsibility (e.g., BuildInstallArgs pre-wraps paths with
+				// inner double quotes).
+				var escapedArgs = actualArgs.Replace("'", "'\\''");
+				actualArgs = $"-c '{sudoPrefix} {quotedCmd} {escapedArgs}'";
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
 			return Task.FromResult(cli.WaitForExit());
+		}
+
+		/// <summary>
+		/// Wraps <paramref name="s"/> in POSIX shell double quotes, escaping the four characters
+		/// that retain special meaning inside <c>"..."</c>: <c>\</c>, <c>$</c>, <c>`</c>, and <c>"</c>.
+		/// Suitable for embedding inside an outer single-quoted shell block as a single token.
+		/// </summary>
+		internal static string ShellDoubleQuote(string s)
+		{
+			if (s == null)
+				return "\"\"";
+
+			var sb = new StringBuilder(s.Length + 2);
+			sb.Append('"');
+			foreach (var c in s)
+			{
+				if (c == '\\' || c == '$' || c == '`' || c == '"')
+					sb.Append('\\');
+				sb.Append(c);
+			}
+			sb.Append('"');
+			return sb.ToString();
 		}
 
 		/// <summary>

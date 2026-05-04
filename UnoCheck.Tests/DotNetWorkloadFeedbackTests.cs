@@ -358,6 +358,30 @@ public class DotNetWorkloadFeedbackTests
         Assert.Equal(expected, DotNetCheck.Util.QuoteForProcessArgs(input));
     }
 
+    [Theory]
+    [InlineData("dotnet", "\"dotnet\"")]
+    [InlineData("/usr/local/share/dotnet/dotnet", "\"/usr/local/share/dotnet/dotnet\"")]
+    [InlineData("/Users/me/My SDK/dotnet", "\"/Users/me/My SDK/dotnet\"")]
+    [InlineData("", "\"\"")]
+    public void ShellDoubleQuote_WrapsArgumentInDoubleQuotes(string input, string expected)
+    {
+        // Repro for the user-configurable DOTNET_ROOT case: a path with spaces inside
+        // the outer single-quoted shell block must be wrapped so the inner shell doesn't
+        // split on the embedded space.
+        Assert.Equal(expected, DotNetCheck.Util.ShellDoubleQuote(input));
+    }
+
+    [Theory]
+    [InlineData("a$b", "\"a\\$b\"")]
+    [InlineData("a`b", "\"a\\`b\"")]
+    [InlineData("a\"b", "\"a\\\"b\"")]
+    [InlineData("a\\b", "\"a\\\\b\"")]
+    [InlineData("$HOME/dotnet", "\"\\$HOME/dotnet\"")]
+    public void ShellDoubleQuote_EscapesShellSpecialChars(string input, string expected)
+    {
+        Assert.Equal(expected, DotNetCheck.Util.ShellDoubleQuote(input));
+    }
+
     [Fact]
     public async Task EnsureSudoCredentialsCachedAsync_NonInteractive_DoesNotBlockOnConsole()
     {
