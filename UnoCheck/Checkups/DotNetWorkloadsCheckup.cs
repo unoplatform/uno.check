@@ -248,18 +248,27 @@ namespace DotNetCheck.Checkups
 				{
 					sln.ReportStatus("Installing .NET workloads. This can take a long time depending on network speed, cache state, and package source availability.");
 
-					// On Linux/macOS, pre-cache sudo credentials BEFORE the live spinner
+					// On Linux/macOS, pre-cache sudo credentials BEFORE each live spinner
 					// starts. Otherwise the password prompt issued from inside the
 					// AnsiConsole.Status block is overwritten by the spinner and the
 					// user never sees it (issue #515). If the handshake itself fails
 					// (wrong password, sudo unavailable), bail before entering the
 					// spinner — the in-spinner sudo -S retry would prompt from
 					// underneath the live status and reproduce the original bug.
-					if (!await genericWorkloadManager.PrepareForInstallAsync(cancel))
+					// We re-handshake before the install step too: a long DOTNET_FORCE
+					// repair can outlast the sudo timestamp_timeout (default 5 min on
+					// macOS, 0 on hardened systems), and once the cached ticket expires
+					// the in-spinner sudo -n retry would fall back to the interactive
+					// prompt path hidden under the live status.
+					async Task EnsureSudoHandshakeOrAbort()
 					{
+						if (await genericWorkloadManager.PrepareForInstallAsync(cancel))
+							return;
 						sln.ReportStatus("Elevated privileges are required to install .NET workloads, but the sudo handshake did not succeed. Please rerun `uno-check --fix` and supply the correct password when prompted.");
 						throw new InvalidOperationException("sudo elevation handshake failed; aborting workload install before the live spinner starts.");
 					}
+
+					await EnsureSudoHandshakeOrAbort();
 
 					if (history.GetEnvironmentVariableFlagSet("DOTNET_FORCE"))
 					{
@@ -277,6 +286,8 @@ namespace DotNetCheck.Checkups
 						{
 							ReportStatus("Warning: Workload repair failed", CheckStatus.Warning);
 						}
+
+						await EnsureSudoHandshakeOrAbort();
 					}
 
 					try
