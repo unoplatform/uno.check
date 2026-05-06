@@ -49,10 +49,20 @@ Concretely:
    `sudo -v` directly. Sudo prints its own `Password:` prompt straight to
    `/dev/tty`, masks input itself, applies its own retry policy (3 attempts
    by default), and refreshes its own credential cache.
-4. After `sudo -v` returns, the spinner starts. The actual install runs
-   under `sudo -n dotnet workload install ...` (via the existing
-   `RetryWithSudo` path), which now succeeds against the freshly cached
-   credentials and never prompts again.
+4. After `sudo -v` returns successfully, the spinner starts. The actual
+   install runs under `sudo -n dotnet workload install ...` (via the
+   existing `RetryWithSudo` path), which now succeeds against the freshly
+   cached credentials and never prompts again.
+5. If `sudo -v` exits non-zero (wrong password three times, sudo not
+   installed, policy denial), `PrepareForInstallAsync` returns `false` and
+   `DotNetWorkloadsCheckup` aborts the install **before** entering the
+   spinner. Entering the spinner with un-cached credentials would let
+   `RetryWithSudo` fall through to `WrapShellCommandWithSudoInteractive`,
+   whose in-process `Console.Write("Password: ")` would be hidden by the
+   live `AnsiConsole.Status` block — exactly the regression this design is
+   meant to prevent. Aborting cleanly leaves the user with sudo's own error
+   already on screen plus a plain-console message instructing them to
+   rerun `uno-check --fix`.
 
 The key property of the happy path: **uno-check never reads, stores, or
 pipes the user's password** when the pre-handshake succeeds and the cached
@@ -129,8 +139,8 @@ satisfied the pre-handshake covers all practical cases.
 | Windows | n/a | n/a | n/a | no-op |
 | Linux/macOS | yes | n/a | n/a | no-op (no elevation needed) |
 | Linux/macOS | no | yes | n/a | no-op (creds already cached) |
-| Linux/macOS | no | no | yes | returns false; install will surface a clear error |
-| Linux/macOS | no | no | no | `sudo -v` prompts the user; install proceeds with `sudo -n` |
+| Linux/macOS | no | no | yes | returns true (no-op); install will surface its own clear error |
+| Linux/macOS | no | no | no | `sudo -v` prompts the user; on success install proceeds with `sudo -n`; on failure `PrepareForInstallAsync` returns false and the checkup aborts before the spinner |
 
 ## Files
 

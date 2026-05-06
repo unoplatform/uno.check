@@ -69,17 +69,24 @@ namespace DotNetCheck.DotNet
 		/// be hidden from the user (see issue #515). Pre-caching sudo credentials here
 		/// — while the plain console is still active — lets the in-spinner elevation use
 		/// <c>sudo -n</c> against cached credentials and avoid prompting at all.
+		///
+		/// Returns true if the install can proceed (Windows, writable SDK, non-interactive
+		/// run, or sudo credentials successfully cached). Returns false only when the
+		/// interactive <c>sudo -v</c> handshake itself failed (wrong password, sudo
+		/// unavailable, policy denial); callers must NOT enter the live spinner in that
+		/// case, because the in-spinner sudo retry would re-prompt for the password from
+		/// underneath the spinner and reproduce issue #515.
 		/// </summary>
-		public Task PrepareForInstallAsync(CancellationToken cancellationToken = default)
+		public Task<bool> PrepareForInstallAsync(CancellationToken cancellationToken = default)
 		{
 			if (Util.IsWindows)
-				return Task.CompletedTask;
+				return Task.FromResult(true);
 
 			if (IsSdkPathWritable(SdkRoot))
-				return Task.CompletedTask;
+				return Task.FromResult(true);
 
 			if (Util.NonInteractive || Util.CI)
-				return Task.CompletedTask;
+				return Task.FromResult(true);
 
 			Util.Log($"SDK path '{SdkRoot}' is not writable by the current user; pre-caching sudo credentials before install.");
 			return Util.EnsureSudoCredentialsCachedAsync(cancellationToken);
