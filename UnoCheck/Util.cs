@@ -507,12 +507,27 @@ namespace DotNetCheck
 			// `sudo -v` exits quickly without launching a child, so the macOS PTY relay
 			// (exec_pty) hang that motivated `sudo -S` for long-running installs does
 			// not apply here.
-			var validate = new ShellProcessRunner(new ShellProcessRunnerOptions("sudo", "-v", cancellationToken)
+			//
+			// The constructor's Process.Start throws Win32Exception on hosts where sudo
+			// isn't installed at all (minimal Linux/macOS containers). Catching it here
+			// honors the documented contract — return false so the caller's friendly
+			// "handshake did not succeed" path runs — instead of letting an unhandled
+			// exception bypass it.
+			ShellProcessRunner validate;
+			try
 			{
-				RedirectInput = false,
-				RedirectOutput = false,
-				UseSystemShell = false
-			});
+				validate = new ShellProcessRunner(new ShellProcessRunnerOptions("sudo", "-v", cancellationToken)
+				{
+					RedirectInput = false,
+					RedirectOutput = false,
+					UseSystemShell = false
+				});
+			}
+			catch (System.ComponentModel.Win32Exception ex)
+			{
+				Log($"Could not launch `sudo -v`: {ex.Message}. Treating elevation as unavailable.");
+				return false;
+			}
 
 			var result = validate.WaitForExit();
 			return result.ExitCode == 0;
