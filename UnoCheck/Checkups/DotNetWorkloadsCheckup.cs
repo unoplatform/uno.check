@@ -264,7 +264,12 @@ namespace DotNetCheck.Checkups
 					{
 						if (await genericWorkloadManager.PrepareForInstallAsync(cancel))
 							return;
-						sln.ReportStatus("Elevated privileges are required to install .NET workloads, but the sudo handshake did not succeed. Please rerun `uno-check --fix` and supply the correct password when prompted.");
+						// PrepareForInstallAsync returns false for any reason `sudo -v` fails to
+						// establish cached credentials: wrong password, sudo policy denial,
+						// sudo not installed, or no TTY available to prompt. Keep the message
+						// generic so we don't push the user toward the "wrong password" fix when
+						// the actual cause is a missing/denied sudo.
+						sln.ReportStatus("Elevated privileges are required to install .NET workloads, but the sudo handshake did not succeed. This can happen if the password was incorrect, sudo policy denied elevation, sudo isn't installed, or no terminal was available for the prompt. Please resolve the elevation issue and rerun `uno-check --fix`.");
 						throw new InvalidOperationException("sudo elevation handshake failed; aborting workload install before the live spinner starts.");
 					}
 
