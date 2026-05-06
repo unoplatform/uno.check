@@ -245,6 +245,36 @@ public class ShellProcessRunnerTests
 	}
 
 	[Fact]
+	public void RunWithStdinPassword_WhenExecutableMissing_ReturnsFailureResultInsteadOfThrowing()
+	{
+		// Repro for the sudo-fallback gap: on minimal Linux/macOS environments without
+		// sudo, ShellProcessRunner's constructor would otherwise throw Win32Exception
+		// before WrapShellCommandWithSudoInteractive could return a ShellProcessResult,
+		// turning the elevation fallback into an unhandled exception. The helper must
+		// catch the launch failure and surface an actionable result.
+		var bogusExe = Path.Combine(Path.GetTempPath(), "uno-check-bogus-" + Guid.NewGuid().ToString("N"));
+
+		var ex = Record.Exception(() =>
+		{
+			var result = DotNetCheck.Util.RunWithStdinPassword(
+				bogusExe,
+				args: string.Empty,
+				workingDir: null,
+				verbose: false,
+				outputCallback: null,
+				password: "ignored",
+				cancellationToken: default);
+
+			Assert.NotEqual(0, result.ExitCode);
+			Assert.Contains(
+				result.StandardError,
+				line => line.Contains("Unable to launch", StringComparison.Ordinal));
+		});
+
+		Assert.Null(ex);
+	}
+
+	[Fact]
 	public void Run_ReturnsSuccess_ForSimpleCommand()
 	{
 		var (executable, args) = GetShellCommand(

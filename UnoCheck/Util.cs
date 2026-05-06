@@ -327,7 +327,38 @@ namespace DotNetCheck
 				// every line under verbose mode and we'd otherwise double-print.
 				Action<string> echo = (Util.Verbose || verbose) ? null : static line => Console.WriteLine(line);
 
-				var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken)
+				return Task.FromResult(RunWithStdinPassword(actualCmd, actualArgs, workingDir, verbose, echo, password, cancellationToken));
+			}
+
+			var fallback = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose });
+			return Task.FromResult(fallback.WaitForExit());
+		}
+
+		/// <summary>
+		/// Launches <paramref name="exe"/> with stdin redirected, writes <paramref name="password"/>
+		/// followed by a newline, closes stdin, and returns the captured result. Used by
+		/// <see cref="WrapShellCommandWithSudoInteractive"/> to feed the user's password to
+		/// <c>sudo -S</c>.
+		///
+		/// On minimal environments where the launched binary is missing (e.g., a stripped-down
+		/// Linux container without sudo), <c>Process.Start</c> throws <see cref="System.ComponentModel.Win32Exception"/>
+		/// from inside the <c>ShellProcessRunner</c> constructor. Catching it here turns that into
+		/// an actionable <c>ShellProcessResult</c> instead of an unhandled exception that would
+		/// crash the caller mid-install.
+		/// </summary>
+		internal static ShellProcessRunner.ShellProcessResult RunWithStdinPassword(
+			string exe,
+			string args,
+			string workingDir,
+			bool verbose,
+			Action<string> outputCallback,
+			string password,
+			System.Threading.CancellationToken cancellationToken)
+		{
+			ShellProcessRunner cli;
+			try
+			{
+				cli = new ShellProcessRunner(new ShellProcessRunnerOptions(exe, args, cancellationToken)
 				{
 					WorkingDirectory = workingDir,
 					Verbose = verbose,
@@ -336,36 +367,44 @@ namespace DotNetCheck
 					// lines, etc.) reach BuildCliFailureMessage instead of being lost to the
 					// terminal.
 					RedirectOutput = true,
-					OutputCallback = echo,
+					OutputCallback = outputCallback,
 					UseSystemShell = false
 				});
-
-				// Pipe the password to sudo's stdin, then close the stream so sudo
-				// (and any child processes) see EOF. This ensures the PTY relay's
-				// stdin side is closed, allowing it to exit after the child finishes.
-				try
-				{
-					cli.Write(password + "\n");
-					cli.FlushAndCloseInput();
-				}
-				catch (System.IO.IOException)
-				{
-					// Process exited before we could write (e.g., sudo not found).
-				}
-				catch (ObjectDisposedException)
-				{
-					// Process was already disposed.
-				}
-				catch (InvalidOperationException)
-				{
-					// StandardInput not available.
-				}
-
-				return Task.FromResult(cli.WaitForExit());
+			}
+			catch (System.ComponentModel.Win32Exception ex)
+			{
+				return new ShellProcessRunner.ShellProcessResult(
+					new List<string>(),
+					new List<string>
+					{
+						$"Unable to launch `{exe}` for elevation: {ex.Message}. " +
+						"Install sudo (or rerun this command as root) and try again."
+					},
+					-1);
 			}
 
-			var fallback = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose });
-			return Task.FromResult(fallback.WaitForExit());
+			// Pipe the password to sudo's stdin, then close the stream so sudo
+			// (and any child processes) see EOF. This ensures the PTY relay's
+			// stdin side is closed, allowing it to exit after the child finishes.
+			try
+			{
+				cli.Write(password + "\n");
+				cli.FlushAndCloseInput();
+			}
+			catch (System.IO.IOException)
+			{
+				// Process exited before we could write (e.g., sudo not found).
+			}
+			catch (ObjectDisposedException)
+			{
+				// Process was already disposed.
+			}
+			catch (InvalidOperationException)
+			{
+				// StandardInput not available.
+			}
+
+			return cli.WaitForExit();
 		}
 
 		/// <summary>
