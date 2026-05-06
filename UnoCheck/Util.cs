@@ -535,14 +535,23 @@ namespace DotNetCheck
 
 		/// <summary>
 		/// Reads a password from the console with masked input (characters are not echoed).
-		/// Returns null if the user enters an empty password, if standard input is redirected,
-		/// or if the console is otherwise unavailable (e.g., non-interactive terminal).
+		/// Returns null if the user enters an empty password, if standard input or
+		/// standard output is redirected (e.g., <c>uno-check --fix &gt; log.txt</c> sends
+		/// the "Password:" prompt to the log file and leaves the user typing blind), or
+		/// if the console is otherwise unavailable (non-interactive terminal). Callers
+		/// must treat null as "elevation prompt is not possible here" and surface the
+		/// generic handshake-failed message.
 		/// </summary>
 		internal static string ReadPasswordFromConsole()
 		{
 			try
 			{
-				if (Console.IsInputRedirected)
+				// Treat redirected stdin OR stdout as non-interactive. Stdin redirection
+				// means Console.ReadKey can't read the password; stdout redirection means
+				// the "Password:" prompt would go to the redirected stream and the user
+				// would never see it (and would type a hidden password into the terminal
+				// blind). Either case must bail out before prompting.
+				if (Console.IsInputRedirected || Console.IsOutputRedirected)
 					return null;
 
 				Console.Write("Password: ");
