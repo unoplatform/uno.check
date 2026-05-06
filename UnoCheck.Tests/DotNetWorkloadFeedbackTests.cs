@@ -168,9 +168,9 @@ public class DotNetWorkloadFeedbackTests
             var manager = new DotNetWorkloadManager(tempDir, "10.0.103");
 
             // The SDK path is writable, so PrepareForInstallAsync must early-return
-            // and never invoke sudo.
+            // true (proceed) and never invoke sudo.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await manager.PrepareForInstallAsync(cts.Token);
+            Assert.True(await manager.PrepareForInstallAsync(cts.Token));
         }
         finally
         {
@@ -189,10 +189,11 @@ public class DotNetWorkloadFeedbackTests
             var manager = new DotNetWorkloadManager(nonExistentPath, "10.0.103");
 
             // Non-existent path → not writable. With NonInteractive=true, the helper
-            // must early-return rather than invoke `sudo -v`, which would block
-            // waiting for input on /dev/tty.
+            // must early-return true (the install will surface its own error if
+            // elevation truly isn't available) rather than invoke `sudo -v`, which
+            // would block waiting for input on /dev/tty.
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await manager.PrepareForInstallAsync(cts.Token);
+            Assert.True(await manager.PrepareForInstallAsync(cts.Token));
         }
         finally
         {

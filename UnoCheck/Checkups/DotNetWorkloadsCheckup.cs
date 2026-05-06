@@ -251,8 +251,15 @@ namespace DotNetCheck.Checkups
 					// On Linux/macOS, pre-cache sudo credentials BEFORE the live spinner
 					// starts. Otherwise the password prompt issued from inside the
 					// AnsiConsole.Status block is overwritten by the spinner and the
-					// user never sees it (issue #515).
-					await genericWorkloadManager.PrepareForInstallAsync(cancel);
+					// user never sees it (issue #515). If the handshake itself fails
+					// (wrong password, sudo unavailable), bail before entering the
+					// spinner — the in-spinner sudo -S retry would prompt from
+					// underneath the live status and reproduce the original bug.
+					if (!await genericWorkloadManager.PrepareForInstallAsync(cancel))
+					{
+						sln.ReportStatus("Elevated privileges are required to install .NET workloads, but the sudo handshake did not succeed. Please rerun `uno-check --fix` and supply the correct password when prompted.");
+						throw new InvalidOperationException("sudo elevation handshake failed; aborting workload install before the live spinner starts.");
+					}
 
 					if (history.GetEnvironmentVariableFlagSet("DOTNET_FORCE"))
 					{
