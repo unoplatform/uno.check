@@ -229,9 +229,17 @@ namespace DotNetCheck.DotNet
 				var workloads = JsonSerializer.Deserialize<WorkloadListResult>(json);
 				return workloads?.installed ?? [];
 			}
-			catch (JsonException)
+			catch (JsonException ex)
 			{
-				return [];
+				// Don't swallow: an unparseable response from `dotnet workload list
+				// --machine-readable` would otherwise look identical to "no workloads
+				// installed", producing false missing-workload reports and triggering
+				// unnecessary repair/install attempts. Surface the format mismatch so
+				// the caller fails loudly instead.
+				var snippet = json.Length > 500 ? json[..500] + "…" : json;
+				throw new InvalidDataException(
+					$"Could not parse `dotnet workload list --machine-readable` output. Output: {snippet}",
+					ex);
 			}
 		}
 

@@ -213,13 +213,28 @@ public class DotNetWorkloadFeedbackTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("not json at all")]
     [InlineData("{\"installed\":null}")]
-    public void ParseInstalledWorkloadIds_ReturnsEmptyOnUnparseableInput(string json)
+    public void ParseInstalledWorkloadIds_ReturnsEmptyOnEmptyOrNullInstalled(string json)
     {
+        // Whitespace-only inputs and a JSON document that explicitly sets `installed`
+        // to null both legitimately mean "no workloads installed" — return empty.
         var ids = DotNetWorkloadManager.ParseInstalledWorkloadIds(json);
 
         Assert.Empty(ids);
+    }
+
+    [Theory]
+    [InlineData("not json at all")]
+    [InlineData("{\"installed\":")]
+    [InlineData("{\"installed\":[\"wasm-tools\"")]
+    public void ParseInstalledWorkloadIds_ThrowsOnMalformedJson(string json)
+    {
+        // Malformed CLI output must NOT be silently mapped to "no workloads
+        // installed" — that would hide CLI format drift behind false missing-workload
+        // reports and trigger spurious install/repair attempts.
+        var ex = Assert.Throws<InvalidDataException>(
+            () => DotNetWorkloadManager.ParseInstalledWorkloadIds(json));
+        Assert.Contains("Could not parse", ex.Message);
     }
 
     [Fact]
