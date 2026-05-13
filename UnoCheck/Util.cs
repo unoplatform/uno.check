@@ -304,8 +304,8 @@ namespace DotNetCheck
 						new List<string>
 						{
 							"Unable to perform sudo elevation because no password could be read from the console. " +
-							"This can happen when standard input is redirected or the terminal is non-interactive. " +
-							"Please rerun this command in an interactive terminal or configure passwordless sudo."
+							"This can happen when standard input or standard output is redirected, the terminal is non-interactive, " +
+							"or no password was entered. Please rerun this command in an interactive terminal, avoid redirecting console I/O while entering the password, or configure passwordless sudo."
 						},
 						-1));
 				}
