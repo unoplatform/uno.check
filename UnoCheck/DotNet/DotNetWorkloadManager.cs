@@ -48,6 +48,54 @@ namespace DotNetCheck.DotNet
 
 		public readonly string[] NuGetPackageSources;
 
+		/// <summary>
+		/// Environment overlay applied to every <c>dotnet workload</c> invocation in this class so
+		/// the CLI emits English output regardless of the host's UI culture. The matchers in
+		/// <see cref="ShouldRetryWithSudo"/> and <see cref="BuildCliFailureMessage"/> look for
+		/// English substrings ("permission denied", "no space left on device", etc.); without
+		/// this override, those checks silently miss on, e.g., fr-FR or ja-JP hosts where dotnet
+		/// localizes its diagnostics.
+		///
+		/// Applied two ways: (1) the static ctor copies the entries into
+		/// <see cref="Util.EnvironmentVariables"/>, which <c>ShellProcessRunner</c> auto-injects
+		/// into every child process — handles the non-sudo path. (2) The sudo call sites in
+		/// <see cref="RetryWithSudo"/> and <see cref="GetInstalledWorkloads"/> invoke through
+		/// <c>env</c> so the pin survives sudo's default <c>env_reset</c>, which would otherwise
+		/// strip it before launching <c>dotnet</c>.
+		///
+		/// Mirrors <c>DotNetNewUnoTemplatesCheckup.GetDotNetNewInstalledList</c> which already
+		/// pins the same variable for the same reason.
+		/// </summary>
+		internal static readonly IReadOnlyDictionary<string, string> WorkloadCliEnv = new Dictionary<string, string>
+		{
+			["DOTNET_CLI_UI_LANGUAGE"] = "en-US",
+		};
+
+		static DotNetWorkloadManager()
+		{
+			foreach (var kv in WorkloadCliEnv)
+				Util.EnvironmentVariables[kv.Key] = kv.Value;
+		}
+
+		/// <summary>
+		/// Builds an args list for invoking <paramref name="dotnetExe"/> through <c>env</c>, with
+		/// <see cref="WorkloadCliEnv"/> re-set inside the elevated child. Required for sudo paths
+		/// because sudo's default <c>env_reset</c> strips any var we set on the parent process.
+		/// <paramref name="dotnetExe"/> is shell-double-quoted so a path containing spaces
+		/// (e.g., <c>/Users/My Name/.dotnet/dotnet</c>) survives both the <c>sh -c '…'</c>
+		/// interpolation used by <see cref="Util.WrapShellCommandWithSudoNoPrompt"/> and the
+		/// .NET argv tokenizer used by <see cref="Util.WrapShellCommandWithSudoInteractive"/>.
+		/// </summary>
+		static string[] BuildEnglishCliSudoArgs(string dotnetExe, string[] args)
+		{
+			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
+			foreach (var kv in WorkloadCliEnv)
+				result.Add($"{kv.Key}={kv.Value}");
+			result.Add(Util.ShellDoubleQuote(dotnetExe));
+			result.AddRange(args);
+			return result.ToArray();
+		}
+
 		readonly string DotNetCliWorkingDir;
 
 		public async Task Repair(CancellationToken cancellationToken = default)
@@ -200,7 +248,9 @@ namespace DotNetCheck.DotNet
 			var sudoContextSucceeded = false;
 			if (sudoContextAttempted)
 			{
-				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
+				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
+				// — see WorkloadCliEnv for the full rationale.
+				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, BuildEnglishCliSudoArgs(dotnetExe, args.ToArray()));
 				if (sudoResult.ExitCode == 0)
 				{
 					sudoContextSucceeded = true;
@@ -424,8 +474,11 @@ namespace DotNetCheck.DotNet
 		/// </summary>
 		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
 		{
-			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD)
-			var result = await Util.WrapShellCommandWithSudoNoPrompt(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD).
+			// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset —
+			// see WorkloadCliEnv for the full rationale.
+			var sudoArgs = BuildEnglishCliSudoArgs(dotnetExe, args);
+			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, sudoArgs);
 
 			if (result.ExitCode == 0)
 				return result;
@@ -436,7 +489,7 @@ namespace DotNetCheck.DotNet
 
 			// Interactive mode: prompt for password in-process and pipe to sudo -S
 			Util.Log("Elevated privileges required. You may be prompted for your password.");
-			return await Util.WrapShellCommandWithSudoInteractive(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			return await Util.WrapShellCommandWithSudoInteractive("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, sudoArgs);
 		}
 
 		internal static bool ShouldRetryWithSudo(string output)

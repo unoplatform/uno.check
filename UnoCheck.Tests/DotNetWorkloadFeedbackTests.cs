@@ -1,3 +1,4 @@
+using DotNetCheck;
 using DotNetCheck.Checkups;
 using DotNetCheck.DotNet;
 
@@ -396,6 +397,24 @@ public class DotNetWorkloadFeedbackTests
     public void ShellDoubleQuote_EscapesShellSpecialChars(string input, string expected)
     {
         Assert.Equal(expected, DotNetCheck.Util.ShellDoubleQuote(input));
+    }
+
+    [Fact]
+    public void DotNetWorkloadManager_PinsDotnetUiLanguageToEnglishGlobally()
+    {
+        // The matchers in ShouldRetryWithSudo and BuildCliFailureMessage look for English
+        // substrings like "permission denied" / "no space left on device". On a non-en-US
+        // host the dotnet CLI localizes those, so the checks would silently miss. The class
+        // pins DOTNET_CLI_UI_LANGUAGE=en-US two ways: the static dict (used inline at the
+        // sudo call sites to outflank sudo's env_reset) and a static-ctor side effect that
+        // adds the same pair to Util.EnvironmentVariables so the non-sudo path inherits it.
+        // Guard against either being dropped or renamed.
+
+        // Touching the static field forces the type initializer to run.
+        var pin = DotNetWorkloadManager.WorkloadCliEnv;
+
+        Assert.Equal("en-US", pin["DOTNET_CLI_UI_LANGUAGE"]);
+        Assert.Equal("en-US", Util.EnvironmentVariables["DOTNET_CLI_UI_LANGUAGE"]);
     }
 
     [Fact]
