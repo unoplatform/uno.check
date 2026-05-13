@@ -1,6 +1,6 @@
 # Sudo elevation for `dotnet workload install`
 
-Status: accepted, implemented in `dev/agzi/issue-515-workload-context-followup`
+Status: accepted, implemented
 Issue: [unoplatform/uno.check#515](https://github.com/unoplatform/uno.check/issues/515)
 
 ## Problem
