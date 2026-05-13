@@ -81,17 +81,40 @@ namespace DotNetCheck.DotNet
 		/// Builds an args list for invoking <paramref name="dotnetExe"/> through <c>env</c>, with
 		/// <see cref="WorkloadCliEnv"/> re-set inside the elevated child. Required for sudo paths
 		/// because sudo's default <c>env_reset</c> strips any var we set on the parent process.
-		/// <paramref name="dotnetExe"/> is shell-double-quoted so a path containing spaces
-		/// (e.g., <c>/Users/My Name/.dotnet/dotnet</c>) survives both the <c>sh -c '…'</c>
-		/// interpolation used by <see cref="Util.WrapShellCommandWithSudoNoPrompt"/> and the
-		/// .NET argv tokenizer used by <see cref="Util.WrapShellCommandWithSudoInteractive"/>.
+		///
+		/// Two variants exist because the consumers tokenize the args differently and the dotnet
+		/// path has to be quoted for the right consumer. Use this one for callers that hand the
+		/// args off to <see cref="Util.WrapShellCommandWithSudoNoPrompt"/>: that helper interpolates
+		/// the args into a <c>sh -c '…'</c> block, so <paramref name="dotnetExe"/> is shell-double-
+		/// quoted to survive the inner shell's re-interpretation of <c>$</c>/backtick/<c>\</c>/<c>"</c>
+		/// and to keep paths with spaces as one token.
 		/// </summary>
-		static string[] BuildEnglishCliSudoArgs(string dotnetExe, string[] args)
+		static string[] BuildEnglishCliSudoArgsForShell(string dotnetExe, string[] args)
 		{
 			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
 			foreach (var kv in WorkloadCliEnv)
 				result.Add($"{kv.Key}={kv.Value}");
 			result.Add(Util.ShellDoubleQuote(dotnetExe));
+			result.AddRange(args);
+			return result.ToArray();
+		}
+
+		/// <summary>
+		/// Companion to <see cref="BuildEnglishCliSudoArgsForShell"/> for the non-shell sudo path
+		/// (<see cref="Util.WrapShellCommandWithSudoInteractive"/>, <c>UseSystemShell=false</c>).
+		/// That helper joins args with spaces and lets .NET re-tokenize the resulting string with
+		/// Windows-style argv rules — there is no shell, so the <c>\$</c>/<c>\`</c>/<c>\\</c>
+		/// escapes <see cref="Util.ShellDoubleQuote"/> inserts would survive as literal characters
+		/// and corrupt the dotnet path. <see cref="Util.QuoteForProcessArgs"/> produces quoting that
+		/// the argv parser will round-trip back to the original path (and still wraps space-bearing
+		/// paths in <c>"…"</c>).
+		/// </summary>
+		static string[] BuildEnglishCliSudoArgsForProcess(string dotnetExe, string[] args)
+		{
+			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
+			foreach (var kv in WorkloadCliEnv)
+				result.Add($"{kv.Key}={kv.Value}");
+			result.Add(Util.QuoteForProcessArgs(dotnetExe));
 			result.AddRange(args);
 			return result.ToArray();
 		}
@@ -250,7 +273,7 @@ namespace DotNetCheck.DotNet
 			{
 				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
 				// — see WorkloadCliEnv for the full rationale.
-				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, BuildEnglishCliSudoArgs(dotnetExe, args.ToArray()));
+				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, BuildEnglishCliSudoArgsForShell(dotnetExe, args.ToArray()));
 				if (sudoResult.ExitCode == 0)
 				{
 					sudoContextSucceeded = true;
@@ -476,9 +499,12 @@ namespace DotNetCheck.DotNet
 		{
 			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD).
 			// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset —
-			// see WorkloadCliEnv for the full rationale.
-			var sudoArgs = BuildEnglishCliSudoArgs(dotnetExe, args);
-			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, sudoArgs);
+			// see WorkloadCliEnv for the full rationale. The two sudo helpers tokenize args
+			// differently (sh -c '…' vs Windows-style argv), so the dotnet path has to be quoted
+			// for the right consumer — see the two builders for why a single shared array breaks
+			// when the path contains $/backtick/quote/backslash.
+			var shellSudoArgs = BuildEnglishCliSudoArgsForShell(dotnetExe, args);
+			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, shellSudoArgs);
 
 			if (result.ExitCode == 0)
 				return result;
@@ -489,7 +515,8 @@ namespace DotNetCheck.DotNet
 
 			// Interactive mode: prompt for password in-process and pipe to sudo -S
 			Util.Log("Elevated privileges required. You may be prompted for your password.");
-			return await Util.WrapShellCommandWithSudoInteractive("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, sudoArgs);
+			var processSudoArgs = BuildEnglishCliSudoArgsForProcess(dotnetExe, args);
+			return await Util.WrapShellCommandWithSudoInteractive("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, processSudoArgs);
 		}
 
 		internal static bool ShouldRetryWithSudo(string output)
