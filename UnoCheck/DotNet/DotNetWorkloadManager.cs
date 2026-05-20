@@ -48,6 +48,77 @@ namespace DotNetCheck.DotNet
 
 		public readonly string[] NuGetPackageSources;
 
+		/// <summary>
+		/// Environment overlay applied to every <c>dotnet workload</c> invocation in this class so
+		/// the CLI emits English output regardless of the host's UI culture. The matchers in
+		/// <see cref="ShouldRetryWithSudo"/> and <see cref="BuildCliFailureMessage"/> look for
+		/// English substrings ("permission denied", "no space left on device", etc.); without
+		/// this override, those checks silently miss on, e.g., fr-FR or ja-JP hosts where dotnet
+		/// localizes its diagnostics.
+		///
+		/// Applied two ways: (1) the static ctor copies the entries into
+		/// <see cref="Util.EnvironmentVariables"/>, which <c>ShellProcessRunner</c> auto-injects
+		/// into every child process — handles the non-sudo path. (2) The sudo call sites in
+		/// <see cref="RetryWithSudo"/> and <see cref="GetInstalledWorkloads"/> invoke through
+		/// <c>env</c> so the pin survives sudo's default <c>env_reset</c>, which would otherwise
+		/// strip it before launching <c>dotnet</c>.
+		///
+		/// Mirrors <c>DotNetNewUnoTemplatesCheckup.GetDotNetNewInstalledList</c> which already
+		/// pins the same variable for the same reason.
+		/// </summary>
+		internal static readonly IReadOnlyDictionary<string, string> WorkloadCliEnv = new Dictionary<string, string>
+		{
+			["DOTNET_CLI_UI_LANGUAGE"] = "en-US",
+		};
+
+		static DotNetWorkloadManager()
+		{
+			foreach (var kv in WorkloadCliEnv)
+				Util.EnvironmentVariables[kv.Key] = kv.Value;
+		}
+
+		/// <summary>
+		/// Builds an args list for invoking <paramref name="dotnetExe"/> through <c>env</c>, with
+		/// <see cref="WorkloadCliEnv"/> re-set inside the elevated child. Required for sudo paths
+		/// because sudo's default <c>env_reset</c> strips any var we set on the parent process.
+		///
+		/// Two variants exist because the consumers tokenize the args differently and the dotnet
+		/// path has to be quoted for the right consumer. Use this one for callers that hand the
+		/// args off to <see cref="Util.WrapShellCommandWithSudoNoPrompt"/>: that helper interpolates
+		/// the args into a <c>sh -c '…'</c> block, so <paramref name="dotnetExe"/> is shell-double-
+		/// quoted to survive the inner shell's re-interpretation of <c>$</c>/backtick/<c>\</c>/<c>"</c>
+		/// and to keep paths with spaces as one token.
+		/// </summary>
+		static string[] BuildEnglishCliSudoArgsForShell(string dotnetExe, string[] args)
+		{
+			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
+			foreach (var kv in WorkloadCliEnv)
+				result.Add($"{kv.Key}={kv.Value}");
+			result.Add(Util.ShellDoubleQuote(dotnetExe));
+			result.AddRange(args);
+			return result.ToArray();
+		}
+
+		/// <summary>
+		/// Companion to <see cref="BuildEnglishCliSudoArgsForShell"/> for the non-shell sudo path
+		/// (<see cref="Util.WrapShellCommandWithSudoInteractive"/>, <c>UseSystemShell=false</c>).
+		/// That helper joins args with spaces and lets .NET re-tokenize the resulting string with
+		/// Windows-style argv rules — there is no shell, so the <c>\$</c>/<c>\`</c>/<c>\\</c>
+		/// escapes <see cref="Util.ShellDoubleQuote"/> inserts would survive as literal characters
+		/// and corrupt the dotnet path. <see cref="Util.QuoteForProcessArgs"/> produces quoting that
+		/// the argv parser will round-trip back to the original path (and still wraps space-bearing
+		/// paths in <c>"…"</c>).
+		/// </summary>
+		static string[] BuildEnglishCliSudoArgsForProcess(string dotnetExe, string[] args)
+		{
+			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
+			foreach (var kv in WorkloadCliEnv)
+				result.Add($"{kv.Key}={kv.Value}");
+			result.Add(Util.QuoteForProcessArgs(dotnetExe));
+			result.AddRange(args);
+			return result.ToArray();
+		}
+
 		readonly string DotNetCliWorkingDir;
 
 		public async Task Repair(CancellationToken cancellationToken = default)
@@ -60,6 +131,36 @@ namespace DotNetCheck.DotNet
 			var rollbackFile = WriteRollbackFile(workloads);
 
 			await CliInstallWithRollback(rollbackFile, workloads.Where(w => !w.Abstract).Select(w => w.Id), cancellationToken);
+		}
+
+		/// <summary>
+		/// Pre-flight handshake before the install/repair spinner starts. On Linux/macOS,
+		/// when the SDK directory isn't writable by the current user, a sudo password
+		/// prompt would otherwise happen INSIDE the AnsiConsole.Status live spinner and
+		/// be hidden from the user (see issue #515). Pre-caching sudo credentials here
+		/// — while the plain console is still active — lets the in-spinner elevation use
+		/// <c>sudo -n</c> against cached credentials and avoid prompting at all.
+		///
+		/// Returns true if the install can proceed (Windows, writable SDK, non-interactive
+		/// run, or sudo credentials successfully cached). Returns false only when the
+		/// interactive <c>sudo -v</c> handshake itself failed (wrong password, sudo
+		/// unavailable, policy denial); callers must NOT enter the live spinner in that
+		/// case, because the in-spinner sudo retry would re-prompt for the password from
+		/// underneath the spinner and reproduce issue #515.
+		/// </summary>
+		public Task<bool> PrepareForInstallAsync(CancellationToken cancellationToken = default)
+		{
+			if (Util.IsWindows)
+				return Task.FromResult(true);
+
+			if (IsSdkPathWritable(SdkRoot))
+				return Task.FromResult(true);
+
+			if (Util.NonInteractive || Util.CI)
+				return Task.FromResult(true);
+
+			Util.Log($"SDK path '{SdkRoot}' is not writable by the current user; pre-caching sudo credentials before install.");
+			return Util.EnsureSudoCredentialsCachedAsync(cancellationToken);
 		}
 
 		internal static string[] BuildInstallArgs(string sdkVersion, string rollbackFile, IEnumerable<string> workloadIds, IEnumerable<string> packageSources, bool verbose)
@@ -151,16 +252,98 @@ namespace DotNetCheck.DotNet
 
 			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, args.ToArray());
 
-			// Throw if this failed with a bad exit code
-			if (r.ExitCode != 0)
-				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+			string[] userInstalled = null;
+			var userContextSucceeded = r.ExitCode == 0;
 
-			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
+			if (userContextSucceeded)
+			{
+				var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), ListOutputMarker);
+				userInstalled = ParseInstalledWorkloadIds(output);
+			}
 
-			// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
-			var workloads = JsonSerializer.Deserialize<WorkloadListResult>(output);
+			// On Linux/macOS, workload installs may be split between the current user and a previous
+			// elevated install, and the user-context call may also fail outright with "Inadequate
+			// permissions" when the SDK is root-owned. Probe with `sudo -n` (no prompt, fails fast
+			// without cached credentials) and union the results so mixed/elevated installs aren't
+			// reported as missing.
+			string[] sudoInstalled = null;
+			var sudoContextAttempted = !Util.IsWindows;
+			var sudoContextSucceeded = false;
+			if (sudoContextAttempted)
+			{
+				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
+				// — see WorkloadCliEnv for the full rationale.
+				var sudoResult = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, BuildEnglishCliSudoArgsForShell(dotnetExe, args.ToArray()));
+				if (sudoResult.ExitCode == 0)
+				{
+					sudoContextSucceeded = true;
+					var sudoOutput = FilterWorkloadCommandOutput(string.Join(" ", sudoResult.StandardOutput), ListOutputMarker);
+					sudoInstalled = ParseInstalledWorkloadIds(sudoOutput);
+				}
+			}
 
-			return workloads.installed;
+			return CombineInstalledWorkloads(
+				userContextSucceeded,
+				userInstalled,
+				sudoContextAttempted,
+				sudoContextSucceeded,
+				sudoInstalled,
+				"dotnet " + string.Join(' ', args));
+		}
+
+		// example of output {"installed":["wasm-tools"],"updateAvailable":[]}
+		internal static string[] ParseInstalledWorkloadIds(string json)
+		{
+			if (string.IsNullOrWhiteSpace(json))
+				return [];
+
+			try
+			{
+				var workloads = JsonSerializer.Deserialize<WorkloadListResult>(json);
+				return workloads?.installed ?? [];
+			}
+			catch (JsonException ex)
+			{
+				// Don't swallow: an unparseable response from `dotnet workload list
+				// --machine-readable` would otherwise look identical to "no workloads
+				// installed", producing false missing-workload reports and triggering
+				// unnecessary repair/install attempts. Surface the format mismatch so
+				// the caller fails loudly instead.
+				var snippet = json.Length > 500 ? json[..500] + "…" : json;
+				throw new InvalidDataException(
+					$"Could not parse `dotnet workload list --machine-readable` output. Output: {snippet}",
+					ex);
+			}
+		}
+
+		/// <summary>
+		/// Merges the user-context and sudo-context workload lists into a single deduplicated set.
+		/// Throws only when both probes failed — a successful sudo probe alone is sufficient to
+		/// report the elevated workload state on a permission-mismatched setup.
+		/// </summary>
+		internal static string[] CombineInstalledWorkloads(
+			bool userContextSucceeded,
+			string[] userInstalled,
+			bool sudoContextAttempted,
+			bool sudoContextSucceeded,
+			string[] sudoInstalled,
+			string failingCommand)
+		{
+			if (!userContextSucceeded && !(sudoContextAttempted && sudoContextSucceeded))
+				throw new Exception($"Workload command failed: `{failingCommand}`");
+
+			var installed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			if (userContextSucceeded && userInstalled != null)
+			{
+				foreach (var id in userInstalled)
+					installed.Add(id);
+			}
+			if (sudoContextAttempted && sudoContextSucceeded && sudoInstalled != null)
+			{
+				foreach (var id in sudoInstalled)
+					installed.Add(id);
+			}
+			return installed.ToArray();
 		}
 
 		public async Task<(string id, string version, string sdkVersion)[]> GetAvailableWorkloads()
@@ -203,7 +386,25 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			ShellProcessRunner.ShellProcessResult r;
+
+			// On Linux/macOS, check if SDK path is writable before attempting user-level install.
+			// If not writable, use sudo directly to avoid doomed user-level attempts that
+			// fail with download/restore errors instead of clear permission-denied messages.
+			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
+			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+			else
+			{
+				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+				{
+					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+				}
+			}
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -220,7 +421,22 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			var r = await Util.WrapShellCommandWithSudo(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+			ShellProcessRunner.ShellProcessResult r;
+
+			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
+			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+			else
+			{
+				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+				{
+					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+				}
+			}
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -272,6 +488,70 @@ namespace DotNetCheck.DotNet
 			}
 
 			return $"{operationName} failed: `{command}`";
+		}
+
+		/// <summary>
+		/// Retries the command with sudo. Always tries <c>sudo -n</c> (non-interactive) first
+		/// to leverage cached credentials or NOPASSWD rules without hanging. In interactive mode,
+		/// falls back to prompting for the password in-process and piping it to <c>sudo -S</c>.
+		/// </summary>
+		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
+		{
+			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD).
+			// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset —
+			// see WorkloadCliEnv for the full rationale. The two sudo helpers tokenize args
+			// differently (sh -c '…' vs Windows-style argv), so the dotnet path has to be quoted
+			// for the right consumer — see the two builders for why a single shared array breaks
+			// when the path contains $/backtick/quote/backslash.
+			var shellSudoArgs = BuildEnglishCliSudoArgsForShell(dotnetExe, args);
+			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, shellSudoArgs);
+
+			if (result.ExitCode == 0)
+				return result;
+
+			// In CI/non-interactive mode, sudo -n is the only option
+			if (Util.NonInteractive || Util.CI)
+				return result;
+
+			// Interactive mode: prompt for password in-process and pipe to sudo -S
+			Util.Log("Elevated privileges required. You may be prompted for your password.");
+			var processSudoArgs = BuildEnglishCliSudoArgsForProcess(dotnetExe, args);
+			return await Util.WrapShellCommandWithSudoInteractive("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, processSudoArgs);
+		}
+
+		internal static bool ShouldRetryWithSudo(string output)
+		{
+			if (string.IsNullOrWhiteSpace(output))
+			{
+				return false;
+			}
+
+			return output.IndexOf("permission denied", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("access to the path", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("EACCES", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("are required to perform this operation", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("inadequate permissions", StringComparison.OrdinalIgnoreCase) >= 0
+				|| output.IndexOf("elevated privileges", StringComparison.OrdinalIgnoreCase) >= 0;
+		}
+
+		/// <summary>
+		/// Checks whether the current user can write to the SDK directory.
+		/// Used to proactively decide whether sudo is needed before attempting workload install,
+		/// avoiding doomed user-level attempts that fail with download/restore errors
+		/// rather than clear permission-denied messages.
+		/// </summary>
+		internal static bool IsSdkPathWritable(string sdkRoot)
+		{
+			try
+			{
+				var testPath = Path.Combine(sdkRoot, $".uno-check-write-test-{Guid.NewGuid():N}");
+				using (File.Create(testPath, 1, FileOptions.DeleteOnClose)) { }
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
 		private string FilterWorkloadCommandOutput(string output, (string begin, string end) marker)

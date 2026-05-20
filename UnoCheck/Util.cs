@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using Spectre.Console;
 
@@ -218,7 +219,16 @@ namespace DotNetCheck
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, string[] args)
 			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, args);
 
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoNoPrompt(string cmd, string workingDir, bool verbose, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, System.Threading.CancellationToken.None, true, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoNoPrompt(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, cancellationToken, true, args);
+
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+			=> WrapShellCommandWithSudo(cmd, workingDir, verbose, cancellationToken, false, args);
+
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, bool noPrompt, string[] args)
 		{
 			var actualCmd = cmd;
 			var actualArgs = string.Join(" ", args);
@@ -226,11 +236,349 @@ namespace DotNetCheck
 			if (!Util.IsWindows)
 			{
 				actualCmd = ShellProcessRunner.MacOSShell;
-				actualArgs = $"-c 'sudo {cmd} {actualArgs}'"; 
+				var sudoPrefix = noPrompt ? "sudo -n" : "sudo";
+				// Wrap `cmd` in shell double quotes so a DOTNET_ROOT or SDK path that contains
+				// spaces (e.g., "/Users/me/My SDK/dotnet") survives tokenization by the inner
+				// shell once the outer `'...'` block is unwrapped. Without this, sudo retries on
+				// such installs fail with "command not found".
+				var quotedCmd = ShellDoubleQuote(cmd);
+				// Args are interpolated raw into the outer single-quoted block, so escape any
+				// embedded single quotes so they don't terminate the block early. Per-arg spaces
+				// are the caller's responsibility (e.g., BuildInstallArgs pre-wraps paths with
+				// inner double quotes).
+				var escapedArgs = actualArgs.Replace("'", "'\\''");
+				actualArgs = $"-c '{sudoPrefix} {quotedCmd} {escapedArgs}'";
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
 			return Task.FromResult(cli.WaitForExit());
+		}
+
+		/// <summary>
+		/// Wraps <paramref name="s"/> in POSIX shell double quotes, escaping the four characters
+		/// that retain special meaning inside <c>"..."</c>: <c>\</c>, <c>$</c>, <c>`</c>, and <c>"</c>.
+		/// Suitable for embedding inside an outer single-quoted shell block as a single token.
+		/// </summary>
+		internal static string ShellDoubleQuote(string s)
+		{
+			if (s == null)
+				return "\"\"";
+
+			var sb = new StringBuilder(s.Length + 2);
+			sb.Append('"');
+			foreach (var c in s)
+			{
+				if (c == '\\' || c == '$' || c == '`' || c == '"')
+					sb.Append('\\');
+				sb.Append(c);
+			}
+			sb.Append('"');
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Runs the command with sudo by prompting for the password in-process first,
+		/// then piping it to <c>sudo -S</c> via stdin.
+		/// Output is captured (so failure diagnostics survive in the returned result) and
+		/// also mirrored to the terminal so the user can watch live progress for long-running
+		/// installs/repairs. This does not rely on sudo prompting on <c>/dev/tty</c>; it avoids
+		/// the macOS sudo PTY relay that can hang indefinitely when started from
+		/// <c>.NET Process.Start</c>, because stdin is a pipe (not a TTY) and is closed after
+		/// the password write.
+		/// </summary>
+		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudoInteractive(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
+		{
+			var actualCmd = cmd;
+			var actualArgs = string.Join(" ", args);
+
+			if (!Util.IsWindows)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+
+				// Prompt the user for the sudo password before starting the process.
+				var password = ReadPasswordFromConsole();
+				if (password == null)
+				{
+					return Task.FromResult(new ShellProcessRunner.ShellProcessResult(
+						new List<string>(),
+						new List<string>
+						{
+							"Unable to perform sudo elevation because no password could be read from the console. " +
+							"This can happen when standard input or standard output is redirected, the terminal is non-interactive, " +
+							"or no password was entered. Please rerun this command in an interactive terminal, avoid redirecting console I/O while entering the password, or configure passwordless sudo."
+						},
+						-1));
+				}
+
+				// sudo -S: read password from stdin (pipe) instead of /dev/tty.
+				// This avoids the macOS PTY relay (exec_pty) that hangs when the child
+				// process exits but the relay's stdin (the terminal) stays open.
+				// sudo -p "": suppress sudo's own "Password:" prompt since we already prompted.
+				// Quote `cmd` because UseSystemShell=false means .NET (not the shell) tokenizes
+				// the args string with Windows-style rules — an unquoted dotnet path that contains
+				// spaces (e.g., a home directory like "/Users/My Name/.dotnet/dotnet") would
+				// otherwise be split into multiple tokens and the retry would fail with
+				// "command not found".
+				actualCmd = "sudo";
+				actualArgs = $"-S -p \"\" {QuoteForProcessArgs(cmd)} {actualArgs}";
+
+				// Mirror captured output to the console so the user can watch live progress.
+				// Skip the callback when verbose is on, since ShellProcessRunner already echoes
+				// every line under verbose mode and we'd otherwise double-print.
+				Action<string> echo = (Util.Verbose || verbose) ? null : static line => Console.WriteLine(line);
+
+				return Task.FromResult(RunWithStdinPassword(actualCmd, actualArgs, workingDir, verbose, echo, password, cancellationToken));
+			}
+
+			var fallback = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose });
+			return Task.FromResult(fallback.WaitForExit());
+		}
+
+		/// <summary>
+		/// Launches <paramref name="exe"/> with stdin redirected, writes <paramref name="password"/>
+		/// followed by a newline, closes stdin, and returns the captured result. Used by
+		/// <see cref="WrapShellCommandWithSudoInteractive"/> to feed the user's password to
+		/// <c>sudo -S</c>.
+		///
+		/// On minimal environments where the launched binary is missing (e.g., a stripped-down
+		/// Linux container without sudo), <c>Process.Start</c> throws <see cref="System.ComponentModel.Win32Exception"/>
+		/// from inside the <c>ShellProcessRunner</c> constructor. Catching it here turns that into
+		/// an actionable <c>ShellProcessResult</c> instead of an unhandled exception that would
+		/// crash the caller mid-install.
+		/// </summary>
+		internal static ShellProcessRunner.ShellProcessResult RunWithStdinPassword(
+			string exe,
+			string args,
+			string workingDir,
+			bool verbose,
+			Action<string> outputCallback,
+			string password,
+			System.Threading.CancellationToken cancellationToken)
+		{
+			ShellProcessRunner cli;
+			try
+			{
+				cli = new ShellProcessRunner(new ShellProcessRunnerOptions(exe, args, cancellationToken)
+				{
+					WorkingDirectory = workingDir,
+					Verbose = verbose,
+					RedirectInput = true,
+					// Capture stdout/stderr so failure diagnostics (disk full, specific error
+					// lines, etc.) reach BuildCliFailureMessage instead of being lost to the
+					// terminal.
+					RedirectOutput = true,
+					OutputCallback = outputCallback,
+					UseSystemShell = false
+				});
+			}
+			catch (System.ComponentModel.Win32Exception ex)
+			{
+				return new ShellProcessRunner.ShellProcessResult(
+					new List<string>(),
+					new List<string>
+					{
+						$"Unable to launch `{exe}` for elevation: {ex.Message}. " +
+						"Install sudo (or rerun this command as root) and try again."
+					},
+					-1);
+			}
+
+			// Pipe the password to sudo's stdin, then close the stream so sudo
+			// (and any child processes) see EOF. This ensures the PTY relay's
+			// stdin side is closed, allowing it to exit after the child finishes.
+			try
+			{
+				cli.Write(password + "\n");
+				cli.FlushAndCloseInput();
+			}
+			catch (System.IO.IOException)
+			{
+				// Process exited before we could write (e.g., sudo not found).
+			}
+			catch (ObjectDisposedException)
+			{
+				// Process was already disposed.
+			}
+			catch (InvalidOperationException)
+			{
+				// StandardInput not available.
+			}
+
+			return cli.WaitForExit();
+		}
+
+		/// <summary>
+		/// Quotes <paramref name="arg"/> for inclusion in a <c>ProcessStartInfo.Arguments</c> string
+		/// when <c>UseShellExecute</c> is false. Both Windows and Unix .NET parse that string with
+		/// Windows-style command-line rules, so an argument containing spaces, tabs, quotes, or
+		/// backslashes must be wrapped in double quotes with embedded quotes/backslashes escaped.
+		/// </summary>
+		internal static string QuoteForProcessArgs(string arg)
+		{
+			if (string.IsNullOrEmpty(arg))
+				return "\"\"";
+
+			var needsQuoting = false;
+			foreach (var c in arg)
+			{
+				if (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '"' || c == '\\')
+				{
+					needsQuoting = true;
+					break;
+				}
+			}
+
+			if (!needsQuoting)
+				return arg;
+
+			// Each backslash that precedes a literal quote (or the closing quote) must be doubled,
+			// and each embedded quote must be backslash-escaped. Lone backslashes that don't precede
+			// a quote are passed through as-is.
+			var sb = new StringBuilder(arg.Length + 2);
+			sb.Append('"');
+			var backslashes = 0;
+			foreach (var c in arg)
+			{
+				if (c == '\\')
+				{
+					backslashes++;
+				}
+				else if (c == '"')
+				{
+					sb.Append('\\', backslashes * 2 + 1);
+					sb.Append('"');
+					backslashes = 0;
+				}
+				else
+				{
+					if (backslashes > 0)
+					{
+						sb.Append('\\', backslashes);
+						backslashes = 0;
+					}
+					sb.Append(c);
+				}
+			}
+			if (backslashes > 0)
+				sb.Append('\\', backslashes * 2);
+			sb.Append('"');
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Ensures sudo credentials are cached so subsequent <c>sudo -n</c> calls succeed
+		/// without prompting. Must be called BEFORE entering any AnsiConsole.Status/Live
+		/// block — otherwise sudo's password prompt is hidden by the live spinner.
+		///
+		/// Returns true on Windows (no-op), or when <c>sudo -n true</c> already succeeds
+		/// (cached credentials or NOPASSWD). Otherwise invokes <c>sudo -v</c> directly:
+		/// sudo prompts the user on <c>/dev/tty</c>, masks input, handles retries, and
+		/// refreshes its own credential cache — uno-check never touches the password.
+		///
+		/// Returns false in CI / non-interactive mode when credentials aren't already
+		/// cached, or when sudo exits non-zero (wrong password, sudo not installed).
+		/// Callers should proceed and let the actual elevated command surface a clear
+		/// error if elevation truly isn't available.
+		/// </summary>
+		public static async Task<bool> EnsureSudoCredentialsCachedAsync(System.Threading.CancellationToken cancellationToken = default)
+		{
+			if (IsWindows)
+				return true;
+
+			cancellationToken.ThrowIfCancellationRequested();
+
+			// Probe with `sudo -n true`. If it succeeds, creds are already cached or
+			// the user has NOPASSWD — no prompt required.
+			var probe = await WrapShellCommandWithSudoNoPrompt("true", null, false, cancellationToken, Array.Empty<string>());
+			if (probe.ExitCode == 0)
+				return true;
+
+			if (NonInteractive || CI)
+				return false;
+
+			Console.WriteLine("Elevated privileges are required to install .NET workloads.");
+
+			// `sudo -v`: validate (refresh cached credentials) without running a command.
+			// Sudo prompts the user directly on /dev/tty, masks input itself, and applies
+			// its own retry policy. We do NOT capture the password — RedirectInput is
+			// false so sudo reads the TTY, RedirectOutput is false so sudo's "Password:"
+			// prompt and any error messages go straight to the user's terminal.
+			//
+			// `sudo -v` exits quickly without launching a child, so the macOS PTY relay
+			// (exec_pty) hang that motivated `sudo -S` for long-running installs does
+			// not apply here.
+			//
+			// The constructor's Process.Start throws Win32Exception on hosts where sudo
+			// isn't installed at all (minimal Linux/macOS containers). Catching it here
+			// honors the documented contract — return false so the caller's friendly
+			// "handshake did not succeed" path runs — instead of letting an unhandled
+			// exception bypass it.
+			ShellProcessRunner validate;
+			try
+			{
+				validate = new ShellProcessRunner(new ShellProcessRunnerOptions("sudo", "-v", cancellationToken)
+				{
+					RedirectInput = false,
+					RedirectOutput = false,
+					UseSystemShell = false
+				});
+			}
+			catch (System.ComponentModel.Win32Exception ex)
+			{
+				Log($"Could not launch `sudo -v`: {ex.Message}. Treating elevation as unavailable.");
+				return false;
+			}
+
+			var result = validate.WaitForExit();
+			return result.ExitCode == 0;
+		}
+
+		/// <summary>
+		/// Reads a password from the console with masked input (characters are not echoed).
+		/// Returns null if the user enters an empty password, if standard input or
+		/// standard output is redirected (e.g., <c>uno-check --fix &gt; log.txt</c> sends
+		/// the "Password:" prompt to the log file and leaves the user typing blind), or
+		/// if the console is otherwise unavailable (non-interactive terminal). Callers
+		/// must treat null as "elevation prompt is not possible here" and surface the
+		/// generic handshake-failed message.
+		/// </summary>
+		internal static string ReadPasswordFromConsole()
+		{
+			try
+			{
+				// Treat redirected stdin OR stdout as non-interactive. Stdin redirection
+				// means Console.ReadKey can't read the password; stdout redirection means
+				// the "Password:" prompt would go to the redirected stream and the user
+				// would never see it (and would type a hidden password into the terminal
+				// blind). Either case must bail out before prompting.
+				if (Console.IsInputRedirected || Console.IsOutputRedirected)
+					return null;
+
+				Console.Write("Password: ");
+				var password = new System.Text.StringBuilder();
+				while (true)
+				{
+					var key = Console.ReadKey(intercept: true);
+					if (key.Key == ConsoleKey.Enter)
+						break;
+					if (key.Key == ConsoleKey.Backspace)
+					{
+						if (password.Length > 0)
+							password.Remove(password.Length - 1, 1);
+					}
+					else if (!char.IsControl(key.KeyChar))
+					{
+						password.Append(key.KeyChar);
+					}
+				}
+				Console.WriteLine();
+				return password.Length > 0 ? password.ToString() : null;
+			}
+			catch (InvalidOperationException)
+			{
+				// Console.ReadKey is unavailable (e.g., stdin redirected in a wrapper script).
+				return null;
+			}
 		}
 
 		public static async Task<bool> WrapCopyWithShellSudo(string destination, bool isFile, Func<string, Task<bool>> wrapping)
