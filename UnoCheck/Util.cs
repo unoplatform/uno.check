@@ -11,9 +11,16 @@ namespace DotNetCheck
 	public class Util
 	{
 		public static string[] BaseSkips = ["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"];
+        
+        // IDE skip lists (for --ide flag, when running from within IDE - IDE is already installed)
         public static string[] RiderSkips = ["vswin","vswinworkloads"];
         public static string[] VSCodeSkips = ["vswin","vswinworkloads"];
         public static string[] VSSkips = ["vswin","vswinworkloads"];
+        
+        // IdeCliChoice skip lists (for interactive selection from command line)
+        public static string[] VSCodeCliChoiceSkips = ["vswin","vswinworkloads"]; // VSCode selected - skip VS checks
+        public static string[] RiderCliChoiceSkips = ["vswin","vswinworkloads"]; // Rider selected - skip VS checks
+        public static string[] NoneCliChoiceSkips = ["vswin","vswinworkloads"]; // No IDE / Other IDE - skip all IDE checks
 
         public static void UpdateSkips(CheckSettings settings, string[] skips)
         {
