@@ -50,7 +50,7 @@ public class CheckCommandTests
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            Assert.Equal<IEnumerable<string>>(platformsToInclude, ["windows", "android", "ios", "macos", "web", "macos"]);
+            Assert.Equal<IEnumerable<string>>(platformsToInclude, ["windows", "android", "ios", "macos", "web", "skiadesktop"]);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
