@@ -443,11 +443,11 @@ namespace DotNetCheck.Cli
                         case "desktop":
                             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                             {
-                                targetPlatforms.Add("win32");   
+                                targetPlatforms.Add("win32");
                             }
                             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                             {
-                                targetPlatforms.Add("macos");
+                                targetPlatforms.Add("skiadesktop");
                             }
                             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                             {
