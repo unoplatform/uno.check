@@ -35,12 +35,12 @@
           "version": "34.2.16"
         },
         {
-          "path": "build-tools;35.0.1",
-          "version": "35.0.1"
+          "path": "build-tools;36.0.0",
+          "version": "36.0.0"
         },
         {
-          "path": "platforms;android-36",
-          "version": "1"
+          "path": "platforms;android-37.0",
+          "version": "2"
         },
         {
           "path": "system-images;android-35;google_apis;x86_64",
@@ -58,11 +58,11 @@
         },
         {
           "path": "platform-tools",
-          "version": "35.0.2"
+          "version": "36.0.0"
         },
         {
-          "path": "cmdline-tools;17.0",
-          "version": "17.0"
+          "path": "cmdline-tools;19.0",
+          "version": "19.0"
         }
       ],
       "emulators": [
