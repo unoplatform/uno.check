@@ -52,7 +52,9 @@ namespace DotNetCheck
 				new HyperVCheckup(),
 				new DotNetNewUnoTemplatesCheckup(),
 				new UnoSdkCheckup(),
-				new EdgeWebView2Checkup()
+				new EdgeWebView2Checkup(),
+				new DotNetRootsCheckup(),
+				new DotNetTargetingPackAlignmentCheckup()
 			);
 
 			var app = new CommandApp();

@@ -1,0 +1,183 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+
+using DotNetCheck.DotNet;
+using DotNetCheck.Models;
+using DotNetCheck.Solutions;
+using Newtonsoft.Json.Linq;
+
+namespace DotNetCheck.Checkups
+{
+	/// <summary>
+	/// Verifies that the <c>Microsoft.NETCore.App</c> version pinned for browser-wasm by the
+	/// installed mono-toolchain workload manifests has its targeting pack available — either
+	/// under the effective root's <c>packs/</c> folder or in the NuGet cache (materialized by a
+	/// restore-time <c>PackageDownload</c>). When it is missing, regular builds still work
+	/// (restore downloads the pack) but restore-less design-time builds — Uno Hot Reload —
+	/// silently produce compilations without any framework reference (the .NET SDK deliberately
+	/// emits no error under <c>DesignTimeBuild=true</c>). See
+	/// https://github.com/unoplatform/uno.check/issues/542 and
+	/// https://github.com/unoplatform/uno/issues/23780.
+	/// </summary>
+	public class DotNetTargetingPackAlignmentCheckup : Checkup
+	{
+		private const string MonoToolchainManifestId = "microsoft.net.workload.mono.toolchain.current";
+		private const string BrowserWasmRuntimePackPrefix = "Microsoft.NETCore.App.Runtime.Mono.browser-wasm";
+		private const string TargetingPackName = "Microsoft.NETCore.App.Ref";
+
+		public override string Id => "dotnettargetingpacks";
+
+		public override string Title => ".NET wasm targeting-pack alignment";
+
+		public override IEnumerable<CheckupDependency> DeclareDependencies(IEnumerable<string> checkupIds)
+			=> new[] { new CheckupDependency("dotnet") };
+
+		public override TargetPlatform GetApplicableTargets(Manifest.Manifest manifest)
+			=> TargetPlatform.WebAssembly;
+
+		public override Task<DiagnosticResult> Examine(SharedState state)
+		{
+			var sdk = new DotNetSdk(state);
+			var root = sdk.DotNetSdkLocation;
+
+			if (root == null || !root.Exists)
+			{
+				// The dotnet checkup (declared dependency) reports the missing SDK itself.
+				return Task.FromResult(DiagnosticResult.Ok(this));
+			}
+
+			var misaligned = new List<(string ManifestPath, string PinnedVersion)>();
+
+			foreach (var manifestFile in EnumerateMonoToolchainManifests(root.FullName))
+			{
+				string pinnedVersion;
+				try
+				{
+					pinnedVersion = GetPinnedBrowserWasmRuntimeVersion(File.ReadAllText(manifestFile));
+				}
+				catch (Exception ex)
+				{
+					ReportStatus($"Could not read workload manifest '{manifestFile}': {ex.Message}", null);
+					continue;
+				}
+
+				if (string.IsNullOrEmpty(pinnedVersion))
+					continue;
+
+				if (IsTargetingPackAvailable(root.FullName, pinnedVersion))
+				{
+					ReportStatus($"Manifest '{manifestFile}' pins {TargetingPackName} {pinnedVersion}: available.", null);
+					continue;
+				}
+
+				misaligned.Add((manifestFile, pinnedVersion));
+			}
+
+			if (misaligned.Count == 0)
+			{
+				return Task.FromResult(DiagnosticResult.Ok(this));
+			}
+
+			var installedPacks = DescribeInstalledTargetingPacks(root.FullName);
+			var details = string.Join(" ", misaligned.ConvertAll(m =>
+				$"The workload manifest '{m.ManifestPath}' pins the browser-wasm runtime to {TargetingPackName} {m.PinnedVersion}, which is neither installed (installed: {installedPacks}) nor in the NuGet cache."));
+
+			var message =
+				$"{details} Regular builds survive by downloading the pack at restore, but restore-less design-time builds " +
+				"(Uno Hot Reload) silently produce compilations without any .NET framework reference, blocking hot reload " +
+				"for WebAssembly. Running 'dotnet workload update' on this .NET root realigns the manifests with the SDK.";
+
+			var suggestion = new Suggestion(
+				"Update the workload manifests to match the installed SDK",
+				$"Runs '{sdk.DotNetExeLocation.FullName} workload update' (root: {root.FullName}).",
+				new DotNetWorkloadUpdateSolution(sdk.DotNetExeLocation.FullName));
+
+			return Task.FromResult(new DiagnosticResult(Status.Error, this, message, suggestion));
+		}
+
+		/// <summary>
+		/// Enumerates the mono-toolchain <c>WorkloadManifest.json</c> files across the SDK bands
+		/// of <paramref name="dotnetRoot"/>, supporting both layouts: the flat one
+		/// (<c>sdk-manifests/&lt;band&gt;/&lt;id&gt;/WorkloadManifest.json</c>) and the versioned one
+		/// (<c>sdk-manifests/&lt;band&gt;/&lt;id&gt;/&lt;manifest-version&gt;/WorkloadManifest.json</c>).
+		/// </summary>
+		internal static IEnumerable<string> EnumerateMonoToolchainManifests(string dotnetRoot)
+		{
+			var manifestsRoot = Path.Combine(dotnetRoot, "sdk-manifests");
+			if (!Directory.Exists(manifestsRoot))
+				yield break;
+
+			foreach (var band in Directory.EnumerateDirectories(manifestsRoot))
+			{
+				var manifestDir = Path.Combine(band, MonoToolchainManifestId);
+				if (!Directory.Exists(manifestDir))
+					continue;
+
+				var flat = Path.Combine(manifestDir, "WorkloadManifest.json");
+				if (File.Exists(flat))
+					yield return flat;
+
+				foreach (var versionDir in Directory.EnumerateDirectories(manifestDir))
+				{
+					var versioned = Path.Combine(versionDir, "WorkloadManifest.json");
+					if (File.Exists(versioned))
+						yield return versioned;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Extracts the <c>Microsoft.NETCore.App</c> version the manifest pins for browser-wasm,
+		/// from the version of its <c>Microsoft.NETCore.App.Runtime.Mono.browser-wasm</c> pack.
+		/// Returns <see langword="null"/> when the manifest carries no such pack.
+		/// </summary>
+		internal static string GetPinnedBrowserWasmRuntimeVersion(string manifestJson)
+		{
+			var manifest = JObject.Parse(manifestJson);
+
+			if (manifest["packs"] is not JObject packs)
+				return null;
+
+			foreach (var pack in packs.Properties())
+			{
+				if (pack.Name.StartsWith(BrowserWasmRuntimePackPrefix, StringComparison.OrdinalIgnoreCase))
+					return pack.Value?["version"]?.ToString();
+			}
+
+			return null;
+		}
+
+		internal static bool IsTargetingPackAvailable(string dotnetRoot, string version)
+		{
+			if (Directory.Exists(Path.Combine(dotnetRoot, "packs", TargetingPackName, version)))
+				return true;
+
+			// A prior restore may have materialized the PackageDownload into the NuGet cache,
+			// which design-time builds resolve from as well.
+			var nugetRoot = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+			if (string.IsNullOrEmpty(nugetRoot))
+			{
+				var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+				nugetRoot = string.IsNullOrEmpty(home) ? null : Path.Combine(home, ".nuget", "packages");
+			}
+
+			return nugetRoot != null
+				&& Directory.Exists(Path.Combine(nugetRoot, TargetingPackName.ToLowerInvariant(), version));
+		}
+
+		private static string DescribeInstalledTargetingPacks(string dotnetRoot)
+		{
+			var packsDir = Path.Combine(dotnetRoot, "packs", TargetingPackName);
+			if (!Directory.Exists(packsDir))
+				return "none";
+
+			var versions = new List<string>();
+			foreach (var dir in Directory.EnumerateDirectories(packsDir))
+				versions.Add(Path.GetFileName(dir));
+
+			return versions.Count == 0 ? "none" : string.Join(", ", versions);
+		}
+	}
+}
