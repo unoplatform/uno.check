@@ -3,13 +3,13 @@
     "toolVersion": "1.14.0",
     "variables": {
       "OPENJDK_VERSION": "17.0.16",
-      "DOTNET_SDK_VERSION": "11.0.100-preview.5.26302.115",
-      "MACCATALYST_SDK_VERSION": "26.5.11546-net11-p5/11.0.100-preview.5",
-      "IOS_SDK_VERSION": "26.5.11546-net11-p5/11.0.100-preview.5",
-      "TVOS_SDK_VERSION": "26.5.11546-net11-p5/11.0.100-preview.5",
-      "ANDROID_SDK_VERSION": "36.99.0-preview.5.308/11.0.100-preview.5",
-      "MAUI_VERSION": "11.0.0-preview.5.26308.4/11.0.100-preview.5",
-      "WASMTOOLS_VERSION": "11.0.100-preview.5.26302.115/11.0.100-preview.5"
+      "DOTNET_SDK_VERSION": "11.0.100-preview.6.26359.118",
+      "MACCATALYST_SDK_VERSION": "26.5.11720-net11-p6/11.0.100-preview.6",
+      "IOS_SDK_VERSION": "26.5.11720-net11-p6/11.0.100-preview.6",
+      "TVOS_SDK_VERSION": "26.5.11720-net11-p6/11.0.100-preview.6",
+      "ANDROID_SDK_VERSION": "37.0.0-preview.6.59/11.0.100-preview.6",
+      "MAUI_VERSION": "11.0.0-preview.6.26360.8/11.0.100-preview.6",
+      "WASMTOOLS_VERSION": "11.0.100-preview.6.26359.118/11.0.100-preview.6"
     },
     "variableMappers": [
     ],
@@ -100,49 +100,49 @@
             {
               "workloadId": "android",
               "workloadManifestId": "microsoft.net.sdk.android",
-              "packageId": "Microsoft.NET.Sdk.Android.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.Android.Manifest-11.0.100-preview.6",
               "version": "$(ANDROID_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
             },
             {
               "workloadId": "ios",
               "workloadManifestId": "microsoft.net.sdk.ios",
-              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.iOS.Manifest-11.0.100-preview.6",
               "version": "$(IOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maccatalyst",
               "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-11.0.100-preview.6",
               "version": "$(MACCATALYST_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
-              "packageId": "Microsoft.NET.Sdk.tvos.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.tvos.Manifest-11.0.100-preview.6",
               "version": "$(TVOS_SDK_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-preview.6",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "maui-android",
               "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-preview.6",
               "version": "$(MAUI_VERSION)",
               "supportedPlatforms": [ "Linux/x64" ]
             },
             {
               "workloadId": "wasm-tools",
               "workloadManifestId": "microsoft.net.workload.mono.toolchain.current",
-              "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Current.Manifest-11.0.100-preview.5",
+              "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Current.Manifest-11.0.100-preview.6",
               "version": "$(WASMTOOLS_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
