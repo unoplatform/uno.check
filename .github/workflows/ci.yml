@@ -19,6 +19,9 @@ concurrency:
   group: ${{github.workflow}} - ${{github.ref}}
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: '10.0.302'
+
 jobs:
   build_tool:
     name: Build
@@ -29,10 +32,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup .NET Core v6
-      uses: actions/setup-dotnet@v1
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: '8.0.100'
+        dotnet-version: '${{ env.DOTNET_VERSION }}'
 
     - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
       id: nbgv
@@ -68,9 +71,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.100'
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
 
       - name: Run Tests
         run: |
@@ -169,9 +172,9 @@ jobs:
           path: ${{ github.workspace }}\NuGet
 
       - name: Install base .NET SDK
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 8.0.100
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
       
       - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
         id: nbgv
@@ -209,69 +212,58 @@ jobs:
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
            os: macos-14
-           dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview
            previous_tool_version: ''
            previous_tool_params: ''
            os: macos-14
-           dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable Upgrade
            previous_tool_version: 1.17.0
            previous_tool_params: ''
            os: macos-14
-           dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui-preview.manifest.json'
            manifest_name: Preview Upgrade
            previous_tool_version: 1.17.0
            previous_tool_params: '--pre'
            os: macos-14
-           dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
            manifest_name: Preview Major Upgrade
            previous_tool_version: 1.17.0
            os: macos-14
-           dotnet_version: 8.0.300
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFMs
            os: macos-14
-           dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios --tfm net8.0-maccatalyst --tfm net8.0-windows10.0.19041 --tfm net8.0-browserwasm --tfm net8.0-desktop'
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-android\ios TFMs
            os: macos-14
-           dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-android --tfm net8.0-ios'
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net8.0-browserwasm TFM
            os: macos-14
-           dotnet_version: 8.0.300
            tool_params: '--tfm net8.0-browserwasm'
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test default Uno template TFMs with net10
            os: macos-14
-           dotnet_version: 8.0.300
            tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Test net10.0-browserwasm TFM
            os: macos-14
-           dotnet_version: 8.0.300
            tool_params: '--tfm net10.0-browserwasm'
 
          - manifest: 'manifests/uno.ui.manifest.json'
            manifest_name: Stable
            os: macos-15
-           dotnet_version: 8.0.300
 
     runs-on: ${{ matrix.os }}
 
@@ -288,10 +280,10 @@ jobs:
           path: ${{ github.workspace }}/NuGet
 
       # Preinstall .NET as it may fail on some build agents
-      - name: Setup .NET Core ${{ matrix.dotnet_version }}
-        uses: actions/setup-dotnet@v1
+      - name: Setup .NET Core ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '${{ matrix.dotnet_version }}'
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
 
       # - name: MANUAL WORKLOAD INSTALL
       #   shell: pwsh
@@ -410,9 +402,9 @@ jobs:
           path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.100'
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
 
       - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
         id: nbgv
@@ -466,7 +458,7 @@ jobs:
           path: artifacts\NuGet
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
