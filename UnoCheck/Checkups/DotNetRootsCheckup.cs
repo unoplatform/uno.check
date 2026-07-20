@@ -98,7 +98,7 @@ namespace DotNetCheck.Checkups
 
 		internal static string ResolvePathDotnetRoot(string pathValue, string exeName)
 		{
-			// A bare file name is guaranteed here, so Path.Combine below cannot be
+			// A bare file name is guaranteed here, so the join below cannot be
 			// short-circuited by a rooted second segment.
 			exeName = Path.GetFileName(exeName);
 			if (string.IsNullOrEmpty(exeName))
@@ -111,13 +111,14 @@ namespace DotNetCheck.Checkups
 				string candidate;
 				try
 				{
-					candidate = Path.Combine(entry, exeName);
+					candidate = Path.Join(entry, exeName);
 					if (!File.Exists(candidate))
 						continue;
 				}
-				catch (ArgumentException)
+				catch (Exception)
 				{
-					// Malformed PATH entry; skip it.
+					// Malformed PATH entry (invalid chars, too long, ...); skip it rather
+					// than letting it crash this informational checkup.
 					continue;
 				}
 
@@ -184,7 +185,21 @@ namespace DotNetCheck.Checkups
 		}
 
 		internal static string NormalizeRoot(string path)
-			=> string.IsNullOrEmpty(path) ? null : Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+		{
+			if (string.IsNullOrEmpty(path))
+				return null;
+
+			try
+			{
+				return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+			}
+			catch (Exception)
+			{
+				// A malformed DOTNET_ROOT* (or other) value must not crash the checkup;
+				// treat it as no root at all.
+				return null;
+			}
+		}
 
 		private static bool RootsEqual(string a, string b)
 			=> string.Equals(a, b, Util.IsWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);

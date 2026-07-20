@@ -137,6 +137,16 @@ namespace UnoCheck.Tests
 		}
 
 		[Fact]
+		public void IsTargetingPackAvailable_MalformedVersion_False()
+		{
+			// A parsed-manifest version that is empty or rooted must fail closed instead of
+			// probing outside the expected roots.
+			Assert.False(DotNetTargetingPackAlignmentCheckup.IsTargetingPackAvailable(_root, ""));
+			Assert.False(DotNetTargetingPackAlignmentCheckup.IsTargetingPackAvailable(_root, "   "));
+			Assert.False(DotNetTargetingPackAlignmentCheckup.IsTargetingPackAvailable(_root, Path.GetTempPath()));
+		}
+
+		[Fact]
 		public void IsTargetingPackAvailable_NowhereToBeFound_False()
 		{
 			// Field case: manifest pins 10.0.5 while only 10.0.7 is installed.

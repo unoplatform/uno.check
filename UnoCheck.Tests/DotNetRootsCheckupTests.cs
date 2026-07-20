@@ -17,7 +17,7 @@ namespace UnoCheck.Tests
 
 		public DotNetRootsCheckupTests()
 		{
-			_root = Path.Combine(Path.GetTempPath(), "uno-check-tests", Guid.NewGuid().ToString("n"));
+			_root = Path.Join(Path.GetTempPath(), "uno-check-tests", Guid.NewGuid().ToString("n"));
 			Directory.CreateDirectory(_root);
 		}
 
@@ -185,6 +185,13 @@ namespace UnoCheck.Tests
 			var normalized = DotNetRootsCheckup.NormalizeRoot(Path.Combine(_root, "other", "..", "sdk-root"));
 
 			Assert.Equal(expected, normalized);
+		}
+
+		[Fact]
+		public void NormalizeRoot_MalformedPath_ReturnsNull()
+		{
+			// e.g. a broken DOTNET_ROOT value; must not throw out of the checkup.
+			Assert.Null(DotNetRootsCheckup.NormalizeRoot("bad\0path"));
 		}
 	}
 }

@@ -106,20 +106,20 @@ namespace DotNetCheck.Checkups
 		/// </summary>
 		internal static IEnumerable<string> EnumerateMonoToolchainManifests(string dotnetRoot)
 		{
-			var manifestsRoot = Path.Combine(dotnetRoot, "sdk-manifests");
+			var manifestsRoot = Path.Join(dotnetRoot, "sdk-manifests");
 			if (!Directory.Exists(manifestsRoot))
 				yield break;
 
 			foreach (var manifestDir in SafeEnumerateDirectories(manifestsRoot)
-				.Select(band => Path.Combine(band, MonoToolchainManifestId))
+				.Select(band => Path.Join(band, MonoToolchainManifestId))
 				.Where(Directory.Exists))
 			{
-				var flat = Path.Combine(manifestDir, "WorkloadManifest.json");
+				var flat = Path.Join(manifestDir, "WorkloadManifest.json");
 				if (File.Exists(flat))
 					yield return flat;
 
 				foreach (var versioned in SafeEnumerateDirectories(manifestDir)
-					.Select(versionDir => Path.Combine(versionDir, "WorkloadManifest.json"))
+					.Select(versionDir => Path.Join(versionDir, "WorkloadManifest.json"))
 					.Where(File.Exists))
 				{
 					yield return versioned;
@@ -147,7 +147,12 @@ namespace DotNetCheck.Checkups
 
 		internal static bool IsTargetingPackAvailable(string dotnetRoot, string version)
 		{
-			if (Directory.Exists(Path.Combine(dotnetRoot, "packs", TargetingPackName, version)))
+			// The version comes from a parsed manifest: a malformed (empty or rooted) value
+			// must not be probed as if it designated a pack under the roots below.
+			if (string.IsNullOrWhiteSpace(version) || Path.IsPathRooted(version))
+				return false;
+
+			if (Directory.Exists(Path.Join(dotnetRoot, "packs", TargetingPackName, version)))
 				return true;
 
 			// A prior restore may have materialized the PackageDownload into the NuGet cache,
@@ -156,18 +161,18 @@ namespace DotNetCheck.Checkups
 			if (string.IsNullOrEmpty(nugetRoot))
 			{
 				var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-				nugetRoot = string.IsNullOrEmpty(home) ? null : Path.Combine(home, ".nuget", "packages");
+				nugetRoot = string.IsNullOrEmpty(home) ? null : Path.Join(home, ".nuget", "packages");
 			}
 
 			return nugetRoot != null
-				&& Directory.Exists(Path.Combine(nugetRoot, TargetingPackName.ToLowerInvariant(), version));
+				&& Directory.Exists(Path.Join(nugetRoot, TargetingPackName.ToLowerInvariant(), version));
 		}
 
 		private static string DescribeInstalledTargetingPacks(string dotnetRoot)
 		{
 			try
 			{
-				var packsDir = Path.Combine(dotnetRoot, "packs", TargetingPackName);
+				var packsDir = Path.Join(dotnetRoot, "packs", TargetingPackName);
 				if (!Directory.Exists(packsDir))
 					return "none";
 
