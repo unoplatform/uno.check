@@ -147,10 +147,16 @@ namespace DotNetCheck.Checkups
 
 		internal static bool IsTargetingPackAvailable(string dotnetRoot, string version)
 		{
-			// The version comes from a parsed manifest: a malformed (empty or rooted) value
-			// must not be probed as if it designated a pack under the roots below.
-			if (string.IsNullOrWhiteSpace(version) || Path.IsPathRooted(version))
+			// The version comes from a parsed manifest: it must stay a single child segment
+			// under the roots below, so reject anything empty, rooted, or carrying
+			// separators/traversal sequences instead of probing outside those roots.
+			if (string.IsNullOrWhiteSpace(version)
+				|| Path.IsPathRooted(version)
+				|| version.Contains("..")
+				|| version.IndexOfAny(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }) >= 0)
+			{
 				return false;
+			}
 
 			if (Directory.Exists(Path.Join(dotnetRoot, "packs", TargetingPackName, version)))
 				return true;

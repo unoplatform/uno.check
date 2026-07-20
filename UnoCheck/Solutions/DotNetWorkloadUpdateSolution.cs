@@ -27,8 +27,11 @@ namespace DotNetCheck.Solutions
 
 			ReportStatus($"Running '{_dotnetExePath} workload update'...");
 
+			// The muxer path is fully resolved, so invoke it directly instead of going
+			// through the system shell (temp script + zsh/bash on unix): no quoting or
+			// injection surface, same output capture.
 			var result = await Task.Run(
-				() => new ShellProcessRunner(new ShellProcessRunnerOptions(_dotnetExePath, "workload update", cancellationToken) { Verbose = true }).WaitForExit(),
+				() => new ShellProcessRunner(new ShellProcessRunnerOptions(_dotnetExePath, "workload update", cancellationToken) { Verbose = true, UseSystemShell = false }).WaitForExit(),
 				cancellationToken);
 
 			if (result.Success)

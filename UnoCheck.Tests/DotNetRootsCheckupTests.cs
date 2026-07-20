@@ -35,16 +35,16 @@ namespace UnoCheck.Tests
 
 		private string CreateDotnetDir(string name, string exeName = "dotnet")
 		{
-			var dir = Path.Combine(_root, name);
+			var dir = Path.Join(_root, name);
 			Directory.CreateDirectory(dir);
-			File.WriteAllText(Path.Combine(dir, exeName), string.Empty);
+			File.WriteAllText(Path.Join(dir, exeName), string.Empty);
 			return dir;
 		}
 
 		[Fact]
 		public void ResolvePathDotnetRoot_FirstEntryCarryingExe_Wins()
 		{
-			var without = Path.Combine(_root, "no-dotnet-here");
+			var without = Path.Join(_root, "no-dotnet-here");
 			Directory.CreateDirectory(without);
 			var first = CreateDotnetDir("first");
 			var second = CreateDotnetDir("second");
@@ -95,7 +95,7 @@ namespace UnoCheck.Tests
 		[Fact]
 		public void ResolvePathDotnetRoot_NoMatch_ReturnsNull()
 		{
-			var without = Path.Combine(_root, "empty");
+			var without = Path.Join(_root, "empty");
 			Directory.CreateDirectory(without);
 
 			Assert.Null(DotNetRootsCheckup.ResolvePathDotnetRoot(without, "dotnet"));
@@ -106,8 +106,8 @@ namespace UnoCheck.Tests
 		{
 			var dir = CreateDotnetDir("rooted-exe");
 
-			// A rooted exe segment must not override the PATH entry in Path.Combine.
-			var resolved = DotNetRootsCheckup.ResolvePathDotnetRoot(dir, Path.Combine(dir, "dotnet"));
+			// A rooted exe segment must not override the PATH entry when joined.
+			var resolved = DotNetRootsCheckup.ResolvePathDotnetRoot(dir, Path.Join(dir, "dotnet"));
 
 			Assert.Equal(dir, resolved);
 		}
@@ -122,11 +122,11 @@ namespace UnoCheck.Tests
 
 			// PATH points at a bin dir whose dotnet is a two-hop symlink chain, mirroring
 			// /usr/bin/dotnet → /usr/lib/dotnet/dotnet.
-			var binDir = Path.Combine(_root, "bin");
+			var binDir = Path.Join(_root, "bin");
 			Directory.CreateDirectory(binDir);
-			var intermediate = Path.Combine(_root, "intermediate-link");
-			File.CreateSymbolicLink(intermediate, Path.Combine(realRoot, "dotnet"));
-			File.CreateSymbolicLink(Path.Combine(binDir, "dotnet"), intermediate);
+			var intermediate = Path.Join(_root, "intermediate-link");
+			File.CreateSymbolicLink(intermediate, Path.Join(realRoot, "dotnet"));
+			File.CreateSymbolicLink(Path.Join(binDir, "dotnet"), intermediate);
 
 			var resolved = DotNetRootsCheckup.ResolvePathDotnetRoot(binDir, "dotnet");
 
@@ -136,7 +136,7 @@ namespace UnoCheck.Tests
 		[Fact]
 		public void ResolveLinks_RegularFile_ReturnsSamePath()
 		{
-			var file = Path.Combine(CreateDotnetDir("plain"), "dotnet");
+			var file = Path.Join(CreateDotnetDir("plain"), "dotnet");
 
 			Assert.Equal(file, DotNetRootsCheckup.ResolveLinks(file));
 		}
@@ -144,7 +144,7 @@ namespace UnoCheck.Tests
 		[Fact]
 		public void ResolveLinks_NonExistentFile_FallsBackToLiteralPath()
 		{
-			var file = Path.Combine(_root, "does-not-exist", "dotnet");
+			var file = Path.Join(_root, "does-not-exist", "dotnet");
 
 			Assert.Equal(file, DotNetRootsCheckup.ResolveLinks(file));
 		}
@@ -155,8 +155,8 @@ namespace UnoCheck.Tests
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 				return; // Creating symlinks on Windows requires elevation.
 
-			var link = Path.Combine(_root, "broken-link");
-			File.CreateSymbolicLink(link, Path.Combine(_root, "gone", "dotnet"));
+			var link = Path.Join(_root, "broken-link");
+			File.CreateSymbolicLink(link, Path.Join(_root, "gone", "dotnet"));
 
 			// Must not throw; either the (dangling) target or the literal path is acceptable.
 			Assert.NotNull(DotNetRootsCheckup.ResolveLinks(link));
@@ -165,7 +165,7 @@ namespace UnoCheck.Tests
 		[Fact]
 		public void NormalizeRoot_TrailingSeparators_AreTrimmed()
 		{
-			var expected = Path.Combine(_root, "sdk-root");
+			var expected = Path.Join(_root, "sdk-root");
 
 			Assert.Equal(expected, DotNetRootsCheckup.NormalizeRoot(expected + Path.DirectorySeparatorChar));
 		}
@@ -180,9 +180,9 @@ namespace UnoCheck.Tests
 		[Fact]
 		public void NormalizeRoot_RelativeSegments_AreResolved()
 		{
-			var expected = Path.Combine(_root, "sdk-root");
+			var expected = Path.Join(_root, "sdk-root");
 
-			var normalized = DotNetRootsCheckup.NormalizeRoot(Path.Combine(_root, "other", "..", "sdk-root"));
+			var normalized = DotNetRootsCheckup.NormalizeRoot(Path.Join(_root, "other", "..", "sdk-root"));
 
 			Assert.Equal(expected, normalized);
 		}
