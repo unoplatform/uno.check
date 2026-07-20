@@ -148,14 +148,31 @@ namespace DotNetCheck.Checkups
 			if (Util.IsWindows)
 				return file;
 
-			// readlink -f follows the whole chain (e.g. /usr/bin/dotnet → /usr/lib/dotnet/dotnet).
-			// Invoked directly (no system shell), so a path carrying quotes or metacharacters
-			// cannot be reinterpreted.
-			var result = new ShellProcessRunner(new ShellProcessRunnerOptions("readlink", $"-f \"{file}\"") { UseSystemShell = false }).WaitForExit();
-			var output = result.GetOutput()?.Trim();
-			return result.Success && !string.IsNullOrEmpty(output) ? output : file;
+			// realpath follows the whole chain (e.g. /usr/bin/dotnet → /usr/lib/dotnet/dotnet)
+			// and exists on both macOS and Linux; BSD readlink on older macOS lacks -f, so
+			// readlink is only the fallback. Both are invoked directly (no system shell).
+			return TryResolveLinkWithTool("realpath", $"\"{file}\"")
+				?? TryResolveLinkWithTool("readlink", $"-f \"{file}\"")
+				?? file;
 #endif
 		}
+
+#if !NET6_0_OR_GREATER
+		private static string TryResolveLinkWithTool(string tool, string args)
+		{
+			try
+			{
+				var result = new ShellProcessRunner(new ShellProcessRunnerOptions(tool, args) { UseSystemShell = false }).WaitForExit();
+				var output = result.GetOutput()?.Trim();
+				return result.Success && !string.IsNullOrEmpty(output) ? output : null;
+			}
+			catch (Exception)
+			{
+				// Tool missing or not runnable on this platform; the caller tries the next one.
+				return null;
+			}
+		}
+#endif
 
 		private static IEnumerable<string> EnumerateKnownRoots()
 		{
