@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -36,7 +37,9 @@ namespace DotNetCheck.Solutions
 			}
 			else
 			{
-				ReportStatus($"'workload update' exited with code {result.ExitCode}.");
+				// Throwing lets the fix runner surface the remediation failure instead of
+				// reporting "Fix applied" for an update that did not happen.
+				throw new Exception($"'{_dotnetExePath} workload update' exited with code {result.ExitCode}.");
 			}
 		}
 	}

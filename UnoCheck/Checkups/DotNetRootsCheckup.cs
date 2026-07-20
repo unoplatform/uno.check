@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using DotNetCheck.DotNet;
@@ -10,10 +12,10 @@ namespace DotNetCheck.Checkups
 {
 	/// <summary>
 	/// Surfaces multi-root .NET installations where the effective root — the one uno-check and
-	/// IDE/devserver tooling resolve (DOTNET_ROOT first) — differs from the root behind the
-	/// <c>dotnet</c> found on PATH. Workload and SDK maintenance commands typed in a terminal
-	/// hit the PATH root, so on such machines manual repairs silently land on the wrong
-	/// installation (see https://github.com/unoplatform/uno.check/issues/542).
+	/// IDE/devserver tooling resolve (DOTNET_ROOT-family variables first) — differs from the
+	/// root behind the <c>dotnet</c> found on PATH. Workload and SDK maintenance commands typed
+	/// in a terminal hit the PATH root, so on such machines manual repairs silently land on the
+	/// wrong installation (see https://github.com/unoplatform/uno.check/issues/542).
 	/// </summary>
 	public class DotNetRootsCheckup : Checkup
 	{
@@ -26,9 +28,17 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState state)
 		{
-			var effectiveRoot = NormalizeRoot(new DotNetSdk(state).DotNetSdkLocation?.FullName);
+			var (environmentRootVariable, environmentRootValue) = ResolveDotNetRootEnvironment();
+			var environmentRoot = NormalizeRoot(environmentRootValue);
+
+			// The host gives the architecture-specific variables precedence over DOTNET_ROOT,
+			// while DotNetSdk only considers the latter — so when an arch-specific variable
+			// designates an existing root, it is the one tooling actually resolves.
+			var effectiveRoot = environmentRoot != null && Directory.Exists(environmentRoot)
+				? environmentRoot
+				: NormalizeRoot(new DotNetSdk(state).DotNetSdkLocation?.FullName);
+
 			var pathRoot = NormalizeRoot(ResolvePathDotnetRoot());
-			var environmentRoot = NormalizeRoot(Environment.GetEnvironmentVariable("DOTNET_ROOT"));
 
 			foreach (var root in EnumerateKnownRoots())
 			{
@@ -37,7 +47,7 @@ namespace DotNetCheck.Checkups
 
 			if (effectiveRoot != null)
 			{
-				ReportStatus($"Effective root (DOTNET_ROOT-first resolution, used by uno-check and IDE/devserver tooling): {effectiveRoot}", null);
+				ReportStatus($"Effective root ({environmentRootVariable ?? "DOTNET_ROOT"}-first resolution, used by uno-check and IDE/devserver tooling): {effectiveRoot}", null);
 			}
 
 			if (pathRoot != null)
@@ -50,32 +60,58 @@ namespace DotNetCheck.Checkups
 				return Task.FromResult(DiagnosticResult.Ok(this));
 			}
 
+			var effectiveDotnetCommandPath = Path.Join(effectiveRoot, DotNetSdk.DotNetExeName);
 			var message =
 				$"Two different .NET installations are in play: `dotnet` on PATH resolves to '{pathRoot}' " +
 				$"while the effective root is '{effectiveRoot}'" +
-				(environmentRoot != null ? $" (DOTNET_ROOT={environmentRoot})" : string.Empty) + ". " +
+				(environmentRoot != null ? $" ({environmentRootVariable}={environmentRoot})" : string.Empty) + ". " +
 				"IDE and devserver tooling (including Uno Hot Reload) use the effective root; terminal commands use the PATH one. " +
 				$"SDK and workload maintenance (e.g. `dotnet workload update`) must target the effective root explicitly: " +
-				$"'{Path.Combine(effectiveRoot, DotNetSdk.DotNetExeName)} workload update'. " +
+				$"'{effectiveDotnetCommandPath} workload update'. " +
 				"Alternatively align DOTNET_ROOT and PATH on a single installation.";
 
 			return Task.FromResult(new DiagnosticResult(Status.Warning, this, message));
 		}
 
-		private static string ResolvePathDotnetRoot()
+		/// <summary>
+		/// Resolves the DOTNET_ROOT-family variable the .NET host would use, following its
+		/// probing order: <c>DOTNET_ROOT_&lt;ARCH&gt;</c> (net6+ hosts), then
+		/// <c>DOTNET_ROOT(x86)</c> for 32-bit processes, then <c>DOTNET_ROOT</c>.
+		/// </summary>
+		private static (string Variable, string Value) ResolveDotNetRootEnvironment()
 		{
-			var exeName = DotNetSdk.DotNetExeName;
-			var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+			var archVariable = $"DOTNET_ROOT_{RuntimeInformation.ProcessArchitecture.ToString().ToUpperInvariant()}";
+			var variables = new[] { archVariable, Environment.Is64BitProcess ? null : "DOTNET_ROOT(x86)", "DOTNET_ROOT" };
 
-			foreach (var entry in pathValue.Split(Path.PathSeparator))
+			foreach (var variable in variables.Where(v => v != null))
 			{
-				if (string.IsNullOrWhiteSpace(entry))
-					continue;
+				var value = Environment.GetEnvironmentVariable(variable);
+				if (!string.IsNullOrEmpty(value))
+					return (variable, value);
+			}
 
+			return (null, null);
+		}
+
+		private static string ResolvePathDotnetRoot()
+			=> ResolvePathDotnetRoot(Environment.GetEnvironmentVariable("PATH") ?? string.Empty, DotNetSdk.DotNetExeName);
+
+		internal static string ResolvePathDotnetRoot(string pathValue, string exeName)
+		{
+			// A bare file name is guaranteed here, so Path.Combine below cannot be
+			// short-circuited by a rooted second segment.
+			exeName = Path.GetFileName(exeName);
+			if (string.IsNullOrEmpty(exeName))
+				return null;
+
+			foreach (var entry in pathValue.Split(Path.PathSeparator)
+				.Select(entry => entry.Trim().Trim('"')) // Quoted entries occur in Windows PATH values.
+				.Where(entry => !string.IsNullOrWhiteSpace(entry)))
+			{
 				string candidate;
 				try
 				{
-					candidate = Path.Combine(entry.Trim(), exeName);
+					candidate = Path.Combine(entry, exeName);
 					if (!File.Exists(candidate))
 						continue;
 				}
@@ -91,7 +127,7 @@ namespace DotNetCheck.Checkups
 			return null;
 		}
 
-		private static string ResolveLinks(string file)
+		internal static string ResolveLinks(string file)
 		{
 #if NET6_0_OR_GREATER
 			try
@@ -100,9 +136,10 @@ namespace DotNetCheck.Checkups
 				if (resolved != null)
 					return resolved.FullName;
 			}
-			catch (IOException)
+			catch (Exception)
 			{
-				// Broken link or unsupported filesystem; fall back to the literal path.
+				// Broken link, restricted path or unsupported filesystem; fall back to the
+				// literal path rather than failing this informational checkup.
 			}
 
 			return file;
@@ -123,11 +160,11 @@ namespace DotNetCheck.Checkups
 
 			var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 			if (!string.IsNullOrEmpty(home))
-				candidates.Add(Path.Combine(home, ".dotnet"));
+				candidates.Add(Path.Join(home, ".dotnet"));
 
 			if (Util.IsWindows)
 			{
-				candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet"));
+				candidates.Add(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet"));
 			}
 			else if (Util.IsMac)
 			{
@@ -139,15 +176,14 @@ namespace DotNetCheck.Checkups
 				candidates.Add("/usr/share/dotnet");
 			}
 
-			foreach (var candidate in candidates)
+			// Only roots that actually carry SDKs matter for the divergence analysis.
+			foreach (var candidate in candidates.Where(candidate => Directory.Exists(Path.Join(candidate, "sdk"))))
 			{
-				// Only roots that actually carry SDKs matter for the divergence analysis.
-				if (Directory.Exists(Path.Combine(candidate, "sdk")))
-					yield return NormalizeRoot(candidate);
+				yield return NormalizeRoot(candidate);
 			}
 		}
 
-		private static string NormalizeRoot(string path)
+		internal static string NormalizeRoot(string path)
 			=> string.IsNullOrEmpty(path) ? null : Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
 		private static bool RootsEqual(string a, string b)

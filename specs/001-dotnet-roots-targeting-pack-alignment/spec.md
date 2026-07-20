@@ -58,7 +58,9 @@ Two new checkups:
 - Enumerate candidate roots:
   - the resolved target of `dotnet` on `PATH` (symlinks followed, e.g.
     `/usr/bin/dotnet → /usr/lib/dotnet`),
-  - `DOTNET_ROOT` (and `DOTNET_ROOT_<ARCH>` variants) when set,
+  - the `DOTNET_ROOT`-family variables when set, probed in the host's order:
+    `DOTNET_ROOT_<ARCH>` (net6+ hosts), then `DOTNET_ROOT(x86)` for 32-bit processes,
+    then `DOTNET_ROOT`,
   - conventional locations per OS: `~/.dotnet`, `/usr/lib/dotnet`, `/usr/share/dotnet`
     (Linux), `/usr/local/share/dotnet` (macOS), `%ProgramFiles%\dotnet` (Windows).
 - Report the inventory (root, SDKs present, workload-set/manifest mode) at info level.

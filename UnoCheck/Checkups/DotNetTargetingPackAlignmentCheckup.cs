@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 using DotNetCheck.DotNet;
@@ -109,21 +110,19 @@ namespace DotNetCheck.Checkups
 			if (!Directory.Exists(manifestsRoot))
 				yield break;
 
-			foreach (var band in Directory.EnumerateDirectories(manifestsRoot))
+			foreach (var manifestDir in SafeEnumerateDirectories(manifestsRoot)
+				.Select(band => Path.Combine(band, MonoToolchainManifestId))
+				.Where(Directory.Exists))
 			{
-				var manifestDir = Path.Combine(band, MonoToolchainManifestId);
-				if (!Directory.Exists(manifestDir))
-					continue;
-
 				var flat = Path.Combine(manifestDir, "WorkloadManifest.json");
 				if (File.Exists(flat))
 					yield return flat;
 
-				foreach (var versionDir in Directory.EnumerateDirectories(manifestDir))
+				foreach (var versioned in SafeEnumerateDirectories(manifestDir)
+					.Select(versionDir => Path.Combine(versionDir, "WorkloadManifest.json"))
+					.Where(File.Exists))
 				{
-					var versioned = Path.Combine(versionDir, "WorkloadManifest.json");
-					if (File.Exists(versioned))
-						yield return versioned;
+					yield return versioned;
 				}
 			}
 		}
@@ -140,13 +139,10 @@ namespace DotNetCheck.Checkups
 			if (manifest["packs"] is not JObject packs)
 				return null;
 
-			foreach (var pack in packs.Properties())
-			{
-				if (pack.Name.StartsWith(BrowserWasmRuntimePackPrefix, StringComparison.OrdinalIgnoreCase))
-					return pack.Value?["version"]?.ToString();
-			}
-
-			return null;
+			return packs.Properties()
+				.Where(pack => pack.Name.StartsWith(BrowserWasmRuntimePackPrefix, StringComparison.OrdinalIgnoreCase))
+				.Select(pack => pack.Value?["version"]?.ToString())
+				.FirstOrDefault();
 		}
 
 		internal static bool IsTargetingPackAvailable(string dotnetRoot, string version)
@@ -169,15 +165,38 @@ namespace DotNetCheck.Checkups
 
 		private static string DescribeInstalledTargetingPacks(string dotnetRoot)
 		{
-			var packsDir = Path.Combine(dotnetRoot, "packs", TargetingPackName);
-			if (!Directory.Exists(packsDir))
-				return "none";
+			try
+			{
+				var packsDir = Path.Combine(dotnetRoot, "packs", TargetingPackName);
+				if (!Directory.Exists(packsDir))
+					return "none";
 
-			var versions = new List<string>();
-			foreach (var dir in Directory.EnumerateDirectories(packsDir))
-				versions.Add(Path.GetFileName(dir));
+				var versions = Directory.EnumerateDirectories(packsDir).Select(Path.GetFileName).ToList();
 
-			return versions.Count == 0 ? "none" : string.Join(", ", versions);
+				return versions.Count == 0 ? "none" : string.Join(", ", versions);
+			}
+			catch (Exception)
+			{
+				// This only feeds the diagnostic message; an unreadable packs folder must not
+				// crash the checkup while it is reporting a failure.
+				return "unknown";
+			}
+		}
+
+		/// <summary>
+		/// Enumerates sub-directories, treating unreadable directories (ACLs, transient IO)
+		/// as empty so a filesystem hiccup does not crash the whole checkup.
+		/// </summary>
+		private static string[] SafeEnumerateDirectories(string path)
+		{
+			try
+			{
+				return Directory.GetDirectories(path);
+			}
+			catch (Exception)
+			{
+				return Array.Empty<string>();
+			}
 		}
 	}
 }
