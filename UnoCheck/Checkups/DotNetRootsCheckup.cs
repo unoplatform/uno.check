@@ -78,7 +78,7 @@ namespace DotNetCheck.Checkups
 		/// probing order: <c>DOTNET_ROOT_&lt;ARCH&gt;</c> (net6+ hosts), then
 		/// <c>DOTNET_ROOT(x86)</c> for 32-bit processes, then <c>DOTNET_ROOT</c>.
 		/// </summary>
-		private static (string Variable, string Value) ResolveDotNetRootEnvironment()
+		internal static (string Variable, string Value) ResolveDotNetRootEnvironment()
 		{
 			var archVariable = $"DOTNET_ROOT_{RuntimeInformation.ProcessArchitecture.ToString().ToUpperInvariant()}";
 			var variables = new[] { archVariable, Environment.Is64BitProcess ? null : "DOTNET_ROOT(x86)", "DOTNET_ROOT" };
@@ -149,7 +149,9 @@ namespace DotNetCheck.Checkups
 				return file;
 
 			// readlink -f follows the whole chain (e.g. /usr/bin/dotnet → /usr/lib/dotnet/dotnet).
-			var result = new ShellProcessRunner(new ShellProcessRunnerOptions("readlink", $"-f \"{file}\"")).WaitForExit();
+			// Invoked directly (no system shell), so a path carrying quotes or metacharacters
+			// cannot be reinterpreted.
+			var result = new ShellProcessRunner(new ShellProcessRunnerOptions("readlink", $"-f \"{file}\"") { UseSystemShell = false }).WaitForExit();
 			var output = result.GetOutput()?.Trim();
 			return result.Success && !string.IsNullOrEmpty(output) ? output : file;
 #endif

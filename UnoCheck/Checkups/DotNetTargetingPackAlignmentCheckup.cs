@@ -40,8 +40,7 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState state)
 		{
-			var sdk = new DotNetSdk(state);
-			var root = sdk.DotNetSdkLocation;
+			var root = ResolveEffectiveRoot(state);
 
 			if (root == null || !root.Exists)
 			{
@@ -90,12 +89,30 @@ namespace DotNetCheck.Checkups
 				"(Uno Hot Reload) silently produce compilations without any .NET framework reference, blocking hot reload " +
 				"for WebAssembly. Running 'dotnet workload update' on this .NET root realigns the manifests with the SDK.";
 
+			// The fix must drive the muxer of the root that was examined, not whatever
+			// another resolution would pick.
+			var dotnetExePath = Path.Join(root.FullName, DotNetSdk.DotNetExeName);
 			var suggestion = new Suggestion(
 				"Update the workload manifests to match the installed SDK",
-				$"Runs '{sdk.DotNetExeLocation.FullName} workload update' (root: {root.FullName}).",
-				new DotNetWorkloadUpdateSolution(sdk.DotNetExeLocation.FullName));
+				$"Runs '{dotnetExePath} workload update' (root: {root.FullName}).",
+				new DotNetWorkloadUpdateSolution(dotnetExePath));
 
 			return Task.FromResult(new DiagnosticResult(Status.Error, this, message, suggestion));
+		}
+
+		/// <summary>
+		/// Resolves the effective root with the same DOTNET_ROOT-family host probing order as
+		/// <see cref="DotNetRootsCheckup"/>: an arch-specific variable outranks DOTNET_ROOT —
+		/// which is all <see cref="DotNetSdk"/> considers — so alignment is examined (and the
+		/// fix muxer chosen) on the installation tooling actually resolves.
+		/// </summary>
+		private static DirectoryInfo ResolveEffectiveRoot(SharedState state)
+		{
+			var (_, environmentRoot) = DotNetRootsCheckup.ResolveDotNetRootEnvironment();
+
+			return environmentRoot != null && Directory.Exists(environmentRoot)
+				? new DirectoryInfo(environmentRoot)
+				: new DotNetSdk(state).DotNetSdkLocation;
 		}
 
 		/// <summary>
