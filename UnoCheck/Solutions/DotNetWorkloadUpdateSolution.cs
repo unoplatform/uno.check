@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,8 +44,22 @@ namespace DotNetCheck.Solutions
 			{
 				// Throwing lets the fix runner surface the remediation failure instead of
 				// reporting "Fix applied" for an update that did not happen.
-				throw new Exception($"'{_dotnetExePath} workload update' exited with code {result.ExitCode}.");
+				throw new Exception(BuildFailureMessage(_dotnetExePath, result.ExitCode, result.StandardOutput.Concat(result.StandardError)));
 			}
+		}
+
+		/// <summary>
+		/// The actionable reason (permissions, corrupted manifests, missing SDK band, ...)
+		/// lives in the process output, so the failure message carries its tail alongside
+		/// the exit code.
+		/// </summary>
+		internal static string BuildFailureMessage(string dotnetExePath, int exitCode, IEnumerable<string> outputLines)
+		{
+			var tail = string.Join(Environment.NewLine,
+				outputLines.Where(line => !string.IsNullOrWhiteSpace(line)).TakeLast(10));
+
+			return $"'{dotnetExePath} workload update' exited with code {exitCode}."
+				+ (tail.Length == 0 ? string.Empty : $" Output:{Environment.NewLine}{tail}");
 		}
 	}
 }

@@ -93,6 +93,25 @@ namespace UnoCheck.Tests
 		}
 
 		[Fact]
+		public void ResolvePathDotnetRoot_EnvironmentVariableEntries_AreExpanded()
+		{
+			var dir = CreateDotnetDir("expanded");
+
+			Environment.SetEnvironmentVariable("UNO_CHECK_TEST_ROOT", dir);
+			try
+			{
+				// e.g. an unexpanded %ProgramFiles%\dotnet entry in a Windows PATH.
+				var resolved = DotNetRootsCheckup.ResolvePathDotnetRoot("%UNO_CHECK_TEST_ROOT%", "dotnet");
+
+				Assert.Equal(dir, resolved);
+			}
+			finally
+			{
+				Environment.SetEnvironmentVariable("UNO_CHECK_TEST_ROOT", null);
+			}
+		}
+
+		[Fact]
 		public void ResolvePathDotnetRoot_NoMatch_ReturnsNull()
 		{
 			var without = Path.Join(_root, "empty");

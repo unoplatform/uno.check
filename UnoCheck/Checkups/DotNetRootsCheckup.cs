@@ -104,8 +104,10 @@ namespace DotNetCheck.Checkups
 			if (string.IsNullOrEmpty(exeName))
 				return null;
 
+			// Windows PATH values can carry quoted entries and unexpanded %VAR% references
+			// (e.g. %ProgramFiles%\dotnet); both must be normalized before probing.
 			foreach (var entry in pathValue.Split(Path.PathSeparator)
-				.Select(entry => entry.Trim().Trim('"')) // Quoted entries occur in Windows PATH values.
+				.Select(entry => Environment.ExpandEnvironmentVariables(entry.Trim().Trim('"')))
 				.Where(entry => !string.IsNullOrWhiteSpace(entry)))
 			{
 				string candidate;
