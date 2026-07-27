@@ -1,0 +1,103 @@
+name: Manifest Drift
+
+# The manifests are embedded resources in the Uno.Check package, so a manifest change only
+# reaches users once a new package is published. This job watches the upstream release trains
+# that drive those manifests and keeps a single tracking issue in sync with what it finds.
+
+on:
+  schedule:
+    # Daily. Microsoft's servicing releases (Patch Tuesday) land during US business hours,
+    # so an early-UTC run picks them up the following morning.
+    - cron: '0 7 * * *'
+
+  workflow_dispatch:
+    inputs:
+      fail_on_action:
+        description: 'Fail the job when action items are found'
+        type: boolean
+        default: false
+      skip_issue:
+        description: 'Report only, do not create or update the tracking issue'
+        type: boolean
+        default: false
+
+  # Keep the checker honest: run it on PRs that touch the manifests or the scripts themselves.
+  pull_request:
+    paths:
+      - 'manifests/**'
+      - '.github/scripts/Check-ManifestDrift.ps1'
+      - '.github/scripts/Sync-DriftIssue.ps1'
+      - '.github/workflows/manifest-drift.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: manifest-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: Check manifest drift
+    runs-on: ubuntu-latest
+
+    env:
+      MANIFEST_DRIFT_WEBHOOK: ${{ secrets.MANIFEST_DRIFT_WEBHOOK }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Tags and full history are required by the release-pending check.
+          fetch-depth: 0
+
+      - name: Self-test the detector
+        shell: pwsh
+        run: ./.github/scripts/Check-ManifestDrift.ps1 -SelfTest
+
+      - name: Check for drift
+        id: drift
+        shell: pwsh
+        run: |
+          $arguments = @('-JsonOut', 'drift.json', '-MarkdownOut', 'drift.md')
+          if ('${{ inputs.fail_on_action }}' -eq 'true') { $arguments += '-FailOnAction' }
+          ./.github/scripts/Check-ManifestDrift.ps1 @arguments
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-drift-report
+          path: |
+            drift.json
+            drift.md
+          if-no-files-found: warn
+
+      # On pull requests the summary is the deliverable - never touch the tracking issue.
+      - name: Sync tracking issue
+        if: ${{ github.event_name != 'pull_request' && inputs.skip_issue != true }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Hashtable splatting keeps -Assignee a real string[]; array splatting would
+          # flatten it and a second assignee would fail parameter binding.
+          $params = @{
+            ReportPath = 'drift.json'
+            Repository = '${{ github.repository }}'
+          }
+          $assignees = @('${{ vars.MANIFEST_DRIFT_ASSIGNEES }}' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+          if ($assignees.Count -gt 0) { $params.Assignee = $assignees }
+          ./.github/scripts/Sync-DriftIssue.ps1 @params
+
+      # Optional out-of-band alarm. No-ops unless the MANIFEST_DRIFT_WEBHOOK secret is set.
+      - name: Notify webhook
+        if: ${{ github.event_name != 'pull_request' && steps.drift.outputs.has_action == 'true' && env.MANIFEST_DRIFT_WEBHOOK != '' }}
+        shell: pwsh
+        run: |
+          $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $payload = @{
+            content = ":rotating_light: **uno.check manifest drift** - ${{ steps.drift.outputs.action_count }} action item(s) need attention. See the ``manifest-drift`` tracking issue or the [run]($runUrl)."
+          } | ConvertTo-Json -Compress
+          Invoke-RestMethod -Uri $env:MANIFEST_DRIFT_WEBHOOK -Method Post -ContentType 'application/json' -Body $payload -TimeoutSec 30
