@@ -31,19 +31,27 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: manifest-drift
   cancel-in-progress: false
 
 jobs:
+  # The detector runs PR-authored code (the pull_request trigger above deliberately covers
+  # the scripts themselves), so this job stays unprivileged: read-only token, no secrets in
+  # scope, credentials not persisted into .git/config. Everything that needs write access
+  # lives in the `report` job below, which never runs on a pull request.
   drift:
     name: Check manifest drift
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
-    env:
-      MANIFEST_DRIFT_WEBHOOK: ${{ secrets.MANIFEST_DRIFT_WEBHOOK }}
+    permissions:
+      contents: read
+
+    outputs:
+      has_action: ${{ steps.drift.outputs.has_action }}
+      action_count: ${{ steps.drift.outputs.action_count }}
 
     steps:
       - name: Checkout
@@ -51,6 +59,7 @@ jobs:
         with:
           # Tags and full history are required by the release-pending check.
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Self-test the detector
         shell: pwsh
@@ -74,12 +83,47 @@ jobs:
             drift.md
           if-no-files-found: warn
 
-      # On pull requests the summary is the deliverable - never touch the tracking issue.
+  # On pull requests the step summary is the deliverable - never touch the tracking issue.
+  # `has_action != ''` means the detector got far enough to publish its outputs, so this
+  # job still runs after a deliberate -FailOnAction exit, but not after a crash that left
+  # no report to sync.
+  report:
+    name: Sync tracking issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: drift
+    if: >-
+      ${{ !cancelled()
+      && github.event_name != 'pull_request'
+      && inputs.skip_issue != true
+      && needs.drift.outputs.has_action != '' }}
+
+    permissions:
+      contents: read
+      issues: write
+
+    # Job-scoped rather than workflow-scoped: this job cannot be reached by a pull request,
+    # so the secret is never in the environment of a step running PR-authored script code.
+    env:
+      MANIFEST_DRIFT_WEBHOOK: ${{ secrets.MANIFEST_DRIFT_WEBHOOK }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: manifest-drift-report
+
       - name: Sync tracking issue
-        if: ${{ github.event_name != 'pull_request' && inputs.skip_issue != true }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Via env, never interpolated into the script body: a repo variable is set in
+          # settings rather than reviewed as code, and an apostrophe in the value would
+          # otherwise close the PowerShell literal and run whatever followed it.
+          ASSIGNEES: ${{ vars.MANIFEST_DRIFT_ASSIGNEES }}
         run: |
           # Hashtable splatting keeps -Assignee a real string[]; array splatting would
           # flatten it and a second assignee would fail parameter binding.
@@ -87,17 +131,17 @@ jobs:
             ReportPath = 'drift.json'
             Repository = '${{ github.repository }}'
           }
-          $assignees = @('${{ vars.MANIFEST_DRIFT_ASSIGNEES }}' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+          $assignees = @($env:ASSIGNEES -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
           if ($assignees.Count -gt 0) { $params.Assignee = $assignees }
           ./.github/scripts/Sync-DriftIssue.ps1 @params
 
       # Optional out-of-band alarm. No-ops unless the MANIFEST_DRIFT_WEBHOOK secret is set.
       - name: Notify webhook
-        if: ${{ github.event_name != 'pull_request' && steps.drift.outputs.has_action == 'true' && env.MANIFEST_DRIFT_WEBHOOK != '' }}
+        if: ${{ needs.drift.outputs.has_action == 'true' && env.MANIFEST_DRIFT_WEBHOOK != '' }}
         shell: pwsh
         run: |
           $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           $payload = @{
-            content = ":rotating_light: **uno.check manifest drift** - ${{ steps.drift.outputs.action_count }} action item(s) need attention. See the ``manifest-drift`` tracking issue or the [run]($runUrl)."
+            content = ":rotating_light: **uno.check manifest drift** - ${{ needs.drift.outputs.action_count }} action item(s) need attention. See the ``manifest-drift`` tracking issue or the [run]($runUrl)."
           } | ConvertTo-Json -Compress
           Invoke-RestMethod -Uri $env:MANIFEST_DRIFT_WEBHOOK -Method Post -ContentType 'application/json' -Body $payload -TimeoutSec 30
