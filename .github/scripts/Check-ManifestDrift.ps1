@@ -405,7 +405,13 @@ function Get-PackageVersion {
             }
         }
         catch {
-            if ($_.Exception.Response -and $_.Exception.Response.StatusCode.value__ -eq 404) { $reachable = $true }
+            # A 404 is a real answer from a reachable feed (the package is simply not on this
+            # source). Connection-level failures - DNS, TLS, timeout - throw exception types
+            # with no Response property at all, so this must go through Get-Prop: under
+            # StrictMode a bare $_.Exception.Response would terminate inside the catch, and a
+            # crashed checker reads as "no drift".
+            $status = Get-Prop (Get-Prop $_.Exception 'Response') 'StatusCode'
+            if ($null -ne $status -and [int] $status -eq 404) { $reachable = $true }
         }
     }
 
@@ -459,30 +465,47 @@ function Get-DotNetChannel {
 }
 
 function Test-UrlAlive {
+    <#  Returns 'alive', 'dead' or 'offline'.
+
+        'dead' is reserved for a definite answer from a working server (a non-429 4xx).
+        Anything else - DNS/TLS failure, timeout, 429, 5xx - is 'offline': unproven, not
+        broken. This distinction matters because url-dead is an Action-tier finding that
+        tells maintainers "users will fail to install", so a flaky runner must never
+        produce one. Callers must compare against 'alive' explicitly: every return value
+        here is a non-empty string, and so truthy. #>
     param([string] $Uri)
+
+    $definite = $false
 
     foreach ($method in @('Head', 'Get')) {
         try {
             $arguments = @{
-                Uri                  = $Uri
-                Method               = $method
-                TimeoutSec           = 60
-                MaximumRedirection   = 10
-                SkipHttpErrorCheck   = $true
-                ErrorAction          = 'Stop'
+                Uri                = $Uri
+                Method             = $method
+                TimeoutSec         = 30
+                MaximumRedirection = 10
+                MaximumRetryCount  = 2
+                RetryIntervalSec   = 5
+                SkipHttpErrorCheck = $true
+                ErrorAction        = 'Stop'
             }
             # Ask for a single byte so a GET fallback never downloads an installer.
             if ($method -eq 'Get') { $arguments['Headers'] = @{ Range = 'bytes=0-0' } }
 
             $response = Invoke-WebRequest @arguments
-            if ($response.StatusCode -lt 400) { return $true }
+            if ($response.StatusCode -lt 400) { return 'alive' }
+
+            # 429 and 5xx are the server having a bad day, not a missing file. A HEAD may
+            # also be refused (405) where a GET succeeds, so keep trying the next method.
+            if ($response.StatusCode -ne 429 -and $response.StatusCode -lt 500) { $definite = $true }
         }
         catch {
             continue
         }
     }
 
-    return $false
+    if ($definite) { return 'dead' }
+    return 'offline'
 }
 
 #endregion
@@ -627,9 +650,15 @@ function Test-ManifestUrl {
         $resolved = Resolve-ManifestVariable $url $Manifest.Variables
         if ($resolved -match '\$\(') { continue }
 
-        if (-not (Test-UrlAlive $resolved)) {
-            Add-Finding -Tier Action -Kind 'url-dead' -Manifest $Manifest.Name -Subject 'download url' `
-                -Current $resolved -Detail 'URL did not resolve. Users will fail to install this component.'
+        switch (Test-UrlAlive $resolved) {
+            'dead' {
+                Add-Finding -Tier Action -Kind 'url-dead' -Manifest $Manifest.Name -Subject 'download url' `
+                    -Current $resolved -Detail 'URL did not resolve. Users will fail to install this component.'
+            }
+            'offline' {
+                Add-Finding -Tier Advisory -Kind 'source-offline' -Manifest $Manifest.Name -Subject 'download url' `
+                    -Current $resolved -Detail 'URL could not be probed (timeout, connection failure or server error); its liveness is unproven for this run.'
+            }
         }
     }
 }
@@ -756,7 +785,7 @@ function Test-Advisory {
         if (-not $latestJdk -or (Compare-SemVer $latestJdk $current) -le 0) { continue }
 
         $probe = "https://aka.ms/download-jdk/microsoft-jdk-$latestJdk-windows-x64.msi"
-        if (Test-UrlAlive $probe) {
+        if ((Test-UrlAlive $probe) -eq 'alive') {
             Add-Finding -Tier Advisory -Kind 'openjdk' -Manifest $manifest.Name -Subject 'OPENJDK_VERSION' `
                 -Current $current -Latest $latestJdk -Detail 'Microsoft has published this JDK build.'
         }
@@ -789,9 +818,17 @@ function New-Report {
     $actions = @($Findings | Where-Object Tier -EQ 'Action')
     $advisories = @($Findings | Where-Object Tier -EQ 'Advisory')
 
+    # A source we could not read, or a pin we could not parse, means some subjects went
+    # unchecked this run. "No actions" then means "nothing proven", not "nothing wrong" -
+    # Sync-DriftIssue uses this to refuse to declare the drift resolved.
+    $degraded = @($Findings | Where-Object { $_.Kind -in @('source-offline', 'manifest-parse') })
+
     $body = [System.Text.StringBuilder]::new()
 
-    if ($actions.Count -eq 0) {
+    if ($actions.Count -eq 0 -and $degraded.Count -gt 0) {
+        [void] $body.AppendLine("No action items, but $($degraded.Count) check(s) could not be completed this run (see Advisory below). Drift is unproven, not absent.")
+    }
+    elseif ($actions.Count -eq 0) {
         [void] $body.AppendLine('No manifest drift detected. Every pinned .NET SDK, workload manifest and download URL is current.')
     }
     else {
@@ -823,13 +860,15 @@ function New-Report {
     $fingerprint = ([System.BitConverter]::ToString($hash) -replace '-', '').Substring(0, 16).ToLowerInvariant()
 
     [pscustomobject]@{
-        HasAction     = $actions.Count -gt 0
-        ActionCount   = $actions.Count
-        AdvisoryCount = $advisories.Count
-        Fingerprint   = $fingerprint
-        Findings      = $Findings
-        Markdown      = $body.ToString()
-        GeneratedUtc  = [datetimeoffset]::UtcNow.ToString('o')
+        HasAction       = $actions.Count -gt 0
+        ActionCount     = $actions.Count
+        AdvisoryCount   = $advisories.Count
+        SourcesDegraded = $degraded.Count -gt 0
+        DegradedCount   = $degraded.Count
+        Fingerprint     = $fingerprint
+        Findings        = $Findings
+        Markdown        = $body.ToString()
+        GeneratedUtc    = [datetimeoffset]::UtcNow.ToString('o')
     }
 }
 
@@ -883,7 +922,7 @@ if (-not $SkipGitCheck) { Test-ReleasePending $RepositoryRoot $ReleaseGraceDays 
 $report = New-Report $script:Findings $repositoryVersion
 
 Write-Host ''
-Write-Host "Action items: $($report.ActionCount) | Advisories: $($report.AdvisoryCount) | Fingerprint: $($report.Fingerprint)"
+Write-Host "Action items: $($report.ActionCount) | Advisories: $($report.AdvisoryCount) | Unproven: $($report.DegradedCount) | Fingerprint: $($report.Fingerprint)"
 Write-Host ''
 Write-Host $report.Markdown
 
