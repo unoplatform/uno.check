@@ -44,7 +44,11 @@ function Get-ActionKey {
 
 function ConvertTo-StateComment {
     param([string[]] $Keys)
-    $json = ($Keys | Sort-Object) | ConvertTo-Json -Compress -AsArray
+    # ConvertTo-Json returns $null - not '[]' - for an empty pipeline, even with -AsArray.
+    # Every no-drift run has an empty key set, so without this the resolved/close path dies
+    # in GetBytes() before it can reach a single gh call.
+    $json = (@($Keys) | Sort-Object) | ConvertTo-Json -Compress -AsArray
+    if ($null -eq $json) { $json = '[]' }
     $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
     "<!-- state:$encoded -->"
 }
@@ -90,6 +94,10 @@ $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 $actions = @($report.Findings | Where-Object { $_.Tier -eq 'Action' })
 $currentKeys = @($actions | ForEach-Object { Get-ActionKey $_ })
 
+# Read defensively: a report written by an older checker has no such field, and under
+# StrictMode a bare property access on it would terminate.
+$degraded = [bool] ($report.PSObject.Properties['SourcesDegraded'] -and $report.SourcesDegraded)
+
 if (-not $RunUrl -and $env:GITHUB_SERVER_URL -and $env:GITHUB_REPOSITORY -and $env:GITHUB_RUN_ID) {
     $RunUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
 }
@@ -128,6 +136,17 @@ $body | Set-Content -LiteralPath $bodyFile -Encoding utf8
 
 try {
     if ($actions.Count -eq 0) {
+        if ($existing -and $degraded) {
+            # Zero actions because a feed was unreachable is not "resolved". Closing here
+            # would post a false all-clear and then re-open a fresh issue on the next good
+            # run, losing the thread, its assignees and its history. Leave the issue
+            # untouched - editing the body would also overwrite the stored state and make
+            # every still-open item look new tomorrow.
+            Write-Host "Issue #$($existing.number) left as-is: $($report.DegradedCount) check(s) could not be completed, so drift is unproven this run."
+            if ($env:GITHUB_OUTPUT) { "issue_action=held" | Add-Content -LiteralPath $env:GITHUB_OUTPUT }
+            return
+        }
+
         if ($existing) {
             $comment = "All previously reported manifest drift is resolved as of this run. Closing.`n`n" +
             $(if ($RunUrl) { "[Run]($RunUrl)" } else { '' })
