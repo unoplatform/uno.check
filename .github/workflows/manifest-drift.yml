@@ -69,9 +69,15 @@ jobs:
         id: drift
         shell: pwsh
         run: |
-          $arguments = @('-JsonOut', 'drift.json', '-MarkdownOut', 'drift.md')
-          if ('${{ inputs.fail_on_action }}' -eq 'true') { $arguments += '-FailOnAction' }
-          ./.github/scripts/Check-ManifestDrift.ps1 @arguments
+          # Hashtable splatting, not an array: an array splat binds positionally, so
+          # '-JsonOut' lands in $RepositoryRoot and 'drift.json' in $ManifestFile - the
+          # checker then tries to parse its own output file as a manifest.
+          $params = @{
+            JsonOut     = 'drift.json'
+            MarkdownOut = 'drift.md'
+          }
+          if ('${{ inputs.fail_on_action }}' -eq 'true') { $params.FailOnAction = $true }
+          ./.github/scripts/Check-ManifestDrift.ps1 @params
 
       - name: Upload report
         if: always()
