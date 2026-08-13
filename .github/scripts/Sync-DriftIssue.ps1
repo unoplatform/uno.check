@@ -39,7 +39,7 @@ $marker = '<!-- uno-check-manifest-drift -->'
 
 function Get-ActionKey {
     param($Finding)
-    '{0}|{1}|{2}|{3}' -f $Finding.Kind, $Finding.Manifest, $Finding.Subject, $Finding.Latest
+    '{0}|{1}|{2}|{3}|{4}' -f $Finding.Kind, $Finding.Manifest, $Finding.Subject, $Finding.Current, $Finding.Latest
 }
 
 function ConvertTo-StateComment {

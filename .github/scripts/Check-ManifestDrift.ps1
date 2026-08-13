@@ -818,7 +818,7 @@ function New-Report {
     [void] $body.AppendLine('---')
     [void] $body.AppendLine("Repository version: ``$RepositoryVersion`` · Checked $([datetimeoffset]::UtcNow.ToString('yyyy-MM-dd HH:mm')) UTC")
 
-    $fingerprintSource = ($actions | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.Kind, $_.Manifest, $_.Subject, $_.Latest } | Sort-Object) -join "`n"
+    $fingerprintSource = ($actions | ForEach-Object { '{0}|{1}|{2}|{3}|{4}' -f $_.Kind, $_.Manifest, $_.Subject, $_.Current, $_.Latest } | Sort-Object) -join "`n"
     $hash = [System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($fingerprintSource))
     $fingerprint = ([System.BitConverter]::ToString($hash) -replace '-', '').Substring(0, 16).ToLowerInvariant()
 
