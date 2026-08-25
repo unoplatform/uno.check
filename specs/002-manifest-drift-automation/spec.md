@@ -36,6 +36,8 @@ A scheduled, zero-maintenance watchdog that:
   pins is `dotnet workload list` on a clean machine (`AGENTS.md` §5), because package
   feeds contain builds that were never part of a shipped SDK. The automation reports
   drift; a human validates and transcribes the real versions.
+  *Superseded by spec 003*: the generator there runs the clean-machine procedure on a
+  runner instead of transcribing feeds; this detector stays signal-only.
 - **No paging/alerting infrastructure.** A tracking issue and an optional webhook are
   the alarm surface. Anything more belongs to whoever consumes the webhook.
 - **No tracking of tool-code (C#) changes pending release** — scope is the manifests.
