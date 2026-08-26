@@ -1,0 +1,26 @@
+<Project Sdk="Uno.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-desktop</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UnoSingleProject>true</UnoSingleProject>
+		<RootNamespace>UnoCheck.Gui</RootNamespace>
+
+		<ApplicationTitle>uno-check Doctor (POC)</ApplicationTitle>
+		<ApplicationId>uno.platform.check.gui.poc</ApplicationId>
+
+		<UnoFeatures>
+			SkiaRenderer;
+		</UnoFeatures>
+
+		<!-- POC: not part of UnoCheck.sln / CI. Build from this directory so the
+		     local global.json (SDK 10) applies instead of the repo root's. -->
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
+	</ItemGroup>
+
+</Project>

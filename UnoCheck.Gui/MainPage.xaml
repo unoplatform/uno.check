@@ -1,0 +1,76 @@
+<Page
+	x:Class="UnoCheck.Gui.MainPage"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:vm="using:UnoCheck.Gui.ViewModels"
+	Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+	<Grid Padding="24" RowSpacing="12">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+
+		<StackPanel Grid.Row="0" Spacing="4">
+			<TextBlock Text="uno-check Doctor" Style="{StaticResource TitleTextBlockStyle}" />
+			<TextBlock Text="POC — drives the uno-check CLI through its JSONL contract (--json / --json-file / --only)"
+					   Style="{StaticResource CaptionTextBlockStyle}"
+					   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+		</StackPanel>
+
+		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+			<Button Content="Run checks" Style="{StaticResource AccentButtonStyle}"
+					Command="{x:Bind ViewModel.RunCommand}" />
+			<Button Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
+			<TextBlock Text="{x:Bind ViewModel.Summary, Mode=OneWay}" VerticalAlignment="Center" />
+		</StackPanel>
+
+		<ScrollViewer Grid.Row="2">
+			<ItemsControl ItemsSource="{x:Bind ViewModel.Cards}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate x:DataType="vm:CheckCardViewModel">
+						<Border Margin="0,4" Padding="14,10"
+								Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+								BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+								BorderThickness="1" CornerRadius="6">
+							<Grid ColumnSpacing="12">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="28" />
+									<ColumnDefinition Width="*" />
+									<ColumnDefinition Width="Auto" />
+								</Grid.ColumnDefinitions>
+
+								<TextBlock Grid.Column="0" Text="{x:Bind StatusGlyph, Mode=OneWay}"
+										   Foreground="{x:Bind StatusBrush, Mode=OneWay}"
+										   FontSize="18" FontWeight="Bold"
+										   VerticalAlignment="Center" HorizontalAlignment="Center" />
+
+								<StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+									<TextBlock Text="{x:Bind Name, Mode=OneWay}" FontWeight="SemiBold" />
+									<TextBlock Text="{x:Bind Message, Mode=OneWay}"
+											   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+											   TextWrapping="Wrap"
+											   Visibility="{x:Bind Message, Mode=OneWay, Converter={StaticResource NullToCollapsed}}" />
+									<TextBlock Text="{x:Bind Detail, Mode=OneWay}"
+											   Style="{StaticResource CaptionTextBlockStyle}"
+											   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+											   TextWrapping="Wrap"
+											   Visibility="{x:Bind Detail, Mode=OneWay, Converter={StaticResource NullToCollapsed}}" />
+								</StackPanel>
+
+								<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+									<ProgressRing IsActive="{x:Bind IsBusy, Mode=OneWay}" Width="20" Height="20" />
+									<Button Content="Fix"
+											Command="{x:Bind FixCommand}"
+											Visibility="{x:Bind CanFix, Mode=OneWay}"
+											IsEnabled="{x:Bind IsBusy, Mode=OneWay, Converter={StaticResource BoolNegation}}" />
+								</StackPanel>
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+	</Grid>
+</Page>
