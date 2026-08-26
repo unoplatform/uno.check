@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -17,7 +18,17 @@ namespace DotNetCheck
 			TelemetryClient.Init();
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				ConsoleWindowHelpers.BringToFront();
+				// In structured-output mode a host app (Studio, CI, agents) owns the UX:
+				// hide the console instead of fronting it. Checked on raw args because
+				// the window must be handled before command-line parsing runs.
+				// Covers --json, --json-file, and --json-file=<path> forms.
+				var structuredMode = args?.Any(a =>
+					a.StartsWith("--json", StringComparison.OrdinalIgnoreCase)) ?? false;
+
+				if (structuredMode)
+					ConsoleWindowHelpers.Hide();
+				else
+					ConsoleWindowHelpers.BringToFront();
 			}
 
 			// Need to register the code pages provider for code that parses

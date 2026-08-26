@@ -28,6 +28,20 @@ internal static class ConsoleWindowHelpers
         SetForegroundWindow(hWnd);
     }
 
+    /// <summary>
+    /// Hides the console window entirely. Used in structured-output mode (--json/--json-file)
+    /// where a host application owns the UX and the console must never appear — in particular
+    /// for elevated fix children, whose window-style hint is dropped across the UAC boundary.
+    /// </summary>
+    public static void Hide()
+    {
+        var hWnd = GetConsoleWindow();
+        if (hWnd == IntPtr.Zero)
+            return;
+
+        ShowWindow(hWnd, ShowWindowCommands.Hide);
+    }
+
     // https://learn.microsoft.com/en-us/windows/console/getconsolewindow
     [DllImport("kernel32.dll")] private static extern IntPtr GetConsoleWindow();
     

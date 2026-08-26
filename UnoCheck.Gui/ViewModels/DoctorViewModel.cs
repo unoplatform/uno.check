@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using UnoCheck.Gui.Services;
 
@@ -64,30 +66,89 @@ public partial class DoctorViewModel : ObservableObject
 	[RelayCommand(CanExecute = nameof(IsRunning))]
 	private void Cancel() => _cts?.Cancel();
 
+	/// <summary>Set by the view; ContentDialogs need a live XamlRoot.</summary>
+	public XamlRoot? XamlRoot { get; set; }
+
 	public async Task FixAsync(CheckCardViewModel card)
 	{
 		card.IsBusy = true;
-		card.Detail = "Fixing…";
+
+		// Progress popup: fix events stream into it live (tailed from --json-file when
+		// the child runs elevated — its stdout can't cross the UAC boundary).
+		var log = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Text = "Starting fix…" };
+		var progress = new ProgressBar { IsIndeterminate = true };
+		var dialog = new ContentDialog
+		{
+			Title = $"Fixing: {card.Name}",
+			Content = new StackPanel
+			{
+				Spacing = 8,
+				MinWidth = 420,
+				Children = { progress, new ScrollViewer { Content = log, MaxHeight = 320 } },
+			},
+			PrimaryButtonText = "Close",
+			IsPrimaryButtonEnabled = false,
+			XamlRoot = XamlRoot,
+		};
+
+		void AppendLine(string line)
+			=> _dispatcher.TryEnqueue(() => log.Text += Environment.NewLine + line);
+
+		void OnFixEvent(JsonElement evt)
+		{
+			OnEvent(evt);
+
+			var type = evt.TryGetProperty("type", out var t) ? t.GetString() : null;
+			switch (type)
+			{
+				case "fix_started":
+					AppendLine($"Applying {evt.GetProperty("solution").GetString()}…");
+					break;
+				case "fix_progress" or "checkup_progress":
+					if (evt.TryGetProperty("message", out var m) && m.GetString() is { Length: > 0 } msg)
+						AppendLine(msg);
+					break;
+				case "fix_result":
+					AppendLine(evt.GetProperty("success").GetBoolean()
+						? "Fix applied."
+						: evt.TryGetProperty("error", out var err) ? $"Fix failed: {err.GetString()}" : "Fix failed.");
+					break;
+			}
+		}
+
+		var showTask = dialog.ShowAsync();
 
 		try
 		{
 			// Fixes may write to machine-scoped locations; elevate the child on Windows
-			// unless this process is already admin. Progress is tailed from --json-file.
-			var exit = OperatingSystem.IsWindows() && !UnoCheckClient.IsElevated()
-				? await Task.Run(() => _client.RunFixElevatedAsync(card.Id, OnEvent))
-				: await Task.Run(() => _client.RunAsync($"--fix --only {card.Id}", OnEvent));
+			// unless this process is already admin.
+			var elevated = OperatingSystem.IsWindows() && !UnoCheckClient.IsElevated();
+			_ = elevated
+				? await Task.Run(() => _client.RunFixElevatedAsync(card.Id, OnFixEvent))
+				: await Task.Run(() => _client.RunAsync($"--fix --only {card.Id}", OnFixEvent));
 
-			// Re-diagnose just this checkup and let its checkup_result update the card.
-			await Task.Run(() => _client.RunAsync($"--only {card.Id}", OnEvent));
+			// Re-diagnose just this checkup; its checkup_result updates the card.
+			AppendLine("Re-checking…");
+			await Task.Run(() => _client.RunAsync($"--only {card.Id}", OnFixEvent));
+			AppendLine("Done.");
 		}
 		catch (Exception ex)
 		{
-			card.Detail = $"Fix failed: {ex.Message}";
+			// Includes the user declining the UAC prompt (Win32 error 1223).
+			AppendLine($"Fix did not run: {ex.Message}");
 		}
 		finally
 		{
+			_dispatcher.TryEnqueue(() =>
+			{
+				progress.IsIndeterminate = false;
+				progress.Value = 100;
+				dialog.IsPrimaryButtonEnabled = true;
+			});
 			card.IsBusy = false;
 		}
+
+		await showTask;
 	}
 
 	void OnEvent(JsonElement evt)

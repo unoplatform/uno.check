@@ -13,6 +13,10 @@ public sealed partial class MainPage : Page
 		this.InitializeComponent();
 
 		// Doctor panels diagnose on open; no reason to make the user click first.
-		Loaded += (_, _) => ViewModel.RunCommand.Execute(null);
+		Loaded += (_, _) =>
+		{
+			ViewModel.XamlRoot = XamlRoot;
+			ViewModel.RunCommand.Execute(null);
+		};
 	}
 }
