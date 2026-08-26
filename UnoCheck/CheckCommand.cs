@@ -27,6 +27,23 @@ namespace DotNetCheck.Cli
 			Util.CI = settings.CI;
 			if (settings.CI)
 				settings.NonInteractive = true;
+
+			if (settings.Json || !string.IsNullOrEmpty(settings.JsonFile))
+			{
+				settings.NonInteractive = true;
+				Json.JsonlOutput.Init(settings.Json, settings.JsonFile);
+
+				if (settings.Json)
+				{
+					// stdout carries pure JSONL; human-readable output moves to stderr.
+					AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
+					{
+						Ansi = AnsiSupport.Detect,
+						Out = new AnsiConsoleOutput(Console.Error),
+					});
+				}
+			}
+
 			Util.NonInteractive = settings.NonInteractive;
 
 			Console.Title = ToolInfo.ToolName;
@@ -43,7 +60,9 @@ namespace DotNetCheck.Cli
 			AnsiConsole.MarkupLine("If problems are detected, it will offer the option to try and fix them for you, or suggest a way to fix them yourself.");
 			AnsiConsole.Write(new Rule());
 
-			if (await ToolUpdater.CheckAndPromptForUpdateAsync(settings))
+			// Structured-output consumers (Studio, CI, agents) pin the tool version themselves;
+			// the interactive update prompt would corrupt the event stream.
+			if (!Json.JsonlOutput.Enabled && await ToolUpdater.CheckAndPromptForUpdateAsync(settings))
 			{
 				return 1;
 			}
@@ -161,9 +180,54 @@ namespace DotNetCheck.Cli
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
-			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);
+			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms).ToList();
+
+			// --only: scope the run to the requested checkup(s) plus their required dependencies.
+			// Id matching mirrors the dependency-resolution rule below (prefix match, either direction).
+			if (settings.Only is { Length: > 0 })
+			{
+				var include = new HashSet<string>(settings.Only, StringComparer.OrdinalIgnoreCase);
+
+				bool expanded;
+				do
+				{
+					expanded = false;
+					var allIds = checkups.Select(c => c.Id);
+
+					foreach (var c in checkups)
+					{
+						if (!include.Any(inc => c.Id.StartsWith(inc, StringComparison.OrdinalIgnoreCase)
+							|| inc.StartsWith(c.Id, StringComparison.OrdinalIgnoreCase)))
+							continue;
+
+						foreach (var dep in c.DeclareDependencies(allIds))
+						{
+							if (dep.IsRequired && include.Add(dep.CheckupId))
+								expanded = true;
+						}
+					}
+				} while (expanded);
+
+				checkups = checkups
+					.Where(c => include.Any(inc => c.Id.StartsWith(inc, StringComparison.OrdinalIgnoreCase)
+						|| inc.StartsWith(c.Id, StringComparison.OrdinalIgnoreCase)))
+					.ToList();
+			}
 
 			AnsiConsole.MarkupLine(" ok");
+
+			if (Json.JsonlOutput.Enabled)
+			{
+				Json.JsonlOutput.Emit(new Json.RunStartedEvent
+				{
+					ToolVersion = ToolInfo.CurrentVersion.ToString(),
+					Channel = channel.ToString(),
+					Targets = settings.TargetPlatforms,
+					CheckupCount = checkups.Count,
+				});
+			}
+
+			var reportChecks = new Dictionary<string, Json.HealthCheck>();
 
 			var checkupId = string.Empty;
 
@@ -230,6 +294,19 @@ namespace DotNetCheck.Cli
 						: $"[bold gray]{Icon.Ignored}";
 
 					AnsiConsole.MarkupLine($"{icon} Skipped: {Markup.Escape(checkup.Title)} ({Markup.Escape(skipCheckup.skipReason)})[/]");
+
+					var skippedCheck = new Json.HealthCheck
+					{
+						Id = checkup.Id,
+						Name = checkup.Title,
+						Status = skipCheckup.isError ? "error" : "skipped",
+						SkipReason = skipCheckup.skipReason,
+					};
+					reportChecks[checkup.Id] = skippedCheck;
+
+					if (Json.JsonlOutput.Enabled)
+						Json.JsonlOutput.Emit(new Json.CheckupResultEvent { Check = skippedCheck });
+
 					continue;
 				}
 
@@ -238,6 +315,9 @@ namespace DotNetCheck.Cli
 				AnsiConsole.WriteLine();
 				AnsiConsole.MarkupLine($"[bold]{Icon.Checking} {Markup.Escape(checkup.Title)} Checkup[/]...");
 				Console.Title = checkup.Title;
+
+				if (Json.JsonlOutput.Enabled && !isRetry)
+					Json.JsonlOutput.Emit(new Json.CheckupStartedEvent { Id = checkup.Id, Name = checkup.Title });
 
 				DiagnosticResult diagnosis = null;
 
@@ -255,6 +335,12 @@ namespace DotNetCheck.Cli
 
 				// Cache the status for dependencies
 				checkupStatus[checkup.Id] = diagnosis.Status;
+
+				var healthCheck = BuildHealthCheck(checkup, diagnosis);
+				reportChecks[checkup.Id] = healthCheck;
+
+				if (Json.JsonlOutput.Enabled)
+					Json.JsonlOutput.Emit(new Json.CheckupResultEvent { Check = healthCheck });
 
 				if (diagnosis.Status == Models.Status.Ok)
 					continue;
@@ -306,22 +392,36 @@ namespace DotNetCheck.Cli
 							try
 							{
 								remedy.OnStatusUpdated += RemedyStatusUpdated;
+								_activeFixCheckupId = checkup.Id;
 
 								AnsiConsole.MarkupLine($"{Icon.Thinking} Attempting to fix: {Markup.Escape(checkup.Title)}");
+
+								if (Json.JsonlOutput.Enabled)
+									Json.JsonlOutput.Emit(new Json.FixStartedEvent { Id = checkup.Id, Solution = remedy.GetType().Name });
 
 								await remedy.Implement(sharedState, cts.Token);
 
 								didFix = true;
 								AnsiConsole.MarkupLine($"[bold]Fix applied.  Checking again...[/]");
+
+								if (Json.JsonlOutput.Enabled)
+									Json.JsonlOutput.Emit(new Json.FixResultEvent { Id = checkup.Id, Success = true });
 							}
 							catch (Exception x) when (x is AccessViolationException || x is UnauthorizedAccessException)
 							{
 								Util.Exception(x);
 								AnsiConsole.Markup(adminMsg);
+
+								if (Json.JsonlOutput.Enabled)
+									Json.JsonlOutput.Emit(new Json.FixResultEvent { Id = checkup.Id, Success = false, Error = $"Elevation required: {x.Message}" });
 							}
 							catch (OperationCanceledException)
 							{
 								AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Operation canceled by user.[/]");
+
+								if (Json.JsonlOutput.Enabled)
+									Json.JsonlOutput.Emit(new Json.FixResultEvent { Id = checkup.Id, Success = false, Error = "Canceled" });
+
 								Environment.ExitCode = 130;
 								return 130;
 							}
@@ -329,10 +429,14 @@ namespace DotNetCheck.Cli
 							{
 								Util.Exception(ex);
 								AnsiConsole.MarkupLine($"[bold red]Fix failed - {Markup.Escape(ex.Message)}[/]");
+
+								if (Json.JsonlOutput.Enabled)
+									Json.JsonlOutput.Emit(new Json.FixResultEvent { Id = checkup.Id, Success = false, Error = ex.Message });
 							}
 							finally
 							{
 								remedy.OnStatusUpdated -= RemedyStatusUpdated;
+								_activeFixCheckupId = null;
 							}
 						}
 
@@ -395,6 +499,31 @@ namespace DotNetCheck.Cli
 			{
 				TelemetryClient.TrackCheckSuccess(sw.Elapsed);
                 AnsiConsole.MarkupLine($"[bold blue]{Icon.Success} Congratulations, everything looks great![/]");
+			}
+
+			if (Json.JsonlOutput.Enabled)
+			{
+				var checksOut = reportChecks.Values.ToList();
+
+				Json.JsonlOutput.Emit(new Json.ReportEvent
+				{
+					Report = new Json.DoctorReport
+					{
+						CorrelationId = Json.JsonlOutput.CorrelationId,
+						Timestamp = DateTimeOffset.UtcNow,
+						ToolVersion = ToolInfo.CurrentVersion.ToString(),
+						Status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy",
+						Checks = checksOut,
+						Summary = new Json.DoctorSummary
+						{
+							Total = checksOut.Count,
+							Ok = checksOut.Count(c => c.Status == "ok"),
+							Warning = checksOut.Count(c => c.Status == "warning"),
+							Error = checksOut.Count(c => c.Status == "error"),
+							Skipped = checksOut.Count(c => c.Status == "skipped"),
+						},
+					},
+				});
 			}
 
 			Console.Title = ToolInfo.ToolName;
@@ -476,9 +605,51 @@ namespace DotNetCheck.Cli
             return targetPlatforms.ToArray();
         }
 
+		private string _activeFixCheckupId;
+
+		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis)
+		{
+			Json.FixInfo fix = null;
+
+			if (diagnosis.Status != Models.Status.Ok && diagnosis.HasSuggestion)
+			{
+				fix = new Json.FixInfo
+				{
+					IssueId = checkup.Id,
+					Description = string.IsNullOrEmpty(diagnosis.Suggestion.Description)
+						? diagnosis.Suggestion.Name
+						: $"{diagnosis.Suggestion.Name}: {diagnosis.Suggestion.Description}",
+					AutoFixable = diagnosis.Suggestion.HasSolution,
+					Command = diagnosis.Suggestion.HasSolution
+						? $"{ToolInfo.ToolCommand} --fix --only {checkup.Id} --non-interactive"
+						: null,
+				};
+			}
+
+			return new Json.HealthCheck
+			{
+				Id = checkup.Id,
+				Name = checkup.Title,
+				Status = Json.JsonlOutput.StatusName(diagnosis.Status),
+				Message = diagnosis.Message,
+				Fix = fix,
+			};
+		}
+
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)
 		{
 			AnsiConsole.MarkupLine("  " + BuildCheckupStatusMarkup(e.Message, e.Status));
+
+			if (Json.JsonlOutput.Enabled)
+			{
+				Json.JsonlOutput.Emit(new Json.CheckupProgressEvent
+				{
+					Id = e.Checkup?.Id,
+					Message = e.Message,
+					Status = e.Status.HasValue ? Json.JsonlOutput.StatusName(e.Status.Value) : null,
+					Progress = e.Progress >= 0 ? e.Progress : (int?)null,
+				});
+			}
 		}
 
 #nullable enable
@@ -498,6 +669,9 @@ namespace DotNetCheck.Cli
 		private void RemedyStatusUpdated(object sender, RemedyStatusEventArgs e)
 		{
 			AnsiConsole.MarkupLine("  " + Markup.Escape(e.Message));
+
+			if (Json.JsonlOutput.Enabled)
+				Json.JsonlOutput.Emit(new Json.FixProgressEvent { Id = _activeFixCheckupId, Message = e.Message });
 		}
     }
 }

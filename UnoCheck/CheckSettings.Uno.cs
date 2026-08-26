@@ -31,5 +31,20 @@ Targets: webassembly ios android macos linux windows"
         [Description(
 	        @"Uno SDK Checkup will validate if provided Uno SDK version is installed.")]
         public string? UnoSdkVersion { get; set; }
+
+        [CommandOption("--json")]
+        [Description(
+            @"Emit JSONL progress events and a final JSON report on stdout for GUI/CI/agent consumers. Human-readable output moves to stderr. Implies --non-interactive.")]
+        public bool Json { get; set; }
+
+        [CommandOption("--json-file <PATH>")]
+        [Description(
+            @"Append the same JSONL events to a file. Intended for elevated child processes whose stdout cannot be redirected across the elevation boundary.")]
+        public string? JsonFile { get; set; }
+
+        [CommandOption("--only <CHECKUP_ID>")]
+        [Description(
+            @"Run only the specified checkup(s), plus any checkups they require. Use the --only option multiple times for multiple checkups. See the list command for checkup ids.")]
+        public string[]? Only { get; set; }
 	}
 }

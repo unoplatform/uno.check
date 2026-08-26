@@ -16,8 +16,12 @@
             Remove this element if your application requires this virtualization for backwards
             compatibility.
         -->
-        <!--<requestedExecutionLevel  level="asInvoker" uiAccess="false" />-->
-        <requestedExecutionLevel  level="requireAdministrator" uiAccess="false" />
+        <!-- asInvoker: the read-only diagnosis pass needs no elevation and must be
+             launchable from non-elevated hosts (Studio Desktop, CI, agents).
+             Fixes that require elevation are run in a deliberately elevated child
+             process (uno-check ~fix ~only <id>); the CLI already warns non-admin
+             users interactively that most fixes need Administrator. -->
+        <requestedExecutionLevel  level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
