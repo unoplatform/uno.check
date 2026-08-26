@@ -164,10 +164,67 @@ Skips a checkup by name or ID as listed in `uno-check list`.
 uno-check --skip openjdk --skip androidsdk
 ```
 
+### `--only <CHECKUP_ID>` Run only specific checkups
+
+Runs only the nominated checkup(s), plus any checkups they require. Use the argument multiple times for multiple checkups. Checkup ids (not display names) are listed by `uno-check list`; ids match exactly, case-insensitively.
+
+```bash
+uno-check --only openjdk
+uno-check --fix --only androidsdk --non-interactive
+```
+
+> [!NOTE]
+> An id that matches no checkup fails the run: the unknown ids are listed on stderr and the exit code is non-zero, so a typo can never produce a passing empty run.
+
+### `--json` Structured JSONL output
+
+Emits machine-readable JSONL on stdout — one JSON event per line (`run_started`, `checkup_started`, `checkup_progress`, `checkup_result`, `fix_started`, `fix_progress`, `fix_result`) ending with a final `report` event containing the full results and summary. The `report` event is emitted on every exit path — including cancellation and early failures — so consumers can treat it as the end-of-stream marker. Human-readable output moves to stderr so stdout stays pure JSONL. Implies `--non-interactive`.
+
+Intended for host applications, CI pipelines, and AI agents that embed uno-check. The event schema is documented in the repository under `specs/003-structured-json-output`.
+
+```bash
+uno-check --json --target wasm > results.jsonl
+```
+
+### `--json-file <PATH>` Structured output to a file
+
+Writes the same JSONL events to a file. Useful when stdout cannot be captured — for example an elevated child process on Windows, whose stdout cannot be redirected across the elevation boundary. Can be combined with `--json` or used alone. Implies `--non-interactive`.
+
+The path must not already exist: uno-check only writes files it creates itself (`FileMode.CreateNew`), refusing pre-existing files and links. If the path cannot be created and no other sink was requested, the run exits immediately with `-1` rather than running without output. Pass a fresh path per run — ideally in a directory only the launching user can write — and delete it when done.
+
+```bash
+uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-run-1234.jsonl"
+```
+
+### `--correlation-id <ID>` Correlate structured-output runs
+
+Structured-output events carry a `correlation_id`, newly generated per run by default. A host that launches uno-check child processes (for example an elevated per-item fix) passes its own id so the parent run and the child report as one logical run.
+
+```bash
+uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
+```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0`  | All checks passed (warnings possible) |
+| `1`  | One or more checks failed, or `--only` named an unknown checkup id |
+| `-1` (`255` in most shells) | The tool could not run — e.g. manifest validation failed |
+| `130` | Canceled (Ctrl+C) |
+
+In structured mode, prefer the final `report` event over the exit code for check results — the exit code cannot distinguish which checks failed.
+
 ### `list` List Checkups
 
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
 These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
+
+With `--json`, emits the catalog as a single JSON line on stdout (`checkup_catalog` event with `id`, `name`, and display `title` per checkup) — for host applications building checkup-selection UIs that feed `--only`/`--skip`. Honors `--target` filtering and implies `--non-interactive`.
+
+```bash
+uno-check list --json
+```
 
 ### `config` Configure global.json and NuGet.config in Working Dir
 
