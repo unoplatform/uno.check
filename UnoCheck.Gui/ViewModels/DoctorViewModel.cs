@@ -94,6 +94,8 @@ public partial class DoctorViewModel : ObservableObject
 		void AppendLine(string line)
 			=> _dispatcher.TryEnqueue(() => log.Text += Environment.NewLine + line);
 
+		var fixSucceeded = false;
+
 		void OnFixEvent(JsonElement evt)
 		{
 			OnEvent(evt);
@@ -109,43 +111,58 @@ public partial class DoctorViewModel : ObservableObject
 						AppendLine(msg);
 					break;
 				case "fix_result":
-					AppendLine(evt.GetProperty("success").GetBoolean()
-						? "Fix applied."
+					fixSucceeded = evt.GetProperty("success").GetBoolean();
+					AppendLine(fixSucceeded
+						? "Fix applied — verifying…"
 						: evt.TryGetProperty("error", out var err) ? $"Fix failed: {err.GetString()}" : "Fix failed.");
 					break;
 			}
 		}
 
 		var showTask = dialog.ShowAsync();
+		var failed = false;
 
 		try
 		{
 			// Fixes may write to machine-scoped locations; elevate the child on Windows
-			// unless this process is already admin.
+			// unless this process is already admin. No separate re-check needed:
+			// uno-check re-examines the checkup itself after a successful fix, and that
+			// checkup_result flows through the same event stream to update the card.
 			var elevated = OperatingSystem.IsWindows() && !UnoCheckClient.IsElevated();
 			_ = elevated
 				? await Task.Run(() => _client.RunFixElevatedAsync(card.Id, OnFixEvent))
 				: await Task.Run(() => _client.RunAsync($"--fix --only {card.Id}", OnFixEvent));
 
-			// Re-diagnose just this checkup; its checkup_result updates the card.
-			AppendLine("Re-checking…");
-			await Task.Run(() => _client.RunAsync($"--only {card.Id}", OnFixEvent));
-			AppendLine("Done.");
+			failed = !fixSucceeded;
 		}
 		catch (Exception ex)
 		{
 			// Includes the user declining the UAC prompt (Win32 error 1223).
+			failed = true;
 			AppendLine($"Fix did not run: {ex.Message}");
 		}
 		finally
 		{
-			_dispatcher.TryEnqueue(() =>
+			card.IsBusy = false;
+
+			var close = !failed;
+			_dispatcher.TryEnqueue(async () =>
 			{
 				progress.IsIndeterminate = false;
 				progress.Value = 100;
-				dialog.IsPrimaryButtonEnabled = true;
+
+				if (close)
+				{
+					// Success: let the final state register, then get out of the way.
+					await Task.Delay(600);
+					dialog.Hide();
+				}
+				else
+				{
+					// Failure: keep the log on screen until the user closes it.
+					dialog.IsPrimaryButtonEnabled = true;
+				}
 			});
-			card.IsBusy = false;
 		}
 
 		await showTask;
@@ -192,6 +209,7 @@ public partial class DoctorViewModel : ObservableObject
 					card.Message = skip.GetString();
 				card.CanFix = check.TryGetProperty("fix", out var fix)
 					&& fix.TryGetProperty("auto_fixable", out var af) && af.GetBoolean();
+				card.Detail = null; // final state: drop stale progress text
 				card.SetStatus(check.GetProperty("status").GetString() ?? "error");
 				break;
 			}
