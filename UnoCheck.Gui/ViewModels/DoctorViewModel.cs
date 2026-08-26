@@ -20,9 +20,106 @@ public partial class DoctorViewModel : ObservableObject
 	public DoctorViewModel(DispatcherQueue dispatcher)
 	{
 		_dispatcher = dispatcher;
+
+		Targets = new ObservableCollection<TargetOption>(BuildDefaultTargets());
+		LoadSettings();
 	}
 
 	public ObservableCollection<CheckCardViewModel> Cards { get; } = new();
+
+	// ── Run options (mirrors the Mountaineer Doctor screen) ──────────
+
+	public ObservableCollection<TargetOption> Targets { get; }
+
+	public string[] Channels { get; } = ["Stable", "Preview", "Preview major", "Main"];
+
+	[ObservableProperty]
+	private int _selectedChannelIndex;
+
+	[ObservableProperty]
+	private bool _verbose;
+
+	static IEnumerable<TargetOption> BuildDefaultTargets()
+	{
+		// Defaults suit the current OS: no Apple-only targets preselected on Windows, etc.
+		var isWindows = OperatingSystem.IsWindows();
+		var isMac = OperatingSystem.IsMacOS();
+
+		yield return new TargetOption("WASM", "wasm", true);
+		yield return new TargetOption("Android", "android", true);
+		yield return new TargetOption("iOS", "ios", isMac);
+		yield return new TargetOption("Skia/Desktop", "skia", true);
+		yield return new TargetOption("Windows", "windows", isWindows);
+		yield return new TargetOption("macOS", "macos", isMac);
+	}
+
+	string BuildRunArgs()
+	{
+		var args = string.Join(" ", Targets.Where(t => t.IsChecked).Select(t => $"--target {t.Flag}"));
+
+		args += SelectedChannelIndex switch
+		{
+			1 => " --pre",
+			2 => " --pre-major",
+			3 => " --main",
+			_ => "",
+		};
+
+		if (Verbose)
+			args += " -v";
+
+		return args.Trim();
+	}
+
+	// ── Settings persistence (spec 084: no re-picking every visit) ───
+
+	static string SettingsPath => Path.Combine(
+		Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+		"UnoCheck.Gui", "settings.json");
+
+	void LoadSettings()
+	{
+		try
+		{
+			if (!File.Exists(SettingsPath))
+				return;
+
+			var root = JsonDocument.Parse(File.ReadAllText(SettingsPath)).RootElement;
+
+			if (root.TryGetProperty("targets", out var targets))
+			{
+				var picked = targets.EnumerateArray().Select(t => t.GetString()).ToHashSet();
+				foreach (var t in Targets)
+					t.IsChecked = picked.Contains(t.Flag);
+			}
+			if (root.TryGetProperty("channel", out var ch))
+				SelectedChannelIndex = Math.Clamp(ch.GetInt32(), 0, Channels.Length - 1);
+			if (root.TryGetProperty("verbose", out var v))
+				Verbose = v.GetBoolean();
+		}
+		catch
+		{
+			// Corrupt/unreadable settings: fall back to defaults.
+		}
+	}
+
+	void SaveSettings()
+	{
+		try
+		{
+			Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+			File.WriteAllText(SettingsPath, JsonSerializer.Serialize(new
+			{
+				targets = Targets.Where(t => t.IsChecked).Select(t => t.Flag),
+				channel = SelectedChannelIndex,
+				verbose = Verbose,
+			}));
+		}
+		catch
+		{
+			// Persistence is a convenience; never fail a run over it.
+		}
+	}
 
 	[ObservableProperty]
 	[NotifyCanExecuteChangedFor(nameof(RunCommand))]
@@ -38,11 +135,12 @@ public partial class DoctorViewModel : ObservableObject
 		IsRunning = true;
 		Cards.Clear();
 		Summary = "Running uno-check…";
+		SaveSettings();
 		_cts = new CancellationTokenSource();
 
 		try
 		{
-			var exit = await Task.Run(() => _client.RunAsync("", OnEvent, _cts.Token));
+			var exit = await Task.Run(() => _client.RunAsync(BuildRunArgs(), OnEvent, _cts.Token));
 			if (Summary.StartsWith("Running"))
 				Summary = $"Run finished (exit {exit}).";
 		}
@@ -128,10 +226,13 @@ public partial class DoctorViewModel : ObservableObject
 			// unless this process is already admin. No separate re-check needed:
 			// uno-check re-examines the checkup itself after a successful fix, and that
 			// checkup_result flows through the same event stream to update the card.
+			// The fix must run against the same manifest channel as the diagnosis.
+			var channelArg = SelectedChannelIndex switch { 1 => "--pre", 2 => "--pre-major", 3 => "--main", _ => "" };
+
 			var elevated = OperatingSystem.IsWindows() && !UnoCheckClient.IsElevated();
 			_ = elevated
-				? await Task.Run(() => _client.RunFixElevatedAsync(card.Id, OnFixEvent))
-				: await Task.Run(() => _client.RunAsync($"--fix --only {card.Id}", OnFixEvent));
+				? await Task.Run(() => _client.RunFixElevatedAsync(card.Id, channelArg, OnFixEvent))
+				: await Task.Run(() => _client.RunAsync($"--fix --only {card.Id} {channelArg}".Trim(), OnFixEvent));
 
 			failed = !fixSucceeded;
 		}
@@ -254,6 +355,22 @@ public partial class DoctorViewModel : ObservableObject
 		}
 		return card;
 	}
+}
+
+public partial class TargetOption : ObservableObject
+{
+	public TargetOption(string label, string flag, bool isChecked)
+	{
+		Label = label;
+		Flag = flag;
+		_isChecked = isChecked;
+	}
+
+	public string Label { get; }
+	public string Flag { get; }
+
+	[ObservableProperty]
+	private bool _isChecked;
 }
 
 public partial class CheckCardViewModel : ObservableObject

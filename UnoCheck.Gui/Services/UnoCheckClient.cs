@@ -86,15 +86,16 @@ public sealed class UnoCheckClient
 	/// Elevated fix run: launches the CLI via the shell "runas" verb (UAC prompt) with
 	/// --json-file, and tails that file for events until the child exits.
 	/// </summary>
-	public async Task<int> RunFixElevatedAsync(string checkupId, Action<JsonElement> onEvent, CancellationToken ct = default)
+	public async Task<int> RunFixElevatedAsync(string checkupId, string extraArgs, Action<JsonElement> onEvent, CancellationToken ct = default)
 	{
 		var (fileName, argPrefix) = GetInvocation();
 		var eventsFile = Path.Combine(Path.GetTempPath(), $"unocheck-fix-{Guid.NewGuid():n}.jsonl");
 
+		var args = $"{argPrefix}--fix --only {checkupId} {extraArgs}".Trim();
 		var psi = new ProcessStartInfo
 		{
 			FileName = fileName,
-			Arguments = $"{argPrefix}--fix --only {checkupId} --non-interactive --json-file \"{eventsFile}\"",
+			Arguments = $"{args} --non-interactive --json-file \"{eventsFile}\"",
 			UseShellExecute = true,
 			Verb = "runas",
 			WindowStyle = ProcessWindowStyle.Hidden,

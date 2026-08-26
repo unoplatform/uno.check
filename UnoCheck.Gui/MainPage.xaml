@@ -9,6 +9,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
@@ -19,14 +20,38 @@
 					   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 		</StackPanel>
 
-		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+		<!-- Run options: targets, channel, verbose (persisted between sessions) -->
+		<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16">
+			<ItemsControl ItemsSource="{x:Bind ViewModel.Targets}" VerticalAlignment="Center">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<StackPanel Orientation="Horizontal" Spacing="12" />
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate x:DataType="vm:TargetOption">
+						<CheckBox Content="{x:Bind Label}" IsChecked="{x:Bind IsChecked, Mode=TwoWay}"
+								  MinWidth="0" />
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+
+			<ComboBox ItemsSource="{x:Bind ViewModel.Channels}"
+					  SelectedIndex="{x:Bind ViewModel.SelectedChannelIndex, Mode=TwoWay}"
+					  MinWidth="140" VerticalAlignment="Center" />
+
+			<CheckBox Content="Verbose" IsChecked="{x:Bind ViewModel.Verbose, Mode=TwoWay}"
+					  MinWidth="0" VerticalAlignment="Center" />
+		</StackPanel>
+
+		<StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
 			<Button Content="Run checks" Style="{StaticResource AccentButtonStyle}"
 					Command="{x:Bind ViewModel.RunCommand}" />
 			<Button Content="Cancel" Command="{x:Bind ViewModel.CancelCommand}" />
 			<TextBlock Text="{x:Bind ViewModel.Summary, Mode=OneWay}" VerticalAlignment="Center" />
 		</StackPanel>
 
-		<ScrollViewer Grid.Row="2">
+		<ScrollViewer Grid.Row="3">
 			<ItemsControl ItemsSource="{x:Bind ViewModel.Cards}">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate x:DataType="vm:CheckCardViewModel">
