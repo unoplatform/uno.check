@@ -1,0 +1,14 @@
+<Application
+	x:Class="UnoCheck.Gui.App"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+			</ResourceDictionary.MergedDictionaries>
+			<local:NullToCollapsedConverter xmlns:local="using:UnoCheck.Gui" x:Key="NullToCollapsed" />
+			<local:BoolNegationConverter xmlns:local="using:UnoCheck.Gui" x:Key="BoolNegation" />
+		</ResourceDictionary>
+	</Application.Resources>
+</Application>
