@@ -544,6 +544,13 @@ namespace DotNetCheck.Cli
 
 			return exitCode;
 			}
+			catch (Exception ex)
+			{
+				// Hosts tailing --json-file cannot see stderr: carry the failure into the
+				// terminal report before Spectre's handler renders and rethrows it.
+				abnormalReason ??= $"unhandled exception: {ex.Message}";
+				throw;
+			}
 			finally
 			{
 				// Guarantee the end-of-stream marker on every exit path — early returns

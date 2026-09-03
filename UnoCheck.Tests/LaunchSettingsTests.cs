@@ -13,7 +13,10 @@ public class LaunchSettingsTests
 
         var projectPath = Path.Combine(repoRoot, "UnoCheck", "UnoCheck.csproj");
 
-        var psi = new ProcessStartInfo("dotnet", $"run --project \"{projectPath}\" --framework net6.0 --launch-profile UnoCheck -- --non-interactive --ci")
+        // UseAppHost=false runs the project through the dotnet host (`dotnet UnoCheck.dll`)
+        // instead of the apphost exe, whose manifest requests requireAdministrator and
+        // cannot start from a non-elevated test run (Win32 error 740).
+        var psi = new ProcessStartInfo("dotnet", $"run --project \"{projectPath}\" --framework net6.0 -p:UseAppHost=false --launch-profile UnoCheck -- --non-interactive --ci")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,

@@ -190,9 +190,9 @@ uno-check --json --target wasm > results.jsonl
 
 Writes the same JSONL events to a file. Useful when stdout cannot be captured — for example an elevated child process on Windows, whose stdout cannot be redirected across the elevation boundary. Can be combined with `--json` or used alone. Implies `--non-interactive`.
 
-The path must not already exist: uno-check only writes files it creates itself (`FileMode.CreateNew`), refusing pre-existing files and links. If the path cannot be created and no other sink was requested, the run exits immediately with `-1` rather than running without output. Pass a fresh path per run — ideally in a directory only the launching user can write — and delete it when done.
+The path must not already exist: uno-check only writes files it creates itself (`FileMode.CreateNew`), refusing pre-existing files and symlinks (junctions or links in parent directories are not detected, which is why the directory should be private to the launching user). If the path cannot be created and no other sink was requested, the run exits immediately with `-1` rather than running without output. Pass a fresh path per run — ideally in a directory only the launching user can write — and delete it when done.
 
-```bash
+```cmd
 uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-run-1234.jsonl"
 ```
 
@@ -200,7 +200,7 @@ uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-run-1234.jsonl"
 
 Structured-output events carry a `correlation_id`, newly generated per run by default. A host that launches uno-check child processes (for example an elevated per-item fix) passes its own id so the parent run and the child report as one logical run.
 
-```bash
+```cmd
 uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
 ```
 
@@ -220,7 +220,7 @@ In structured mode, prefer the final `report` event over the exit code for check
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
 These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
 
-With `--json`, emits the catalog as a single JSON line on stdout (`checkup_catalog` event with `id`, `name`, and display `title` per checkup) — for host applications building checkup-selection UIs that feed `--only`/`--skip`. Honors `--target` filtering and implies `--non-interactive`.
+With `--json`, emits the catalog as a single JSON line on stdout (`checkup_catalog` event with `id`, display `name`, and `type_name` per checkup; `name` matches the `name` in `checkup_result` events and `type_name` is the class name accepted by `--skip`) — for host applications building checkup-selection UIs that feed `--only`/`--skip`. Honors `--target` filtering and implies `--non-interactive`.
 
 ```bash
 uno-check list --json

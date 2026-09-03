@@ -1,10 +1,10 @@
 using System.Text.Json;
 using DotNetCheck;
-using DotNetCheck.Checkups;
 using DotNetCheck.Cli;
 using DotNetCheck.Json;
 using DotNetCheck.Models;
 using Spectre.Console.Cli;
+using AnsiConsole = Spectre.Console.AnsiConsole;
 
 namespace UnoCheck.Tests;
 
@@ -132,7 +132,7 @@ public class SafeCheckupIdTests
     [InlineData("id;semicolon", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
-    public void Only_Argument_Safe_Ids_Are_Vouched_For(string id, bool expected)
+    public void Only_Argument_Safe_Ids_Are_Vouched_For(string? id, bool expected)
         => Assert.Equal(expected, JsonlOutput.IsSafeCheckupId(id));
 }
 
@@ -490,6 +490,7 @@ public class CheckCommandEndToEndTests
     {
         var originalOut = Console.Out;
         var originalError = Console.Error;
+        var originalConsole = AnsiConsole.Console;
         using var stdout = new StringWriter();
         using var stderr = new StringWriter();
         try
@@ -514,36 +515,37 @@ public class CheckCommandEndToEndTests
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             JsonlOutput.Init(null, null);
+            AnsiConsole.Console = originalConsole;
         }
     }
 
     [Fact]
     public async Task Json_Run_Emits_Pure_Jsonl_Ending_With_A_Report()
     {
-        CheckupManager.RegisterCheckups(new OpenJdkCheckup());
+        // A fake checkup keeps this hermetic (no machine probing) and deterministic, so the
+        // assertions can pin the exact stream. The registry is append-only: use a unique id.
+        var id = $"e2e-{Guid.NewGuid():n}";
+        CheckupManager.RegisterCheckups(new FakeCheckup(id));
 
         var (exit, lines) = await RunAsync(new CheckSettings
         {
             Json = true,
             NonInteractive = true,
-            Only = ["openjdk"],
+            Only = [id],
         });
 
-        Assert.NotEmpty(lines);
+        // Parse throws on any non-JSON stdout line — the purity guarantee.
+        var events = lines.Select(l => JsonDocument.Parse(l).RootElement).ToArray();
+        Assert.Equal(
+            ["run_started", "checkup_started", "checkup_result", "report"],
+            events.Select(e => e.GetProperty("type").GetString()).ToArray());
 
-        foreach (var line in lines)
-        {
-            var evt = JsonDocument.Parse(line).RootElement; // throws on any non-JSON stdout line
-            Assert.True(evt.TryGetProperty("type", out _), $"stdout line is JSON but not an event: {line}");
-        }
-
-        var last = JsonDocument.Parse(lines[^1]).RootElement;
-        Assert.Equal("report", last.GetProperty("type").GetString());
-
-        var report = last.GetProperty("report");
-        Assert.Contains(report.GetProperty("status").GetString(), new[] { "healthy", "degraded", "unhealthy" });
-        Assert.True(report.GetProperty("summary").GetProperty("total").GetInt32() >= 1);
-        Assert.True(exit is 0 or 1);
+        var report = events[^1].GetProperty("report");
+        Assert.Equal("healthy", report.GetProperty("status").GetString());
+        Assert.Equal(1, report.GetProperty("summary").GetProperty("total").GetInt32());
+        Assert.Equal(1, report.GetProperty("summary").GetProperty("ok").GetInt32());
+        Assert.Equal(id, report.GetProperty("checks")[0].GetProperty("id").GetString());
+        Assert.Equal(0, exit);
     }
 
     [Fact]

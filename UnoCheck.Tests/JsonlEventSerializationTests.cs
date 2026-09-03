@@ -174,7 +174,7 @@ public class JsonlEventSerializationTests
     {
         var json = Roundtrip(new CheckupCatalogEvent
         {
-            Checkups = [new CheckupCatalogItem { Id = "openjdk", Name = "OpenJdkCheckup", Title = "OpenJDK 17" }],
+            Checkups = [new CheckupCatalogItem { Id = "openjdk", Name = "OpenJDK 17", TypeName = "OpenJdkCheckup" }],
         });
 
         Assert.Equal("checkup_catalog", json.GetProperty("type").GetString());
@@ -182,8 +182,8 @@ public class JsonlEventSerializationTests
 
         var item = json.GetProperty("checkups")[0];
         Assert.Equal("openjdk", item.GetProperty("id").GetString());
-        Assert.Equal("OpenJdkCheckup", item.GetProperty("name").GetString());
-        Assert.Equal("OpenJDK 17", item.GetProperty("title").GetString());
+        Assert.Equal("OpenJDK 17", item.GetProperty("name").GetString());
+        Assert.Equal("OpenJdkCheckup", item.GetProperty("type_name").GetString());
     }
 
     [Theory]

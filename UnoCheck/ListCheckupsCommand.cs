@@ -58,8 +58,8 @@ namespace DotNetCheck
 					items.Add(new Json.CheckupCatalogItem
 					{
 						Id = c.Id,
-						Name = c.GetType().Name,
-						Title = title,
+						Name = title,
+						TypeName = c.GetType().Name,
 					});
 				}
 

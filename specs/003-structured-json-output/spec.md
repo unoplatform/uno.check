@@ -30,8 +30,8 @@ package:
    processes: Windows cannot redirect the stdout of a process launched with the `runas` verb,
    so the host tails the file instead.
 3. **`--only <checkup-id>`** — scope the run to the named checkup(s) plus their required
-   dependencies (prefix-matched both directions, mirroring the existing dependency-resolution
-   rule). Repeatable.
+   dependencies (caller ids match exactly, case-insensitively; dependency ids keep the existing
+   one-way prefix rule). Repeatable.
 
 ### Open question — execution level (deferred, needs maintainer sign-off)
 
@@ -62,12 +62,13 @@ Stream guarantees:
   abnormal end reports `status: "unhealthy"` with a `reason` field. Hosts treat `report` as
   the end-of-stream marker; a stream that stops without one means the process was killed.
 - The `--json-file` sink only writes files it created itself (`FileMode.CreateNew`): a
-  pre-existing file or link at the path — stale output, or a link planted at a caller-chosen
-  path while this process runs elevated — is refused with a warning on stderr. **If that
-  leaves no sink at all, the run fails fast with exit `-1`** instead of running blind while a
-  host tails a file that never gets written. A sink failure mid-run (broken pipe, disk error)
-  disables that sink, never the run. Hosts pass a fresh path per run, ideally in a directory
-  only the launching user can write, and delete it afterwards.
+  pre-existing file or symlink at the path — stale output from a previous run — is refused
+  with a warning on stderr. `CreateNew` does not defend against junctions or links in parent
+  directories, which Windows follows, so hosts should point an elevated child only at a
+  directory the launching user alone can write. **If that leaves no sink at all, the run
+  fails fast with exit `-1`** instead of running blind while a host tails a file that never
+  gets written. A sink failure mid-run (broken pipe, disk error) disables that sink, never
+  the run. Hosts pass a fresh path per run and delete it afterwards.
 - Skipped checkups always arrive with `status: "skipped"` and a `skip_reason` — including
   dependency-failure skips (where the failed dependency's own `error` result is what makes the
   run unhealthy) and not-applicable checkups, so every checkup counted by
@@ -88,7 +89,7 @@ Stream guarantees:
 | `fix_progress` | `id`, `message` |
 | `fix_result` | `id`, `success`, optional `error` |
 | `report` | `report` — the final Report |
-| `checkup_catalog` | emitted by `list --json` only: `schema_version`, `checkups[]` of `{ id, name, title }` — the applicable-checkup menu for hosts building selection UIs that feed `--only`/`--skip` |
+| `checkup_catalog` | emitted by `list --json` only: `schema_version`, `checkups[]` of `{ id, name, type_name }` (`name` is the display title, as in `checkup_result`; `type_name` is the checkup class name, which `--skip` also accepts) — the applicable-checkup menu for hosts building selection UIs that feed `--only`/`--skip` |
 
 **HealthCheck:** `id`, `name`, `status` (`ok`/`warning`/`error`/`skipped`), optional `message`,
 optional `skip_reason`, optional `fix` = `{ issue_id, description, auto_fixable, args }`.
@@ -134,6 +135,16 @@ checks failed.
    check's result; tail the file for `fix_*` events and the fix child's own re-examined
    `checkup_result`; the terminal `report` marks the end of the child's stream.
 
+Host requirements:
+
+- Drain stderr as well as stdout, or leave stderr unredirected: in `--json` mode the whole
+  human-readable UI moves there, and an undrained pipe stalls the run once its buffer fills.
+- Treat process exit as an end-of-stream signal alongside `report`: an argument-parse failure
+  produces no events and, on Windows, happens after the child's console has been hidden.
+- `fix.args` for an item scopes the run to that item **plus its required dependencies**, and
+  `--fix` applies to every checkup in the run — fixing the emulator can install the Android
+  SDK and JDK first. Surface that in the UI rather than promising a single-item change.
+
 ## Consumers
 
 The flags ship as **experimental**: the schema is versioned and we intend the policy above,
@@ -145,8 +156,10 @@ merge and be reviewed on its own.
 
 ## Compatibility
 
-- No behavior change for existing interactive/CI users: the flags are additive and the
-  execution level is untouched (see the open question above).
+- The flags are additive and the execution level is untouched (see the open question above).
+  One deliberate change applies outside structured mode too: Ctrl+C now stops the run at the
+  next checkup boundary with exit `130`. Previously the loop kept running to the end, because
+  a checkup's `Examine` cannot observe cancellation; only an in-progress fix honored it.
 - The JSONL contract is additive and versioned via `schema_version`.
 
 ## Alternatives considered

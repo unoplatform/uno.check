@@ -48,10 +48,12 @@ namespace DotNetCheck.Json
 		/// Console.Out to stderr so no stray write can corrupt the stream.
 		///
 		/// The file sink only ever writes a file it created itself: the path must not
-		/// already exist (no stale lines from a previous run, and no writing through a
-		/// link planted at a caller-chosen path by another local process — this process
-		/// may be running elevated). A path that cannot be created disables the sink
-		/// with a warning on stderr rather than failing the run later, mid-stream.
+		/// already exist, so no stale lines from a previous run and no writing through a
+		/// symlink planted at the path by another local process (this process may be
+		/// running elevated). Junctions or links in parent directories are not detected,
+		/// so callers should use a directory private to the launching user. A path that
+		/// cannot be created disables the sink with a warning on stderr rather than
+		/// failing the run later, mid-stream.
 		/// </summary>
 		public static void Init(TextWriter? stdout, string? filePath, string? correlationId = null)
 		{
@@ -337,8 +339,8 @@ namespace DotNetCheck.Json
 		[JsonPropertyName("name")]
 		public string? Name { get; init; }
 
-		[JsonPropertyName("title")]
-		public string? Title { get; init; }
+		[JsonPropertyName("type_name")]
+		public string? TypeName { get; init; }
 	}
 
 	internal sealed class Report
