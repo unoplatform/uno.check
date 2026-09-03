@@ -32,10 +32,11 @@ package:
 3. **`--only <checkup-id>`** — scope the run to the named checkup(s) plus their required
    dependencies (caller ids match exactly, case-insensitively; dependency ids keep the existing
    one-way prefix rule). Repeatable.
-4. **`--allow-elevation-prompt`** — opt a structured macOS fix run into the system
-   administrator authorization dialog. Only the command requested by the active solution is
-   elevated; the Uno.Check process and its user-scoped path discovery remain unelevated. The
-   option is ignored in CI and does not affect the existing Terminal sudo flow.
+4. **`--allow-elevation-prompt`** — opt a structured macOS or Linux fix run into the system
+   authorization dialog (macOS administrator prompt; Linux polkit via `pkexec`). Only the
+   command requested by the active solution is elevated; the Uno.Check process and its
+   user-scoped path discovery remain unelevated. The option is ignored in CI and does not
+   affect the existing terminal sudo flow.
 
 ### Open question — execution level (deferred, needs maintainer sign-off)
 
@@ -142,7 +143,10 @@ checks failed.
    - On macOS, keep the same current-user JSON process and add `--allow-elevation-prompt`.
      User-level solutions run without a prompt. A solution that needs a protected location
      displays the system administrator dialog and elevates only its underlying command.
-   The terminal `report` marks the end of either child stream.
+   - On Linux, the same flag routes protected commands through the polkit dialog (`pkexec`),
+     which needs a running polkit authentication agent (present on any desktop session).
+     Declining the dialog — or a missing `pkexec` — surfaces as a failed `fix_result`.
+   The terminal `report` marks the end of any child stream.
 
 Host requirements:
 

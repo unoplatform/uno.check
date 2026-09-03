@@ -502,9 +502,9 @@ namespace DotNetCheck.DotNet
 		/// </summary>
 		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
 		{
-			// Structured macOS hosts opt into the system authorization dialog. Do not use
-			// an unrelated Terminal sudo ticket: authorization belongs to this fix request.
-			if (Util.UseMacOsAdministratorPrompt)
+			// Structured macOS/Linux hosts opt into the system authorization dialog. Do not
+			// use an unrelated terminal sudo ticket: authorization belongs to this fix request.
+			if (Util.UseAdministratorPrompt)
 			{
 				return await Util.WrapShellCommandWithSudo(
 					"env",
