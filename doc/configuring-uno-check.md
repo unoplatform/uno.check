@@ -204,6 +204,16 @@ Structured-output events carry a `correlation_id`, newly generated per run by de
 uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
 ```
 
+### `--allow-elevation-prompt` Allow macOS administrator authorization
+
+Allows a structured macOS fix run to display the system administrator authorization dialog when an individual solution needs to modify a protected location. Uno.Check itself remains in the current user's context; only the underlying command is authorized as an administrator. Declining the dialog produces a failed `fix_result` and the check remains unresolved.
+
+This option is opt-in because `--json` is also used by unattended consumers. It is ignored with `--ci`, and it does not change the existing interactive Terminal `sudo` flow.
+
+```bash
+uno-check --fix --only xcode --json --allow-elevation-prompt
+```
+
 ### Exit codes
 
 | Code | Meaning |

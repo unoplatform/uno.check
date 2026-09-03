@@ -59,6 +59,7 @@ namespace DotNetCheck.Cli
 			Util.Verbose = settings.Verbose;
 			Util.LogFile = settings.LogFile;
 			Util.CI = settings.CI;
+			Util.AllowElevationPrompt = settings.AllowElevationPrompt;
 			if (settings.CI)
 				settings.NonInteractive = true;
 

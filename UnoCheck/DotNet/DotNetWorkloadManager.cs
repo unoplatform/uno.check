@@ -82,19 +82,16 @@ namespace DotNetCheck.DotNet
 		/// <see cref="WorkloadCliEnv"/> re-set inside the elevated child. Required for sudo paths
 		/// because sudo's default <c>env_reset</c> strips any var we set on the parent process.
 		///
-		/// Two variants exist because the consumers tokenize the args differently and the dotnet
-		/// path has to be quoted for the right consumer. Use this one for callers that hand the
-		/// args off to <see cref="Util.WrapShellCommandWithSudoNoPrompt"/>: that helper interpolates
-		/// the args into a <c>sh -c '…'</c> block, so <paramref name="dotnetExe"/> is shell-double-
-		/// quoted to survive the inner shell's re-interpretation of <c>$</c>/backtick/<c>\</c>/<c>"</c>
-		/// and to keep paths with spaces as one token.
+		/// Two variants exist because the interactive sudo consumer still accepts a rendered
+		/// argument string. Shell and graphical consumers accept a typed argument list and
+		/// apply their own escaping.
 		/// </summary>
 		static string[] BuildEnglishCliSudoArgsForShell(string dotnetExe, string[] args)
 		{
 			var result = new List<string>(args.Length + WorkloadCliEnv.Count + 1);
 			foreach (var kv in WorkloadCliEnv)
 				result.Add($"{kv.Key}={kv.Value}");
-			result.Add(Util.ShellDoubleQuote(dotnetExe));
+			result.Add(dotnetExe);
 			result.AddRange(args);
 			return result.ToArray();
 		}
@@ -115,7 +112,7 @@ namespace DotNetCheck.DotNet
 			foreach (var kv in WorkloadCliEnv)
 				result.Add($"{kv.Key}={kv.Value}");
 			result.Add(Util.QuoteForProcessArgs(dotnetExe));
-			result.AddRange(args);
+			result.AddRange(args.Select(Util.QuoteForProcessArgs));
 			return result.ToArray();
 		}
 
@@ -174,10 +171,14 @@ namespace DotNetCheck.DotNet
 				"workload",
 				"install",
 				"--from-rollback-file",
-				$"\"{rollbackFile}\""
+				rollbackFile
 			};
 			args.AddRange(workloadIds);
-			args.AddRange(packageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+			foreach (var packageSource in packageSources)
+			{
+				args.Add(addSourceArg);
+				args.Add(packageSource);
+			}
 
 			if (verbose)
 			{
@@ -199,7 +200,11 @@ namespace DotNetCheck.DotNet
 				"workload",
 				"repair"
 			};
-			args.AddRange(packageSources.Select(ps => $"{addSourceArg} \"{ps}\""));
+			foreach (var packageSource in packageSources)
+			{
+				args.Add(addSourceArg);
+				args.Add(packageSource);
+			}
 
 			if (verbose)
 			{
@@ -497,6 +502,18 @@ namespace DotNetCheck.DotNet
 		/// </summary>
 		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
 		{
+			// Structured macOS hosts opt into the system authorization dialog. Do not use
+			// an unrelated Terminal sudo ticket: authorization belongs to this fix request.
+			if (Util.UseMacOsAdministratorPrompt)
+			{
+				return await Util.WrapShellCommandWithSudo(
+					"env",
+					DotNetCliWorkingDir,
+					Util.Verbose,
+					cancellationToken,
+					BuildEnglishCliSudoArgsForShell(dotnetExe, args));
+			}
+
 			// Always try non-interactive sudo first (works with cached credentials or NOPASSWD).
 			// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset —
 			// see WorkloadCliEnv for the full rationale. The two sudo helpers tokenize args

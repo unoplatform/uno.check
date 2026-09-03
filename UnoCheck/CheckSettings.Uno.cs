@@ -51,5 +51,10 @@ Targets: webassembly ios android macos linux windows"
         [Description(
             @"Correlation id stamped on structured-output events. Hosts pass their own id when launching a child process (e.g. an elevated fix) so both processes report as one logical run. Defaults to a new id per run.")]
         public string? CorrelationId { get; set; }
+
+        [CommandOption("--allow-elevation-prompt")]
+        [Description(
+            @"Allow a structured macOS fix run to display the system administrator authorization dialog. Ignored in CI.")]
+        public bool AllowElevationPrompt { get; set; }
 	}
 }

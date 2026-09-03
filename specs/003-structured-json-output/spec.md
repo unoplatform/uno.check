@@ -32,6 +32,10 @@ package:
 3. **`--only <checkup-id>`** — scope the run to the named checkup(s) plus their required
    dependencies (caller ids match exactly, case-insensitively; dependency ids keep the existing
    one-way prefix rule). Repeatable.
+4. **`--allow-elevation-prompt`** — opt a structured macOS fix run into the system
+   administrator authorization dialog. Only the command requested by the active solution is
+   elevated; the Uno.Check process and its user-scoped path discovery remain unelevated. The
+   option is ignored in CI and does not affect the existing Terminal sudo flow.
 
 ### Open question — execution level (deferred, needs maintainer sign-off)
 
@@ -130,10 +134,15 @@ checks failed.
    (`--ci` additionally enables strict manifest-version validation — appropriate when the host
    pins a released tool version, wrong for local dev builds.)
 2. Render per-check cards live from `checkup_*` events; summary from `report`.
-3. Fix one item: launch elevated `uno-check --fix --only <id> --non-interactive
-   --json-file <fresh-path> --correlation-id <this run's id>` using `fix.args` from the
-   check's result; tail the file for `fix_*` events and the fix child's own re-examined
-   `checkup_result`; the terminal `report` marks the end of the child's stream.
+3. Fix one item:
+   - On Windows, launch elevated `uno-check --fix --only <id> --non-interactive
+     --json-file <fresh-path> --correlation-id <this run's id>` using `fix.args` from the
+     check's result; tail the file for `fix_*` events and the fix child's own re-examined
+     `checkup_result`.
+   - On macOS, keep the same current-user JSON process and add `--allow-elevation-prompt`.
+     User-level solutions run without a prompt. A solution that needs a protected location
+     displays the system administrator dialog and elevates only its underlying command.
+   The terminal `report` marks the end of either child stream.
 
 Host requirements:
 
