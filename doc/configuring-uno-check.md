@@ -176,6 +176,9 @@ uno-check --fix --only androidsdk --non-interactive
 > [!NOTE]
 > An id that matches no checkup fails the run: the unknown ids are listed on stderr and the exit code is non-zero, so a typo can never produce a passing empty run.
 
+> [!NOTE]
+> With `--fix --non-interactive`, only the checkups named by `--only` are auto-fixed. Dependency checkups pulled into the run are examined for context but never fixed — a fix (and any elevation it needs) always corresponds to the checkup the caller requested. Interactive runs still confirm each fix individually.
+
 ### `--json` Structured JSONL output
 
 Emits machine-readable JSONL on stdout — one JSON event per line (`run_started`, `checkup_started`, `checkup_progress`, `checkup_result`, `fix_started`, `fix_progress`, `fix_result`) ending with a final `report` event containing the full results and summary. The `report` event is emitted on every exit path — including cancellation and early failures — so consumers can treat it as the end-of-stream marker. Human-readable output moves to stderr so stdout stays pure JSONL. Implies `--non-interactive`.

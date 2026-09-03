@@ -118,6 +118,77 @@ public class BuildHealthCheckTests
 
         Assert.Null(CheckCommand.BuildHealthCheck(checkup, diagnosis).Fix);
     }
+
+    [Fact]
+    public void Error_Without_Message_Falls_Back_To_Suggestion_Description()
+    {
+        // Some checkups (e.g. a workloads mismatch) report status without a message;
+        // hosts would render a bare card with no explanation.
+        var checkup = new FakeCheckup("dotnetworkloads-10.0.201");
+        var diagnosis = new DiagnosticResult(
+            Status.Error, checkup,
+            new Suggestion("Install .NET workloads", "Installing .NET workloads.", new NoopSolution()));
+
+        var check = CheckCommand.BuildHealthCheck(checkup, diagnosis);
+
+        Assert.Equal("Installing .NET workloads.", check.Message);
+    }
+
+    [Fact]
+    public void Error_Without_Message_Or_Description_Falls_Back_To_Suggestion_Name()
+    {
+        var checkup = new FakeCheckup("unosdk");
+        var diagnosis = new DiagnosticResult(Status.Error, checkup, new Suggestion("Install the SDK", new NoopSolution()));
+
+        var check = CheckCommand.BuildHealthCheck(checkup, diagnosis);
+
+        Assert.Equal("Install the SDK", check.Message);
+    }
+
+    [Fact]
+    public void Explicit_Message_Wins_Over_Suggestion_Fallback()
+    {
+        var checkup = new FakeCheckup("unosdk");
+        var diagnosis = new DiagnosticResult(
+            Status.Error, checkup, "Uno.Sdk 6.7.22 is not installed.",
+            new Suggestion("Install the SDK", new NoopSolution()));
+
+        var check = CheckCommand.BuildHealthCheck(checkup, diagnosis);
+
+        Assert.Equal("Uno.Sdk 6.7.22 is not installed.", check.Message);
+    }
+}
+
+public class IsCallerNamedForFixTests
+{
+    [Fact]
+    public void Without_Only_Every_Checkup_Qualifies()
+    {
+        Assert.True(CheckCommand.IsCallerNamedForFix("dotnetworkloads-10.0.201", null));
+        Assert.True(CheckCommand.IsCallerNamedForFix("dotnetworkloads-10.0.201", []));
+    }
+
+    [Fact]
+    public void Caller_Named_Id_Qualifies_Case_Insensitively()
+    {
+        Assert.True(CheckCommand.IsCallerNamedForFix("unosdk", ["UnoSdk"]));
+    }
+
+    [Fact]
+    public void Dependency_Included_Checkup_Is_Not_AutoFixed()
+    {
+        // --only unosdk pulls dotnet/workloads in as examine-only dependencies; fixing
+        // them would raise an elevation prompt for a command the user never requested.
+        Assert.False(CheckCommand.IsCallerNamedForFix("dotnetworkloads-10.0.201", ["unosdk"]));
+        Assert.False(CheckCommand.IsCallerNamedForFix("dotnet", ["unosdk"]));
+    }
+
+    [Fact]
+    public void Prefix_Does_Not_Qualify_A_Caller_Name()
+    {
+        // Caller ids match exactly — the one-way prefix rule is for dependency ids only.
+        Assert.False(CheckCommand.IsCallerNamedForFix("dotnetworkloads-10.0.201", ["dotnetworkloads"]));
+    }
 }
 
 public class SafeCheckupIdTests

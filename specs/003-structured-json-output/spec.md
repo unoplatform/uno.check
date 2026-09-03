@@ -31,7 +31,9 @@ package:
    so the host tails the file instead.
 3. **`--only <checkup-id>`** — scope the run to the named checkup(s) plus their required
    dependencies (caller ids match exactly, case-insensitively; dependency ids keep the existing
-   one-way prefix rule). Repeatable.
+   one-way prefix rule). Repeatable. With `--fix --non-interactive`, only caller-named
+   checkups are auto-fixed: dependencies are examined for context but never fixed, so a
+   host-side elevation prompt always describes the fix the user requested.
 4. **`--allow-elevation-prompt`** — opt a structured macOS or Linux fix run into the system
    authorization dialog (macOS administrator prompt; Linux polkit via `pkexec`). Only the
    command requested by the active solution is elevated; the Uno.Check process and its
