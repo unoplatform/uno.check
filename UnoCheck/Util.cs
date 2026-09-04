@@ -57,6 +57,33 @@ namespace DotNetCheck
 		public static string LogFile { get; set; }
 		public static bool CI { get; set; }
 		public static bool NonInteractive { get; set; }
+		public static bool AllowElevationPrompt { get; set; }
+
+		/// <summary>
+		/// Structured hosts cannot provide a terminal for sudo. On macOS, use the system
+		/// administrator authorization dialog for the individual command instead.
+		/// CI remains strictly non-interactive.
+		/// </summary>
+		public static bool UseMacOsAdministratorPrompt
+			=> ShouldUseMacOsAdministratorPrompt(IsMac, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt);
+
+		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt)
+			=> isMac && !ci && structuredOutput && allowElevationPrompt;
+
+		/// <summary>
+		/// Linux analog of <see cref="UseMacOsAdministratorPrompt"/>: the polkit dialog
+		/// (pkexec) authorizes the individual command on structured desktop hosts.
+		/// CI remains strictly non-interactive.
+		/// </summary>
+		public static bool UseLinuxAdministratorPrompt
+			=> ShouldUseLinuxAdministratorPrompt(IsLinux, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt);
+
+		internal static bool ShouldUseLinuxAdministratorPrompt(bool isLinux, bool ci, bool structuredOutput, bool allowElevationPrompt)
+			=> isLinux && !ci && structuredOutput && allowElevationPrompt;
+
+		/// <summary>Any platform-native per-command authorization dialog is active.</summary>
+		public static bool UseAdministratorPrompt
+			=> UseMacOsAdministratorPrompt || UseLinuxAdministratorPrompt;
 
 		public static Dictionary<string, string> EnvironmentVariables { get; } = new Dictionary<string, string>();
 
@@ -209,7 +236,13 @@ namespace DotNetCheck
 
 		public static Task<ShellProcessRunner.ShellProcessResult> ShellCommand(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, string[] args)
 		{
-			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(cmd, string.Join(" ", args), cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
+			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(cmd, string.Empty, cancellationToken)
+			{
+				ArgumentList = args,
+				WorkingDirectory = workingDir,
+				Verbose = verbose,
+				UseSystemShell = false,
+			});
 			return Task.FromResult(cli.WaitForExit());
 		}
 
@@ -230,6 +263,26 @@ namespace DotNetCheck
 
 		public static Task<ShellProcessRunner.ShellProcessResult> WrapShellCommandWithSudo(string cmd, string workingDir, bool verbose, System.Threading.CancellationToken cancellationToken, bool noPrompt, string[] args)
 		{
+			if (!noPrompt && UseMacOsAdministratorPrompt)
+			{
+				return Task.FromResult(MacOsAdministratorCommandRunner.Run(
+					cmd,
+					workingDir,
+					verbose,
+					cancellationToken,
+					args));
+			}
+
+			if (!noPrompt && UseLinuxAdministratorPrompt)
+			{
+				return Task.FromResult(LinuxAdministratorCommandRunner.Run(
+					cmd,
+					workingDir,
+					verbose,
+					cancellationToken,
+					args));
+			}
+
 			var actualCmd = cmd;
 			var actualArgs = string.Join(" ", args);
 
@@ -242,11 +295,10 @@ namespace DotNetCheck
 				// shell once the outer `'...'` block is unwrapped. Without this, sudo retries on
 				// such installs fail with "command not found".
 				var quotedCmd = ShellDoubleQuote(cmd);
-				// Args are interpolated raw into the outer single-quoted block, so escape any
-				// embedded single quotes so they don't terminate the block early. Per-arg spaces
-				// are the caller's responsibility (e.g., BuildInstallArgs pre-wraps paths with
-				// inner double quotes).
-				var escapedArgs = actualArgs.Replace("'", "'\\''");
+				// Quote every argument before interpolation. These quotes become syntax for
+				// the command executed by the shell and prevent argument injection.
+				var quotedArgs = string.Join(" ", args.Select(MacOsAdministratorCommandRunner.PosixShellQuote));
+				var escapedArgs = quotedArgs.Replace("'", "'\\''");
 				actualArgs = $"-c '{sudoPrefix} {quotedCmd} {escapedArgs}'";
 			}
 
@@ -610,14 +662,50 @@ namespace DotNetCheck
 
 			if (r && !Util.IsWindows)
 			{
+				var quotedDestDir = MacOsAdministratorCommandRunner.PosixShellQuote(destDir);
+				var quotedIntermediate = MacOsAdministratorCommandRunner.PosixShellQuote(intermediate);
+				var quotedDestination = MacOsAdministratorCommandRunner.PosixShellQuote(destination);
+				var copyCommand = isFile
+					? $"mkdir -p {quotedDestDir} && cp -pP {quotedIntermediate} {quotedDestination}"
+					: $"mkdir -p {quotedDestDir} && cp -pPR {quotedIntermediate}/ {quotedDestination}";
+
+				if (UseMacOsAdministratorPrompt)
+				{
+					var elevatedResult = MacOsAdministratorCommandRunner.Run(
+						ShellProcessRunner.MacOSShell,
+						workingDirectory: null,
+						verbose: Verbose,
+						cancellationToken: System.Threading.CancellationToken.None,
+						arguments: new[] { "-c", copyCommand });
+
+					if (!elevatedResult.Success)
+						throw new InvalidOperationException(elevatedResult.GetOutput());
+
+					return true;
+				}
+
+				if (UseLinuxAdministratorPrompt)
+				{
+					// pkexec takes argv directly; the shell here only carries the && chain.
+					var elevatedResult = LinuxAdministratorCommandRunner.Run(
+						"/bin/sh",
+						workingDirectory: null,
+						verbose: Verbose,
+						cancellationToken: System.Threading.CancellationToken.None,
+						arguments: new[] { "-c", copyCommand });
+
+					if (!elevatedResult.Success)
+						throw new InvalidOperationException(elevatedResult.GetOutput());
+
+					return true;
+				}
+
 				// Copy a file to a destination as su
 				//		sudo mkdir -p destDir && sudo cp -pP intermediate destination
 
 				// Copy a folder recursively to the destination as su
 				//		sudo mkdir -p destDir && sudo cp -pPR intermediate/ destination
-				var args = isFile
-					? $"-c 'sudo mkdir -p \"{destDir}\" && sudo cp -pP \"{intermediate}\" \"{destination}\"'"
-					: $"-c 'sudo mkdir -p \"{destDir}\" && sudo cp -pPR \"{intermediate}/\" \"{destination}\"'"; // note the / at the end of the dir
+				var args = $"-c 'sudo {copyCommand.Replace("'", "'\\''")}'";
 
 				if (Verbose)
 					Console.WriteLine($"{ShellProcessRunner.MacOSShell} {args}");

@@ -57,14 +57,43 @@ namespace DotNetCheck.Solutions
 			};
 
 			var args = Util.IsWindows
-					? $"\"{scriptPath}\" -InstallDir \"{sdkRoot}\" -Version \"{Version}\""
-					: $"\"{scriptPath}\" --install-dir \"{sdkRoot}\" --version \"{Version}\"";
+				? new[] { Util.QuoteForProcessArgs(scriptPath), "-InstallDir", Util.QuoteForProcessArgs(sdkRoot), "-Version", Version }
+				: new[] { scriptPath, "--install-dir", sdkRoot, "--version", Version };
 
 			Util.Log($"Executing dotnet-install script...");
-			Util.Log($"\t{exe} {args}");
+			Util.Log($"\t{exe} {string.Join(" ", args)}");
 
-			// Launch the process
-			await Util.WrapShellCommandWithSudo(exe, [args]);
+			// A user-local SDK install stays in the user's context. Only a protected
+			// DOTNET_ROOT is elevated, and then only the install command itself.
+			var result = !Util.IsWindows && IsDirectoryWritableOrCreatable(sdkRoot)
+				? await Util.ShellCommand(exe, workingDir: null, verbose: Util.Verbose, cancellationToken: cancellationToken, args: args)
+				: await Util.WrapShellCommandWithSudo(exe, workingDir: null, verbose: Util.Verbose, cancellationToken: cancellationToken, args: args);
+			if (!result.Success)
+				throw new InvalidOperationException(result.GetOutput());
+		}
+
+		internal static bool IsDirectoryWritableOrCreatable(string path)
+		{
+			var candidate = path;
+			while (!string.IsNullOrEmpty(candidate) && !Directory.Exists(candidate))
+				candidate = Path.GetDirectoryName(candidate);
+
+			if (string.IsNullOrEmpty(candidate))
+				return false;
+
+			var probe = Path.Combine(candidate, $".uno-check-write-{Guid.NewGuid():N}");
+			try
+			{
+				using (File.Create(probe))
+				{
+				}
+				File.Delete(probe);
+				return true;
+			}
+			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+			{
+				return false;
+			}
 		}
 	}
 }
