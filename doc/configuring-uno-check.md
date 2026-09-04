@@ -178,6 +178,7 @@ uno-check --fix --only androidsdk --non-interactive
 
 > [!NOTE]
 > With `--fix --non-interactive`, only the checkups named by `--only` are auto-fixed. Dependency checkups pulled into the run are examined for context but never fixed — a fix (and any elevation it needs) always corresponds to the checkup the caller requested. Interactive runs still confirm each fix individually.
+> Consequently, a host fixing several items in one child must name every selected id (`--only a --only b …`) instead of relying on a dependency to pull the rest in — which also keeps authorization prompts to exactly the items the user selected. A full-run `--fix` without `--only` still fixes everything it examines.
 
 ### `--json` Structured JSONL output
 
