@@ -31,11 +31,14 @@ package:
    so the host tails the file instead.
 3. **`--only <checkup-id>`** — scope the run to the named checkup(s) plus their required
    dependencies (caller ids match exactly, case-insensitively; dependency ids keep the existing
-   one-way prefix rule). Repeatable.
-4. **`--allow-elevation-prompt`** — opt a structured macOS fix run into the system
-   administrator authorization dialog. Only the command requested by the active solution is
-   elevated; the Uno.Check process and its user-scoped path discovery remain unelevated. The
-   option is ignored in CI and does not affect the existing Terminal sudo flow.
+   one-way prefix rule). Repeatable. With `--fix --non-interactive`, only caller-named
+   checkups are auto-fixed: dependencies are examined for context but never fixed, so a
+   host-side elevation prompt always describes the fix the user requested.
+4. **`--allow-elevation-prompt`** — opt a structured macOS or Linux fix run into the system
+   authorization dialog (macOS administrator prompt; Linux polkit via `pkexec`). Only the
+   command requested by the active solution is elevated; the Uno.Check process and its
+   user-scoped path discovery remain unelevated. The option is ignored in CI and does not
+   affect the existing terminal sudo flow.
 
 ### Open question — execution level (deferred, needs maintainer sign-off)
 
@@ -142,7 +145,28 @@ checks failed.
    - On macOS, keep the same current-user JSON process and add `--allow-elevation-prompt`.
      User-level solutions run without a prompt. A solution that needs a protected location
      displays the system administrator dialog and elevates only its underlying command.
-   The terminal `report` marks the end of either child stream.
+   - On Linux, the same flag routes protected commands through the polkit dialog (`pkexec`),
+     which needs a running polkit authentication agent (present on any desktop session).
+     Declining the dialog — or a missing `pkexec` — surfaces as a failed `fix_result`.
+   The terminal `report` marks the end of any child stream.
+
+   Authorization-dialog expectations for hosts:
+
+   - **Each protected command is its own authorization.** A single fix can prompt more than
+     once — e.g. a root-owned SDK's workloads fix runs repair and install through separate
+     elevated commands, so two dialogs. A "fix all" flow prompts the sum across items.
+     Solutions coalesce where they can (the apt-based fixes chain update+install into one
+     elevated shell), but hosts should not promise one dialog per fix.
+   - **The elevated command runs as root, not the user.** Per-user state the command touches
+     (NuGet caches, first-run sentinels) therefore lands by `HOME`: on Linux `pkexec` sets a
+     root `HOME` and scrubs the environment (the workload path re-injects what it needs via
+     `env`; on-host runs show root-owned artifacts under the system dotnet root). On macOS
+     the equivalent `HOME` under `do shell script … with administrator privileges` has not
+     been captured yet — either outcome is benign: root's home means a cold cache (slower),
+     the user's home means root-owned cache entries, same as the previous macOS `sudo` path.
+     Worth recording the observed value when next on a macOS host.
+   - **A cached terminal `sudo` ticket is deliberately not reused**: authorization belongs to
+     the fix the user clicked, so the dialog appears even right after a terminal `sudo`.
 
 Host requirements:
 
@@ -150,9 +174,16 @@ Host requirements:
   human-readable UI moves there, and an undrained pipe stalls the run once its buffer fills.
 - Treat process exit as an end-of-stream signal alongside `report`: an argument-parse failure
   produces no events and, on Windows, happens after the child's console has been hidden.
-- `fix.args` for an item scopes the run to that item **plus its required dependencies**, and
-  `--fix` applies to every checkup in the run — fixing the emulator can install the Android
-  SDK and JDK first. Surface that in the UI rather than promising a single-item change.
+- `fix.args` for an item scopes the run to that item **plus its required dependencies**, but
+  with `--only` present, `--fix --non-interactive` applies fixes **only to caller-named ids**
+  — dependencies are examined for context, never fixed. Two host-facing consequences:
+  - An item whose prerequisite is itself broken can resolve as `skipped` (dependency failure)
+    instead of fixed — the card goes from "Fix" to "skipped" with no visible progress unless
+    the host explains that the prerequisite must be fixed first.
+  - A "fix all" (or multi-item) flow must name **every** selected id (`--only a --only b …`)
+    rather than relying on dependency pull-in — which also keeps authorization prompts to
+    exactly the items the user selected. A full-run `--fix` without `--only` still fixes
+    everything it examines.
 
 ## Consumers
 

@@ -54,7 +54,7 @@ Targets: webassembly ios android macos linux windows"
 
         [CommandOption("--allow-elevation-prompt")]
         [Description(
-            @"Allow a structured macOS fix run to display the system administrator authorization dialog. Ignored in CI.")]
+            @"Allow a structured macOS or Linux fix run to display the system authorization dialog (macOS administrator prompt / Linux polkit). Ignored in CI.")]
         public bool AllowElevationPrompt { get; set; }
 	}
 }

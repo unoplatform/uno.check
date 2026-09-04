@@ -70,6 +70,21 @@ namespace DotNetCheck
 		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt)
 			=> isMac && !ci && structuredOutput && allowElevationPrompt;
 
+		/// <summary>
+		/// Linux analog of <see cref="UseMacOsAdministratorPrompt"/>: the polkit dialog
+		/// (pkexec) authorizes the individual command on structured desktop hosts.
+		/// CI remains strictly non-interactive.
+		/// </summary>
+		public static bool UseLinuxAdministratorPrompt
+			=> ShouldUseLinuxAdministratorPrompt(IsLinux, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt);
+
+		internal static bool ShouldUseLinuxAdministratorPrompt(bool isLinux, bool ci, bool structuredOutput, bool allowElevationPrompt)
+			=> isLinux && !ci && structuredOutput && allowElevationPrompt;
+
+		/// <summary>Any platform-native per-command authorization dialog is active.</summary>
+		public static bool UseAdministratorPrompt
+			=> UseMacOsAdministratorPrompt || UseLinuxAdministratorPrompt;
+
 		public static Dictionary<string, string> EnvironmentVariables { get; } = new Dictionary<string, string>();
 
 		public static Platform Platform
@@ -251,6 +266,16 @@ namespace DotNetCheck
 			if (!noPrompt && UseMacOsAdministratorPrompt)
 			{
 				return Task.FromResult(MacOsAdministratorCommandRunner.Run(
+					cmd,
+					workingDir,
+					verbose,
+					cancellationToken,
+					args));
+			}
+
+			if (!noPrompt && UseLinuxAdministratorPrompt)
+			{
+				return Task.FromResult(LinuxAdministratorCommandRunner.Run(
 					cmd,
 					workingDir,
 					verbose,
@@ -648,6 +673,22 @@ namespace DotNetCheck
 				{
 					var elevatedResult = MacOsAdministratorCommandRunner.Run(
 						ShellProcessRunner.MacOSShell,
+						workingDirectory: null,
+						verbose: Verbose,
+						cancellationToken: System.Threading.CancellationToken.None,
+						arguments: new[] { "-c", copyCommand });
+
+					if (!elevatedResult.Success)
+						throw new InvalidOperationException(elevatedResult.GetOutput());
+
+					return true;
+				}
+
+				if (UseLinuxAdministratorPrompt)
+				{
+					// pkexec takes argv directly; the shell here only carries the && chain.
+					var elevatedResult = LinuxAdministratorCommandRunner.Run(
+						"/bin/sh",
 						workingDirectory: null,
 						verbose: Verbose,
 						cancellationToken: System.Threading.CancellationToken.None,

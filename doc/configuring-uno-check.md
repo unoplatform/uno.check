@@ -176,6 +176,10 @@ uno-check --fix --only androidsdk --non-interactive
 > [!NOTE]
 > An id that matches no checkup fails the run: the unknown ids are listed on stderr and the exit code is non-zero, so a typo can never produce a passing empty run.
 
+> [!NOTE]
+> With `--fix --non-interactive`, only the checkups named by `--only` are auto-fixed. Dependency checkups pulled into the run are examined for context but never fixed — a fix (and any elevation it needs) always corresponds to the checkup the caller requested. Interactive runs still confirm each fix individually.
+> Consequently, a host fixing several items in one child must name every selected id (`--only a --only b …`) instead of relying on a dependency to pull the rest in — which also keeps authorization prompts to exactly the items the user selected. A full-run `--fix` without `--only` still fixes everything it examines.
+
 ### `--json` Structured JSONL output
 
 Emits machine-readable JSONL on stdout — one JSON event per line (`run_started`, `checkup_started`, `checkup_progress`, `checkup_result`, `fix_started`, `fix_progress`, `fix_result`) ending with a final `report` event containing the full results and summary. The `report` event is emitted on every exit path — including cancellation and early failures — so consumers can treat it as the end-of-stream marker. Human-readable output moves to stderr so stdout stays pure JSONL. Implies `--non-interactive`.
@@ -204,11 +208,16 @@ Structured-output events carry a `correlation_id`, newly generated per run by de
 uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
 ```
 
-### `--allow-elevation-prompt` Allow macOS administrator authorization
+### `--allow-elevation-prompt` Allow macOS / Linux authorization dialogs
 
-Allows a structured macOS fix run to display the system administrator authorization dialog when an individual solution needs to modify a protected location. Uno.Check itself remains in the current user's context; only the underlying command is authorized as an administrator. Declining the dialog produces a failed `fix_result` and the check remains unresolved.
+Allows a structured macOS or Linux fix run to display the system authorization dialog when an individual solution needs to modify a protected location. Uno.Check itself remains in the current user's context; only the underlying command is authorized:
 
-This option is opt-in because `--json` is also used by unattended consumers. It is ignored with `--ci`, and it does not change the existing interactive Terminal `sudo` flow.
+- **macOS** shows the system administrator authorization dialog.
+- **Linux** shows the polkit authentication dialog via `pkexec` (a polkit authentication agent must be running, as on any desktop session). If `pkexec` is not installed, the fix fails with a message naming the missing tool.
+
+Declining either dialog produces a failed `fix_result` (`Administrator approval was declined.`) and the check remains unresolved.
+
+This option is opt-in because `--json` is also used by unattended consumers. It is ignored with `--ci`, and it does not change the existing interactive terminal `sudo` flow.
 
 ```bash
 uno-check --fix --only xcode --json --allow-elevation-prompt
