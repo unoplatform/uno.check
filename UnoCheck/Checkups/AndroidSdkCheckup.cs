@@ -255,7 +255,10 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 								}
 							}
 						}
-					}))));
+					},
+					// Packages install into the discovered Android SDK: the usual per-user
+					// location needs no elevation, a shared/Program Files one does.
+					requiresElevation: !Util.IsDirectoryWritable(sdkInstance.Path)))));
 
 		}
 

@@ -231,6 +231,35 @@ namespace DotNetCheck
 			return false;
 		}
 
+		/// <summary>
+		/// Whether the current user can create files under <paramref name="path"/> — probed by
+		/// actually creating one, since ACLs, redirection and read-only mounts all make an
+		/// attribute check unreliable. Used to decide <see cref="Models.Solution.RequiresElevation"/>
+		/// for solutions whose target location depends on the machine layout (a user-local
+		/// .NET root needs no elevation; the same install under Program Files does).
+		/// Walks up to the nearest existing ancestor so a not-yet-created target still answers.
+		/// </summary>
+		public static bool IsDirectoryWritable(string path)
+		{
+			var candidate = path;
+			while (!string.IsNullOrEmpty(candidate) && !Directory.Exists(candidate))
+				candidate = Path.GetDirectoryName(candidate);
+
+			if (string.IsNullOrEmpty(candidate))
+				return false;
+
+			try
+			{
+				var probe = Path.Combine(candidate, $".uno-check-write-{Guid.NewGuid():N}");
+				using (File.Create(probe, 1, FileOptions.DeleteOnClose)) { }
+				return true;
+			}
+			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+			{
+				return false;
+			}
+		}
+
 		public static Task<ShellProcessRunner.ShellProcessResult> ShellCommand(string cmd, string workingDir, bool verbose, string[] args)
 			=> ShellCommand(cmd, workingDir, verbose, System.Threading.CancellationToken.None, args);
 

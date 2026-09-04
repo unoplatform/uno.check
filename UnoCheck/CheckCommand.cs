@@ -723,6 +723,7 @@ namespace DotNetCheck.Cli
 						? diagnosis.Suggestion.Name
 						: $"{diagnosis.Suggestion.Name}: {diagnosis.Suggestion.Description}",
 					AutoFixable = fixable,
+					RequiresElevation = RequiresElevation(diagnosis.Suggestion),
 					Args = fixable
 						? new[] { "--fix", "--only", checkup.Id, "--non-interactive" }
 						: null,
@@ -748,6 +749,36 @@ namespace DotNetCheck.Cli
 				Message = message,
 				Fix = fix,
 			};
+		}
+
+		/// <summary>
+		/// A suggestion needs elevation when any of its solutions does — a fix applies them
+		/// all, so the host must elevate for the strictest one. A suggestion with no
+		/// solutions cannot be fixed at all, and reports false rather than an idle prompt.
+		/// Evaluating each solution may probe the filesystem (writability of an SDK root),
+		/// so a solution that throws is treated as elevation-requiring: the conservative
+		/// answer, matching the base default.
+		/// </summary>
+		internal static bool RequiresElevation(Suggestion suggestion)
+		{
+			if (suggestion?.Solutions is not { } solutions)
+				return false;
+
+			foreach (var solution in solutions)
+			{
+				try
+				{
+					if (solution.RequiresElevation)
+						return true;
+				}
+				catch (Exception ex)
+				{
+					Util.Exception(ex);
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		private void CheckupStatusUpdated(object sender, CheckupStatusEventArgs e)

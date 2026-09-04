@@ -7,6 +7,9 @@ namespace DotNetCheck.Solutions
 {
 	public class LinuxNinjaOpenUrlSolution : Solution
 	{
+		/// <summary>Only opens a web page in the user's session; elevating would break it.</summary>
+		public override bool RequiresElevation => false;
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);

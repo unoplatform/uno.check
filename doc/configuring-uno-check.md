@@ -186,6 +186,8 @@ Emits machine-readable JSONL on stdout — one JSON event per line (`run_started
 
 Intended for host applications, CI pipelines, and AI agents that embed uno-check. The event schema is documented in the repository under `specs/003-structured-json-output`.
 
+A failing check that can be repaired carries a `fix` object: `auto_fixable` says the fix can be run, `args` is the argument vector to run it with, and `requires_elevation` says whether running it needs administrator/root rights — so a host only elevates the fixes that actually need it (installing workloads into a machine-wide SDK, enabling Hyper-V, the long-path registry key) and leaves user-scoped ones (templates, the Uno SDK restore, a user-local SDK, Android SDK packages) unelevated. It is conservative: anything not known to be user-scoped reports `true`.
+
 ```bash
 uno-check --json --target wasm > results.jsonl
 ```

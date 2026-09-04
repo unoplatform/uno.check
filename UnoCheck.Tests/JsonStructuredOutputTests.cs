@@ -34,6 +34,22 @@ file class NoopSolution : Solution
 {
 }
 
+/// <summary>Solution with a caller-chosen elevation answer (or one that throws while deciding).</summary>
+file class ElevationSolution : Solution
+{
+    private readonly bool _requiresElevation;
+    private readonly bool _throws;
+
+    public ElevationSolution(bool requiresElevation, bool throws = false)
+    {
+        _requiresElevation = requiresElevation;
+        _throws = throws;
+    }
+
+    public override bool RequiresElevation
+        => _throws ? throw new UnauthorizedAccessException("probe failed") : _requiresElevation;
+}
+
 public class BuildHealthCheckTests
 {
     [Fact]
@@ -120,6 +136,28 @@ public class BuildHealthCheckTests
     }
 
     [Fact]
+    public void Unclassified_Solution_Requires_Elevation()
+    {
+        // The base default is conservative: a needless prompt beats a fix that fails
+        // halfway through because the host did not elevate.
+        var checkup = new FakeCheckup("hyperv");
+        var diagnosis = new DiagnosticResult(Status.Error, checkup, new Suggestion("Enable it", new NoopSolution()));
+
+        Assert.True(CheckCommand.BuildHealthCheck(checkup, diagnosis).Fix!.RequiresElevation);
+    }
+
+    [Fact]
+    public void User_Scoped_Solution_Does_Not_Require_Elevation()
+    {
+        // The point of the field: a host must not raise UAC for a fix that only writes
+        // per-user state (templates, the Uno SDK restore, a user-local SDK).
+        var checkup = new FakeCheckup("dotnetnewunotemplates");
+        var diagnosis = new DiagnosticResult(Status.Error, checkup, new Suggestion("Install", new ElevationSolution(false)));
+
+        Assert.False(CheckCommand.BuildHealthCheck(checkup, diagnosis).Fix!.RequiresElevation);
+    }
+
+    [Fact]
     public void Error_Without_Message_Falls_Back_To_Suggestion_Description()
     {
         // Some checkups (e.g. a workloads mismatch) report status without a message;
@@ -188,6 +226,67 @@ public class IsCallerNamedForFixTests
     {
         // Caller ids match exactly — the one-way prefix rule is for dependency ids only.
         Assert.False(CheckCommand.IsCallerNamedForFix("dotnetworkloads-10.0.201", ["dotnetworkloads"]));
+    }
+}
+
+public class RequiresElevationTests
+{
+    [Fact]
+    public void Any_Elevated_Solution_Makes_The_Whole_Fix_Elevated()
+    {
+        // A fix applies every solution behind the suggestion, so the host has to satisfy
+        // the strictest one — reporting false here would fail the fix midway.
+        var suggestion = new Suggestion("Mixed", new ElevationSolution(false), new ElevationSolution(true));
+
+        Assert.True(CheckCommand.RequiresElevation(suggestion));
+    }
+
+    [Fact]
+    public void All_User_Scoped_Solutions_Need_No_Elevation()
+    {
+        var suggestion = new Suggestion("User scoped", new ElevationSolution(false), new ElevationSolution(false));
+
+        Assert.False(CheckCommand.RequiresElevation(suggestion));
+    }
+
+    [Fact]
+    public void Suggestion_Without_Solutions_Needs_No_Elevation()
+    {
+        // Nothing to run, so nothing to elevate: an advice-only suggestion must not make a
+        // host prompt for a fix it cannot apply.
+        Assert.False(CheckCommand.RequiresElevation(new Suggestion("Manual steps only")));
+    }
+
+    [Fact]
+    public void A_Failing_Probe_Falls_Back_To_Requiring_Elevation()
+    {
+        // Deciding can touch the filesystem (SDK root writability); if that throws, the
+        // safe answer is the conservative one rather than an unelevated fix that fails.
+        var suggestion = new Suggestion("Probe throws", new ElevationSolution(false, throws: true));
+
+        Assert.True(CheckCommand.RequiresElevation(suggestion));
+    }
+
+    [Fact]
+    public void Known_User_Scoped_Solutions_Report_No_Elevation()
+    {
+        // These are the fixes a host was previously forced to elevate for no reason:
+        // per-user template store, per-user NuGet/temp restore, CurrentUser policy scope.
+        Assert.False(new DotNetCheck.Solutions.DotNetNewTemplatesInstallSolution(false, false).RequiresElevation);
+        Assert.False(new DotNetCheck.Solutions.UnoSdkSolution().RequiresElevation);
+        Assert.False(new DotNetCheck.Solutions.PSExecutionPolicySolution().RequiresElevation);
+        Assert.False(new DotNetCheck.Solutions.LinuxNinjaOpenUrlSolution().RequiresElevation);
+    }
+
+    [Fact]
+    public void Layout_Dependent_Solutions_Follow_The_Targets_Writability()
+    {
+        // The same workloads fix is elevated against a machine-wide SDK and unelevated
+        // against a user-local one, so the answer must come from the target, not the type.
+        var userLocal = new DotNetCheck.Solutions.DotNetWorkloadUpdateSolution(
+            Path.Combine(Path.GetTempPath(), "dotnet", "dotnet"));
+
+        Assert.False(userLocal.RequiresElevation);
     }
 }
 

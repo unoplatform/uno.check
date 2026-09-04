@@ -17,6 +17,12 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     private readonly bool _uninstallExisting;
     private readonly NuGetVersion? _requestedVersion;
 
+    /// <summary>
+    /// <c>dotnet new install/uninstall</c> writes the per-user template engine store
+    /// (~/.templateengine), never a machine location.
+    /// </summary>
+    public override bool RequiresElevation => false;
+
     public DotNetNewTemplatesInstallSolution(
         bool uninstallLegacy, 
         bool uninstallExisting, 
