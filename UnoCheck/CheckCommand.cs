@@ -59,6 +59,7 @@ namespace DotNetCheck.Cli
 			Util.Verbose = settings.Verbose;
 			Util.LogFile = settings.LogFile;
 			Util.CI = settings.CI;
+			Util.AllowElevationPrompt = settings.AllowElevationPrompt;
 			if (settings.CI)
 				settings.NonInteractive = true;
 
@@ -394,8 +395,11 @@ namespace DotNetCheck.Cli
 					// needs to have a remedy available to even bother asking/trying
 					var doFix = diagnosis.Suggestion.HasSolution
 						&& (
-							// --fix + --non-interactive == auto fix, no prompt
-							(settings.NonInteractive && settings.Fix)
+							// --fix + --non-interactive == auto fix, no prompt — but only for
+							// checkups the caller named with --only: dependencies are examined
+							// for context, never auto-fixed. A host-side elevation prompt must
+							// describe the fix the user actually requested, not a dependency's.
+							(settings.NonInteractive && settings.Fix && IsCallerNamedForFix(checkup.Id, settings.Only))
 							// interactive (default) + prompt/confirm they want to fix
 							|| (!settings.NonInteractive && AnsiConsole.Confirm($"[bold]{Icon.Bell} Attempt to fix?[/]"))
 						);
@@ -638,6 +642,17 @@ namespace DotNetCheck.Cli
 		private string _activeFixCheckupId;
 
 		/// <summary>
+		/// Whether a checkup was named by the caller (exact, case-insensitive) and may be
+		/// auto-fixed in a non-interactive --fix --only run. Without --only every checkup
+		/// qualifies; with --only, dependency-included checkups are examined but not fixed.
+		/// </summary>
+#nullable enable
+		internal static bool IsCallerNamedForFix(string checkupId, string[]? only)
+			=> only is not { Length: > 0 }
+				|| only.Any(o => string.Equals(o, checkupId, StringComparison.OrdinalIgnoreCase));
+#nullable restore
+
+		/// <summary>
 		/// --only: scope the run to the requested checkup(s) plus their required dependencies.
 		/// Caller-supplied ids match exactly (case-insensitive) so a per-item fix can never
 		/// select siblings the caller did not name. Ids declared by dependencies keep the
@@ -714,12 +729,23 @@ namespace DotNetCheck.Cli
 				};
 			}
 
+			// Some checkups report a non-Ok status with no message (e.g. a workloads mismatch),
+			// which renders as a bare card in hosts. Fall back to the suggestion text so the
+			// JSON always carries a human-readable reason for a failed check.
+			var message = diagnosis.Message;
+			if (string.IsNullOrEmpty(message) && diagnosis.Status != Models.Status.Ok && diagnosis.HasSuggestion)
+			{
+				message = string.IsNullOrEmpty(diagnosis.Suggestion.Description)
+					? diagnosis.Suggestion.Name
+					: diagnosis.Suggestion.Description;
+			}
+
 			return new Json.HealthCheck
 			{
 				Id = checkup.Id,
 				Name = checkup.Title,
 				Status = Json.JsonlOutput.StatusName(diagnosis.Status),
-				Message = diagnosis.Message,
+				Message = message,
 				Fix = fix,
 			};
 		}

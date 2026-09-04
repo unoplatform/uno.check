@@ -1,4 +1,4 @@
-﻿using DotNetCheck.Models;
+using DotNetCheck.Models;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +10,15 @@ namespace DotNetCheck.Solutions
 		{
 			await base.Implement(sharedState, cancellationToken);
 
-			var r = await Util.WrapShellCommandWithSudo("x-www-browser", new[] { GitOpenUrl });
+			// Opening a browser needs the user's session, not root: elevation wrappers
+			// (sudo/pkexec) strip DISPLAY/WAYLAND_DISPLAY, so an elevated launch fails
+			// after authentication and the prompt only confuses.
+			var r = await Util.ShellCommand(
+				"x-www-browser",
+				workingDir: null,
+				verbose: Util.Verbose,
+				cancellationToken,
+				new[] { GitOpenUrl });
 
 			if (r.ExitCode == 0)
 			{
