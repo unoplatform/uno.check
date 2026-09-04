@@ -744,7 +744,15 @@ namespace DotNetCheck
 					RedirectOutput = Verbose
 				});
 
-				p.WaitForExit();
+				var sudoResult = p.WaitForExit();
+
+				// The authorization-dialog paths above throw on failure; this one used to
+				// discard the result, so a refused or failed sudo copy still reported the
+				// fix as applied. Fail the same way instead of silently doing nothing.
+				if (!sudoResult.Success)
+					throw new InvalidOperationException(
+						$"Elevated copy to '{destination}' failed with exit code {sudoResult.ExitCode}."
+						+ (Verbose ? $" Output:{Environment.NewLine}{sudoResult.GetOutput()}" : string.Empty));
 			}
 
 			return r;
