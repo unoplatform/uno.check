@@ -18,6 +18,12 @@ namespace DotNetCheck.Solutions
 {
 	internal class UnoSdkSolution : Solution
 	{
+		/// <summary>
+		/// Restores the Uno.Sdk package through a scratch project in the temp directory and
+		/// the per-user NuGet cache — no machine location is written.
+		/// </summary>
+		public override bool RequiresElevation => false;
+
 		public override async Task Implement(SharedState state, CancellationToken ct)
 		{
 			var resource =

@@ -6,6 +6,25 @@ namespace UnoCheck.Tests;
 public class ShellProcessRunnerTests
 {
 	[Fact]
+	public void WaitForExit_ArgumentList_PreservesArgumentBoundaries()
+	{
+		if (OperatingSystem.IsWindows())
+			return;
+
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions("/bin/sh", string.Empty)
+		{
+			ArgumentList = ["-c", "printf '%s' \"$1\"", "sh", "value with spaces; $(echo unsafe)"],
+			UseSystemShell = false,
+			RedirectOutput = true,
+		});
+
+		var result = sut.WaitForExit();
+
+		Assert.True(result.Success);
+		Assert.Equal("value with spaces; $(echo unsafe)", string.Join(Environment.NewLine, result.StandardOutput));
+	}
+
+	[Fact]
 	public void WaitForExit_CapturesStdOutAndStdErr_AndReturnsExitCode()
 	{
 		var (executable, args) = GetShellCommand(

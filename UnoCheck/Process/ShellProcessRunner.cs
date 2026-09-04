@@ -26,6 +26,7 @@ namespace DotNetCheck
 		 
 		public string Executable { get; set; }
 		public string Args { get; set; }
+		public IReadOnlyList<string> ArgumentList { get; set; }
 
 		public bool Verbose { get;set; }
 
@@ -79,6 +80,9 @@ namespace DotNetCheck
 
 			if (Options.UseSystemShell)
 			{
+				if (Options.ArgumentList != null)
+					throw new ArgumentException("ArgumentList cannot be combined with UseSystemShell.", nameof(options));
+
 				string tmpFile = null;
 
 				if (!Util.IsWindows)
@@ -95,7 +99,15 @@ namespace DotNetCheck
 			else
 			{
 				process.StartInfo.FileName = Options.Executable;
-				process.StartInfo.Arguments = Options.Args;
+				if (Options.ArgumentList == null)
+				{
+					process.StartInfo.Arguments = Options.Args;
+				}
+				else
+				{
+					foreach (var argument in Options.ArgumentList)
+						process.StartInfo.ArgumentList.Add(argument);
+				}
 			}
 
 			process.StartInfo.UseShellExecute = false;

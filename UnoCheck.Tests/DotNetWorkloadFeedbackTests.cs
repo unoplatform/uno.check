@@ -57,6 +57,21 @@ public class DotNetWorkloadFeedbackTests
     }
 
     [Fact]
+    public void BuildInstallArgs_PreservesPathsAndSourcesAsSeparateArguments()
+    {
+        var args = DotNetWorkloadManager.BuildInstallArgs(
+            sdkVersion: "10.0.103",
+            rollbackFile: "/Users/Test User/workload.json",
+            workloadIds: ["wasm-tools"],
+            packageSources: ["/Users/Test User/local feed"],
+            verbose: false);
+
+        Assert.Equal(
+            ["workload", "install", "--from-rollback-file", "/Users/Test User/workload.json", "wasm-tools", "--source", "/Users/Test User/local feed"],
+            args);
+    }
+
+    [Fact]
     public void BuildRepairArgs_AddsDetailedVerbosityWhenVerboseEnabled()
     {
         var args = DotNetWorkloadManager.BuildRepairArgs(

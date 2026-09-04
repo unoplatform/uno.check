@@ -11,7 +11,9 @@ namespace DotNetCheck.Solutions
 		{
 			await base.Implement(sharedState, cancellationToken);
 
-			_ = await Util.WrapShellCommandWithSudo("xcodebuild", new[] { "-license", "accept" });
+			var result = await Util.WrapShellCommandWithSudo("/usr/bin/xcodebuild", new[] { "-license", "accept" });
+			if (!result.Success)
+				throw new InvalidOperationException(result.GetOutput());
 		}
 	}
 }

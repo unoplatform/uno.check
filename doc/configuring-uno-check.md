@@ -164,10 +164,88 @@ Skips a checkup by name or ID as listed in `uno-check list`.
 uno-check --skip openjdk --skip androidsdk
 ```
 
+### `--only <CHECKUP_ID>` Run only specific checkups
+
+Runs only the nominated checkup(s), plus any checkups they require. Use the argument multiple times for multiple checkups. Checkup ids (not display names) are listed by `uno-check list`; ids match exactly, case-insensitively.
+
+```bash
+uno-check --only openjdk
+uno-check --fix --only androidsdk --non-interactive
+```
+
+> [!NOTE]
+> An id that matches no checkup fails the run: the unknown ids are listed on stderr and the exit code is non-zero, so a typo can never produce a passing empty run.
+
+> [!NOTE]
+> With `--fix --non-interactive`, only the checkups named by `--only` are auto-fixed. Dependency checkups pulled into the run are examined for context but never fixed — a fix (and any elevation it needs) always corresponds to the checkup the caller requested. Interactive runs still confirm each fix individually.
+> Consequently, a host fixing several items in one child must name every selected id (`--only a --only b …`) instead of relying on a dependency to pull the rest in — which also keeps authorization prompts to exactly the items the user selected. A full-run `--fix` without `--only` still fixes everything it examines.
+
+### `--json` Structured JSONL output
+
+Emits machine-readable JSONL on stdout — one JSON event per line (`run_started`, `checkup_started`, `checkup_progress`, `checkup_result`, `fix_started`, `fix_progress`, `fix_result`) ending with a final `report` event containing the full results and summary. The `report` event is emitted on every exit path — including cancellation and early failures — so consumers can treat it as the end-of-stream marker. Human-readable output moves to stderr so stdout stays pure JSONL. Implies `--non-interactive`.
+
+Intended for host applications, CI pipelines, and AI agents that embed uno-check. The event schema is documented in the repository under `specs/003-structured-json-output`.
+
+A failing check that can be repaired carries a `fix` object: `auto_fixable` says the fix can be run, `args` is the argument vector to run it with, and `requires_elevation` says whether running it needs administrator/root rights — so a host only elevates the fixes that actually need it (installing workloads into a machine-wide SDK, enabling Hyper-V, the long-path registry key) and leaves user-scoped ones (templates, the Uno SDK restore, a user-local SDK, Android SDK packages) unelevated. It is conservative: anything not known to be user-scoped reports `true`.
+
+```bash
+uno-check --json --target wasm > results.jsonl
+```
+
+### `--json-file <PATH>` Structured output to a file
+
+Writes the same JSONL events to a file. Useful when stdout cannot be captured — for example an elevated child process on Windows, whose stdout cannot be redirected across the elevation boundary. Can be combined with `--json` or used alone. Implies `--non-interactive`.
+
+The path must not already exist: uno-check only writes files it creates itself (`FileMode.CreateNew`), refusing pre-existing files and symlinks (junctions or links in parent directories are not detected, which is why the directory should be private to the launching user). If the path cannot be created and no other sink was requested, the run exits immediately with `-1` rather than running without output. Pass a fresh path per run — ideally in a directory only the launching user can write — and delete it when done.
+
+```cmd
+uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-run-1234.jsonl"
+```
+
+### `--correlation-id <ID>` Correlate structured-output runs
+
+Structured-output events carry a `correlation_id`, newly generated per run by default. A host that launches uno-check child processes (for example an elevated per-item fix) passes its own id so the parent run and the child report as one logical run.
+
+```cmd
+uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
+```
+
+### `--allow-elevation-prompt` Allow macOS / Linux authorization dialogs
+
+Allows a structured macOS or Linux fix run to display the system authorization dialog when an individual solution needs to modify a protected location. Uno.Check itself remains in the current user's context; only the underlying command is authorized:
+
+- **macOS** shows the system administrator authorization dialog.
+- **Linux** shows the polkit authentication dialog via `pkexec` (a polkit authentication agent must be running, as on any desktop session). If `pkexec` is not installed, the fix fails with a message naming the missing tool.
+
+Declining either dialog produces a failed `fix_result` (`Administrator approval was declined.`) and the check remains unresolved.
+
+This option is opt-in because `--json` is also used by unattended consumers. It is ignored with `--ci`, and it does not change the existing interactive terminal `sudo` flow.
+
+```bash
+uno-check --fix --only xcode --json --allow-elevation-prompt
+```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0`  | All checks passed (warnings possible) |
+| `1`  | One or more checks failed, or `--only` named an unknown checkup id |
+| `-1` (`255` in most shells) | The tool could not run — e.g. manifest validation failed |
+| `130` | Canceled (Ctrl+C) |
+
+In structured mode, prefer the final `report` event over the exit code for check results — the exit code cannot distinguish which checks failed.
+
 ### `list` List Checkups
 
 Lists possible checkups in the format: `checkup_id (checkup_name)`.
 These can be used to specify `--skip checkup_id` and `-s checkup_name` arguments.
+
+With `--json`, emits the catalog as a single JSON line on stdout (`checkup_catalog` event with `id`, display `name`, and `type_name` per checkup; `name` matches the `name` in `checkup_result` events and `type_name` is the class name accepted by `--skip`) — for host applications building checkup-selection UIs that feed `--only`/`--skip`. Honors `--target` filtering and implies `--non-interactive`.
+
+```bash
+uno-check list --json
+```
 
 ### `config` Configure global.json and NuGet.config in Working Dir
 

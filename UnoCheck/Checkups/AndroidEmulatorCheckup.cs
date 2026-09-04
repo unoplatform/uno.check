@@ -174,7 +174,9 @@ namespace DotNetCheck.Checkups
 							}
 
 							return Task.CompletedTask;
-						})).ToArray())));
+						},
+						// Creating an AVD writes the per-user Android home (~/.android).
+						requiresElevation: false)).ToArray())));
 		}
 	}
 

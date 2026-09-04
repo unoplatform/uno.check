@@ -28,6 +28,46 @@ internal static class ConsoleWindowHelpers
         SetForegroundWindow(hWnd);
     }
 
+    /// <summary>
+    /// Hides the console window entirely. Used in structured-output mode (--json/--json-file)
+    /// where a host application owns the UX and the console must never appear — in particular
+    /// for elevated fix children, whose window-style hint is dropped across the UAC boundary.
+    /// Callers must first verify ownership via <see cref="OwnsConsole"/>: a process launched
+    /// from an existing terminal shares that window, and hiding it would take out the user's
+    /// own shell with nothing to bring it back.
+    /// </summary>
+    public static void Hide()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
+        var hWnd = GetConsoleWindow();
+        if (hWnd == IntPtr.Zero)
+            return;
+
+        ShowWindow(hWnd, ShowWindowCommands.Hide);
+    }
+
+    /// <summary>
+    /// True when this process is the only one attached to its console — i.e. the console
+    /// was created for us (typical for a child spawned by a host app) rather than shared
+    /// with the terminal the user typed into.
+    /// </summary>
+    public static bool OwnsConsole()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return false;
+
+        if (GetConsoleWindow() == IntPtr.Zero)
+            return false;
+
+        var processIds = new uint[2];
+        return GetConsoleProcessList(processIds, (uint)processIds.Length) == 1;
+    }
+
+    // https://learn.microsoft.com/en-us/windows/console/getconsoleprocesslist
+    [DllImport("kernel32.dll", SetLastError = true)] private static extern uint GetConsoleProcessList(uint[] processList, uint processCount);
+
     // https://learn.microsoft.com/en-us/windows/console/getconsolewindow
     [DllImport("kernel32.dll")] private static extern IntPtr GetConsoleWindow();
     
