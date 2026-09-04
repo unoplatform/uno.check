@@ -504,6 +504,9 @@ namespace DotNetCheck.DotNet
 		{
 			// Structured macOS/Linux hosts opt into the system authorization dialog. Do not
 			// use an unrelated terminal sudo ticket: authorization belongs to this fix request.
+			// Deliberate trade: a user who just authenticated in a terminal still gets the
+			// dialog, and each protected command is its own authorization — a workload
+			// repair + install can prompt twice for one fix (recorded in spec 003's host flow).
 			if (Util.UseAdministratorPrompt)
 			{
 				return await Util.WrapShellCommandWithSudo(
