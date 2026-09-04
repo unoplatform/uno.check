@@ -21,6 +21,29 @@ namespace DotNetCheck.Solutions
 		}
 
 		public readonly string Version;
+
+		/// <summary>
+		/// Depends on the machine layout: the default Windows root is under Program Files
+		/// (elevation required), while a DOTNET_ROOT or the unix default of ~/.dotnet is
+		/// user-writable. Probed rather than assumed, so a user-local SDK does not make a
+		/// host prompt needlessly.
+		/// </summary>
+		public override bool RequiresElevation => !Util.IsDirectoryWritable(DefaultSdkRoot());
+
+		/// <summary>
+		/// The root <see cref="Implement"/> installs into when SharedState carries no
+		/// DOTNET_ROOT. Kept in sync with the resolution there.
+		/// </summary>
+		internal static string DefaultSdkRoot()
+		{
+			var envRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+			if (!string.IsNullOrEmpty(envRoot) && Directory.Exists(envRoot))
+				return envRoot;
+
+			return Util.IsWindows
+				? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet")
+				: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
+		}
 		
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
@@ -72,28 +95,12 @@ namespace DotNetCheck.Solutions
 				throw new InvalidOperationException(result.GetOutput());
 		}
 
+		/// <summary>
+		/// Kept as the name this solution's callers and tests already use; the probe itself
+		/// lives in <see cref="Util.IsDirectoryWritable"/> so the elevation decision here and
+		/// the <see cref="RequiresElevation"/> answer reported to hosts can never diverge.
+		/// </summary>
 		internal static bool IsDirectoryWritableOrCreatable(string path)
-		{
-			var candidate = path;
-			while (!string.IsNullOrEmpty(candidate) && !Directory.Exists(candidate))
-				candidate = Path.GetDirectoryName(candidate);
-
-			if (string.IsNullOrEmpty(candidate))
-				return false;
-
-			var probe = Path.Combine(candidate, $".uno-check-write-{Guid.NewGuid():N}");
-			try
-			{
-				using (File.Create(probe))
-				{
-				}
-				File.Delete(probe);
-				return true;
-			}
-			catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-			{
-				return false;
-			}
-		}
+			=> Util.IsDirectoryWritable(path);
 	}
 }

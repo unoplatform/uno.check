@@ -403,6 +403,18 @@ namespace DotNetCheck.Json
 		public bool AutoFixable { get; init; }
 
 		/// <summary>
+		/// Whether applying the fix needs administrator/root rights. Windows has no
+		/// per-command elevation, so a host must decide before launching whether to use the
+		/// <c>runas</c> verb; without this signal the only safe choice is to elevate every
+		/// fix. True when any solution behind the suggestion needs it, and conservative by
+		/// construction: a solution requires elevation unless it is known to write only
+		/// user-scoped state, and layout-dependent ones (the .NET SDK root, the Android SDK)
+		/// probe the actual target's writability rather than assuming.
+		/// </summary>
+		[JsonPropertyName("requires_elevation")]
+		public bool RequiresElevation { get; init; }
+
+		/// <summary>
 		/// Argument vector for a per-item fix, to be passed straight to the uno-check
 		/// process with no shell involved. Never a pre-joined command string: checkup
 		/// ids can embed manifest-sourced version text, and a joined string invites

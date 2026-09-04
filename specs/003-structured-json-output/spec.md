@@ -99,12 +99,32 @@ Stream guarantees:
 | `checkup_catalog` | emitted by `list --json` only: `schema_version`, `checkups[]` of `{ id, name, type_name }` (`name` is the display title, as in `checkup_result`; `type_name` is the checkup class name, which `--skip` also accepts) — the applicable-checkup menu for hosts building selection UIs that feed `--only`/`--skip` |
 
 **HealthCheck:** `id`, `name`, `status` (`ok`/`warning`/`error`/`skipped`), optional `message`,
-optional `skip_reason`, optional `fix` = `{ issue_id, description, auto_fixable, args }`.
+optional `skip_reason`, optional `fix` =
+`{ issue_id, description, auto_fixable, requires_elevation, args }`.
 `args` is the argument vector for the per-item fix (`["--fix", "--only", "<id>",
 "--non-interactive"]`), to be passed straight to the uno-check process — deliberately never a
 pre-joined command string, so no host is tempted to run it through a shell (checkup ids can
 embed manifest-sourced version text). Ids that fail the `[A-Za-z0-9._-]+` allowlist are never
 marked auto-fixable.
+
+`requires_elevation` answers *"will running `args` need administrator/root rights?"* — the
+question a host must settle **before** launching, because Windows elevates whole processes,
+not commands: without the signal the only safe choice is to elevate every fix, so
+user-scoped fixes (Android SDK packages, `dotnet new` templates, the Uno SDK restore,
+workloads into a user-writable SDK) raise UAC for nothing.
+
+- True when **any** solution behind the suggestion needs elevation — a fix applies them all,
+  so the host must satisfy the strictest one.
+- Conservative by construction: a solution requires elevation unless it is known to write
+  only user-scoped state. Layout-dependent solutions probe the real target instead of
+  assuming — the same workloads fix reports `false` against a user-local `DOTNET_ROOT` and
+  `true` against a Program Files SDK.
+- Advice-only suggestions (no runnable solution) report `false`; they also report
+  `auto_fixable: false`, so there is nothing to launch.
+- It describes the *fix*, not the current process: it stays meaningful when the host is
+  already elevated, and on macOS/Linux — where `--allow-elevation-prompt` elevates
+  per-command rather than per-process — it is what a host uses to warn that a dialog is
+  coming.
 
 **Report (final):** `schema_version`, `correlation_id`, `timestamp`, `tool_version`,
 `status` (`healthy`/`degraded`/`unhealthy`), optional `reason` (abnormal ends), `checks[]`,
@@ -138,10 +158,12 @@ checks failed.
    pins a released tool version, wrong for local dev builds.)
 2. Render per-check cards live from `checkup_*` events; summary from `report`.
 3. Fix one item:
-   - On Windows, launch elevated `uno-check --fix --only <id> --non-interactive
+   - On Windows, launch `uno-check --fix --only <id> --non-interactive
      --json-file <fresh-path> --correlation-id <this run's id>` using `fix.args` from the
-     check's result; tail the file for `fix_*` events and the fix child's own re-examined
-     `checkup_result`.
+     check's result, elevating the child (`runas`) **only when that check's
+     `fix.requires_elevation` is true**; tail the file for `fix_*` events and the fix
+     child's own re-examined `checkup_result`. The file transport is needed either way,
+     since an elevated child's stdout cannot be redirected.
    - On macOS, keep the same current-user JSON process and add `--allow-elevation-prompt`.
      User-level solutions run without a prompt. A solution that needs a protected location
      displays the system administrator dialog and elevates only its underlying command.
@@ -167,6 +189,9 @@ checks failed.
      Worth recording the observed value when next on a macOS host.
    - **A cached terminal `sudo` ticket is deliberately not reused**: authorization belongs to
      the fix the user clicked, so the dialog appears even right after a terminal `sudo`.
+   - **`fix.requires_elevation` is the pre-launch signal**, and it is what keeps user-scoped
+     fixes prompt-free: on Windows it decides `runas` before the child starts, and on
+     macOS/Linux a host can use it to warn that a dialog is coming.
 
 Host requirements:
 
