@@ -1,36 +1,64 @@
-# Reducing elevation prompts
+# Reducing elevation prompts and unnecessary runs
 
 Status: proposed — phased; Phase 0 is a prerequisite for the rest
 
 ## Problem
 
-Fixing a fresh Windows machine through `uno-check --fix` can raise up to **eight** separate
-UAC prompts, because Windows elevates whole processes rather than individual commands: a host
-(or the CLI) must decide before launching, and each fix that touches a protected location is
-its own elevated launch.
+uno-check interrupts developers in two ways, and both come down to the same question: *what
+can actually have changed since last time?*
 
-`fix.requires_elevation` (spec 003) told hosts *which* fixes need it, which stopped the
-needless prompts. It did not reduce the number of fixes that genuinely need elevation. This
-spec is about that second half.
+**Prompts.** Fixing a fresh Windows machine through `uno-check --fix` can raise up to **eight**
+separate UAC prompts, because Windows elevates whole processes rather than individual commands:
+a host (or the CLI) must decide before launching, and each fix that touches a protected
+location is its own elevated launch.
 
-The distribution matters more than the count. Of the eight fixes that really need
-administrator rights today, **three write only the .NET root** — and those three are the only
-ones a developer hits *repeatedly*, on every SDK or workload bump:
+**Time.** Hosts that run uno-check eagerly — in the background at startup, to show whether the
+environment needs attention — pay a full run every launch. Measured on the reference machine
+(appendix A) that is **7.4s** for a desktop-only run and **11.4s** for desktop + Android, on
+every single launch, mostly to re-confirm machine state that cannot have changed.
 
-| Fix | Writes | Recurring? |
+`fix.requires_elevation` (spec 003) told hosts *which* fixes need elevation, which stopped the
+needless prompts. It did not reduce the number of fixes that genuinely need it, and it says
+nothing about when a check is worth running at all. This spec covers both.
+
+### The distribution matters more than the count
+
+Of the eight fixes that really need administrator rights today, **three write only the .NET
+root** — and those three are the only ones a developer hits *repeatedly*:
+
+| Fix | Writes | How often it re-fires |
 |---|---|---|
-| `dotnet` (SDK install) | `%ProgramFiles%\dotnet` + HKLM bundle registration | on every pinned-SDK bump |
-| `dotnetworkloads-<v>` | `<SdkRoot>\{packs,sdk-manifests,metadata}` | on every workload bump |
+| `dotnet` (SDK install) | `%ProgramFiles%\dotnet` + HKLM bundle registration | every pinned-SDK bump — **16 times in 24 months** |
+| `dotnetworkloads-<v>` | `<SdkRoot>\{packs,sdk-manifests,metadata}` | every workload bump, tracking the SDK band |
 | `dotnettargetingpacks` | same subtrees, via `dotnet workload update` | on drift |
-| `openjdk` | `%ProgramFiles%\Microsoft\jdk-*` (MSI) | once per machine |
-| `androidsdk` | `%ProgramFiles(x86)%\Android\android-sdk` | once per machine (location-dependent) |
-| `windowslongpath` | `HKLM\SYSTEM\...\FileSystem\LongPathsEnabled` | once per machine |
-| `windowshyperv` | `dism /Online /Enable-Feature` | once per machine |
+| `openjdk` | `%ProgramFiles%\Microsoft\jdk-*` (MSI) | manifest-pinned — twice in 24 months |
+| `androidsdk` | `%ProgramFiles(x86)%\Android\android-sdk` | manifest-pinned; elevation is location-dependent |
+| `windowslongpath` | `HKLM\SYSTEM\...\FileSystem\LongPathsEnabled` | once per machine, permanently |
+| `windowshyperv` | `dism /Online /Enable-Feature` | once per machine, permanently |
 | `git` | launches the VS Installer (self-elevating) | once per machine |
+
+Frequencies are counted from the git history of `manifests/` on `main`, Sep 2024 → Sep 2026,
+not estimated. Note that **`openjdk` is not a "once per machine, never again" item** even though
+it feels like one: its floor is pinned by the manifest and moved twice in that window
+(17.0.16 → 17.0.19). Any design that hardcodes a never-recheck list will silently stop
+noticing that class of bump. See "Recurrence classification" below.
 
 So the goal is not "zero prompts ever" — enabling Hyper-V or a long-path registry key is a
 machine configuration change and will always require consent. The goal is that **the everyday
-path costs nothing, and the one-time machine setup costs one prompt, once.**
+path costs nothing, the one-time machine setup costs one prompt once, and a run that cannot
+discover anything new does not happen at all.**
+
+### Recurrence classification
+
+This table is the shared foundation for both halves of the spec: it decides which fixes recur
+(the elevation work, phases 0-3) and which checks are worth re-running (the caching work,
+phase 4). Every row was traced to the source that decides it.
+
+| Class | Depends on | Checkups | Consequence |
+|---|---|---|---|
+| **Machine state** | nothing versioned; only what the user did to the machine | `windowshyperv`, `windowslongpath`, `git`, `psexecpolicy`, `vswin` | Cannot change because Uno shipped something. Cacheable until explicitly re-run or a max age elapses. |
+| **Manifest-pinned** | `manifests/uno.ui.manifest.json` | `openjdk`, `dotnet`, `dotnetworkloads-<v>`, `dotnettargetingpacks`, `unosdk`, `dotnetnewunotemplates`, `androidsdk`, `androidemulator` | The only class that can go from green to red without the user touching anything. Must re-run when the manifest moves. |
+| **Ambient** | process/environment state at this instant | `vsrestart` (is VS running now), `dotnetroots` (env drift), `https-dev-cert` (expiry), `edgewebview2` | Not cacheable in any useful sense, but individually cheap. |
 
 ## Goals
 
@@ -40,6 +68,10 @@ path costs nothing, and the one-time machine setup costs one prompt, once.**
    asks for those fixes.
 3. **Never report healthy for a toolchain the user's IDE or CLI does not actually use.** This
    is the hard invariant; everything below is subordinate to it.
+4. **A host can decide whether a run is worth doing in under 100ms**, without duplicating
+   uno-check's own manifest and channel resolution.
+5. **Never show a stale green as if it were fresh.** A cached result must carry when it was
+   taken and against what, so a host can display it honestly.
 
 ## Non-goals
 
@@ -53,6 +85,16 @@ path costs nothing, and the one-time machine setup costs one prompt, once.**
   can do this safely. uno-check validates a toolchain other tools use, so a private root it
   alone believes in is precisely how it would start reporting green on a broken machine.
 - **Automating the Visual Studio Installer.** `vswinworkloads` stays advice-only.
+- **A resident helper, daemon or background service.** Rejected on memory and footprint grounds
+  by host-side product direction, and made unnecessary by phase 4: the expensive part is
+  deciding *whether* to run, and that decision costs one conditional HTTP GET.
+- **uno-check owning the cache.** The CLI stays stateless — it has no user-scoped store today
+  and should not grow one. It exposes the identity a host needs to build a cache key (P4.1);
+  the host owns storage, expiry and policy.
+- **Self-elevating the whole tool so nothing prompts again.** This is what the shipped
+  `uno-check.exe` does via its `requireAdministrator` manifest, and it is why the tool cannot
+  start unelevated at all — even `--version` fails with Win32 error 740. Hosts that need
+  unelevated diagnosis must keep invoking through the dotnet host.
 
 ## Current state
 
@@ -96,6 +138,11 @@ play. Phase 1 must not ship without them.
 | P0.4 | `Checkups/WindowsLongPathCheckup.cs:20` opens HKLM **writable** merely to read | Unelevated it fails before it can report state, surfacing as "Requested registry access is not allowed" with no fix offered. Read-only probe, write only in the solution. |
 | P0.5 | `Solutions/PythonIsInstalledSolution.cs:19-24` only opens a Store URL, but inherits `RequiresElevation => true` | A prompt for nothing — and elevating a browser launch tends to break it. Mirror `LinuxNinjaOpenUrlSolution`. |
 | P0.6 | Remove dead solutions: `CreateFileSolution` (zero references), `LinuxOtherDistGitCliSolution` (zero references) | Both would misreport elevation if revived. |
+| P0.7 | `Solutions/GitSolution.cs` inherits `RequiresElevation => true`, but only starts the Visual Studio Installer, which self-elevates | A host wraps a self-elevating installer in its own elevated child, so the user consents twice for one action. Should be `false`. |
+
+P0.4 and P0.5 are confirmed against a live unelevated run on the reference machine: `windowslongpath`
+returns `status: "error"`, `"Requested registry access is not allowed."` and emits **no fix object at
+all**, so the one-time registry fix is currently unreachable without an already-elevated tool.
 
 ### Phase 1 — user-local .NET root as a first-class scope
 
@@ -155,18 +202,96 @@ hardcoding a list, add an `elevation_scope` discriminator to `FixInfo`
 (`"none" | "user" | "machine"`), so a host can partition the selected fixes into "run
 unelevated now" and "one elevated batch".
 
-**P2.4 — `git` stays as-is.** It launches the VS Installer, which self-elevates; there is
-nothing for uno-check to improve.
+**P2.4 — `git` needs no elevation of ours.** It launches the VS Installer, which self-elevates,
+so there is nothing for uno-check to improve about the installation itself. What must change is
+the classification: see P0.7.
 
 ### Phase 3 — host-side contract
 
-- `requires_elevation` (shipped) decides whether a child is elevated.
-- `elevation_scope` (P2.3) lets a host batch machine-scoped fixes into one approval and mark
-  the affected rows with a shield before the user clicks.
-- Hosts should surface the chosen install scope, since it changes what "your environment"
-  means. A host that installs into a user root must say so.
+Everything the CLI must expose so a host can be both quiet and honest:
 
-### Phase 4 — verification
+| Field | Status | What a host does with it |
+|---|---|---|
+| `fix.requires_elevation` | shipped (spec 003) | Decides whether the fix child is launched elevated at all |
+| `fix.elevation_scope` | P2.3 | Partition selected fixes into "run unelevated now" and "one elevated batch"; shield the affected rows before the user clicks |
+| `manifest_version` / `manifest_etag` | P4.1 | Build a cache key and run the freshness gate without reimplementing manifest resolution |
+| install scope in use | P1.1 | Say which .NET root the result describes — it changes what "your environment" means |
+
+A host that installs into a user root must say so, and a host that shows a cached result must
+say when it was taken.
+
+### Phase 4 — background runs without redundant work
+
+Host-side product direction is to run uno-check **in the background rather than behind a manual
+button**, and to badge the navigation entry when something needs fixing. That is the right call
+— an environment doctor nobody clicks is an environment doctor that never runs — but run
+eagerly on every launch it costs 7.4–11.4s of CPU and network each time, largely re-confirming
+things that cannot have changed.
+
+The measurements (appendix A) point at a specific design rather than a vague "cache it":
+
+**P4.1 — expose manifest identity in the contract (the only CLI change here).** `run_started`
+and `report` carry `schema_version`, `tool_version`, `channel`, `targets` and `checkup_count`,
+but **nothing identifying the manifest**. A host therefore cannot tell whether the pinned
+versions moved. Add to both:
+
+```
+"manifest_version": "<the manifest's own version field>",
+"manifest_etag":    "<ETag of the resolved manifest, when fetched over HTTP>"
+```
+
+Without this a host must fetch and parse the manifest itself, duplicating channel selection,
+`--manifest` overrides and the embedded-fallback path in `ToolInfo.LoadManifest` — logic that
+will drift from the CLI's. The CLI already resolves all of it; it should just say what it used.
+
+**P4.2 — the freshness gate.** With P4.1 a host can decide whether to run at all with one
+conditional GET against the manifest URL: measured at **424ms** for a full fetch (6.5 KB) and
+**18ms** for a `304 Not Modified` on a cold connection, versus 7.4s for the cheapest useful
+run. The gate costs well under 1% of what it can avoid.
+
+**P4.3 — cache key.** A stored report is reusable while *all* of these are unchanged:
+manifest identity (P4.1), `tool_version`, `channel`, and the `targets` set. Any difference
+invalidates. In addition, invalidate on: a successful fix (re-verify that checkup immediately —
+never let a fix be reported from cache), an explicit user re-run, and a **max age** so a machine
+that changed underneath us is eventually rechecked anyway.
+
+**P4.4 — what to re-run, and as one process.** When the gate says something *could* have
+changed, the subset to re-run follows the recurrence classification: manifest moved → the
+manifest-pinned class; otherwise → whatever was not green last time, plus the ambient class.
+
+This must be **a single invocation naming several ids**, never one invocation per checkup.
+Process startup dominates: `dotnet dnx` resolution alone is 2.39s, so one checkup costs 2.59s
+and three cost 2.55s — the same. Sequential per-checkup runs would be slower than the full run
+they were meant to avoid.
+
+**P4.5 — two `--only` hazards a host must not hardcode around.** Both were found by measurement:
+
+- **The workloads id embeds the SDK version.** `--only dotnetworkloads` matches nothing and
+  exits 0 having examined **zero** checkups — a silent no-op that looks like success. The real
+  id is `dotnetworkloads-10.0.201` and it changes with the SDK band. Hosts must take ids from
+  `list --json` or a prior report, never construct them.
+- **`--only` pulls in dependencies.** `--only dotnetworkloads-10.0.201` returns **5** checkup
+  results, not 1, and takes 6.95s. Selective re-runs are cheaper than a full run but not
+  proportionally so, and a host must be ready for results it did not ask for.
+
+Consider making the first case loud: a run whose `--only` set matched no checkup should warn
+rather than exit silently green.
+
+**P4.6 — startup sequence.** The badge must not wait on any of this:
+
+1. Load the persisted report and paint the badge immediately — zero work, zero network.
+2. Run the freshness gate (P4.2) plus the cheap local comparisons (tool version, channel, targets).
+3. Nothing changed and the last run was all green → **do not run**.
+4. Nothing changed but issues were outstanding → re-run just those, one process (P4.4).
+5. Manifest moved → re-run the manifest-pinned class.
+6. Tool version, channel or targets changed, or max age exceeded → full run.
+7. Always show *when* the displayed result was taken (goal 5).
+
+**P4.7 — what the badge can say.** `requires_elevation` is already per-fix, so a host can
+distinguish "3 issues, 2 fixable without a prompt" from "1 issue needing admin" before the user
+clicks anything — worth using, since the two deserve different urgency.
+
+### Phase 5 — verification
 
 Each phase lands with unit coverage for the pure decisions (scope selection, root resolution,
 elevation classification) plus a manual matrix, because the failure modes are environmental:
@@ -179,6 +304,11 @@ elevation classification) plus a manual matrix, because the failure modes are en
 | macOS | script installer into `~/.dotnet`; authorization dialog only for protected commands |
 | Linux | unchanged (already user-local by default); polkit only for protected commands |
 | After any user-root install | a fresh terminal **and** the IDE resolve the same root uno-check validated |
+| Manifest unchanged, last run green | host performs **no** uno-check invocation; badge still renders from the stored report |
+| Manifest moved | manifest-pinned checkups re-run; machine-state ones do not |
+| Fix applied | that checkup is re-verified live, never served from cache |
+| Cache older than max age | full run regardless of the gate |
+| `--only` naming an unknown id | run reports that nothing matched rather than exiting silently green (P4.5) |
 
 ## Risks
 
@@ -189,6 +319,10 @@ elevation classification) plus a manual matrix, because the failure modes are en
 | **VS users regressing** | `auto` selects `machine` whenever VS is detected |
 | **PATH ordering fights** with other installers | The persisted-variables checkup (P1.4) detects and repairs |
 | **Phase 1 landing without Phase 0** | Sequencing is explicit; Phase 0 items are individually shippable and worth landing regardless |
+| **Stale green** — the machine changed outside the host (SDK uninstalled, Hyper-V disabled, JDK removed) | Max age forces a periodic full run; the displayed result always carries its timestamp (goal 5); manual re-run is always available |
+| **A hardcoded never-recheck list going stale** — `openjdk` is the live example | Cacheability is derived from the recurrence classification, not a hand-maintained list; the manifest gate covers every pinned item at once |
+| **Cache key missing an input** the result actually depends on | Key on identity the CLI itself reports (P4.1) rather than anything the host infers; when in doubt, invalidate |
+| **Selective re-runs costing more than a full run** | One process, many `--only` (P4.4); measured at 2.55s for three checkups versus 2.59s for one |
 
 ## Alternatives considered
 
@@ -201,6 +335,17 @@ elevation classification) plus a manual matrix, because the failure modes are en
 - **Self-elevate the whole tool once per run.** Rejected previously for hosts; it also
   elevates work that does not need it, and the manifest question (spec 003 open question) is
   unresolved.
+- **A resident background service that keeps the environment continuously checked.** Rejected
+  on footprint grounds, and unnecessary: the gate is cheap enough to run at launch (P4.2).
+- **A hardcoded "one-time checkups" skip list.** Superficially attractive — Hyper-V, long paths
+  and Git really never change on their own. But `openjdk` looks like it belongs on that list and
+  does not, and the list would need editing every time a checkup's inputs change. Deriving
+  cacheability from what a check depends on (recurrence classification) costs the same and does
+  not rot.
+- **Caching inside uno-check.** Would spare hosts the bookkeeping, but the CLI has no
+  user-scoped store, would need its own invalidation policy, and multiple hosts plus the
+  terminal would contend over one cache. Exposing identity and letting each host cache is
+  smaller and harder to get wrong.
 
 ## Open questions
 
@@ -212,3 +357,40 @@ elevation classification) plus a manual matrix, because the failure modes are en
 3. Is `elevation_scope` worth adding to the contract now, or should hosts infer "machine" from
    `requires_elevation` until a second consumer needs the distinction?
 4. Ownership of the manifest change for OpenJDK archive URLs (P2.1).
+5. What is the max age for a cached report — a day, a week? Long enough that it rarely fires,
+   short enough that a machine changed outside the host self-heals without the user knowing to
+   press anything.
+6. Should the freshness gate be the host's conditional GET, or a `uno-check status --json`
+   subcommand that answers "would a run find anything new?" without running? The subcommand
+   keeps manifest resolution in one place, at the cost of ~2.4s of process startup versus 18ms
+   for the host doing the GET itself. Proposed: host-side GET, with P4.1 making it possible.
+7. Does the badge need per-project state? Targets are part of the cache key, so a solution
+   targeting Android and one targeting desktop-only legitimately have different answers, and
+   host-side direction is heading toward a Default/Project split.
+
+## Appendix A — measurements
+
+Reference machine: Windows 11 Pro 26200, unelevated shell, warm NuGet and dnx caches, package
+`uno.check@1.35.0-json.3` from a local feed, invoked as `dotnet dnx`. Times are wall clock.
+
+| What | Time | Notes |
+|---|---|---|
+| `dotnet --version` | 0.19s | host spin-up floor |
+| `dnx` resolve + tool start | **2.39s** | paid by *every* invocation, before any checkup runs |
+| `list --json` (catalog) | 3.49s first, 2.87s after | |
+| One checkup (`windowshyperv`) | 2.59s | ≈ dnx overhead + 0.2s of actual work |
+| Three checkups, one process | **2.55s** | same as one — startup dominates |
+| `--only dotnetworkloads` | 2.72s | **zero** results; the id is versioned |
+| `--only dotnetworkloads-10.0.201` | 6.95s | **five** results; pulls in dependencies |
+| Full run, `skiadesktop` | 7.05 / 7.35 / 7.54s | median **7.35s** |
+| Full run, `android` + `skiadesktop` | 11.95 / 10.81s | ≈ **11.4s** |
+| Manifest full GET | 424ms | 6,489 bytes |
+| Manifest conditional GET → `304` | **18ms** cold, ~1ms on a reused connection | the freshness gate |
+
+Two conclusions the numbers force:
+
+1. **Per-checkup invocation is a trap.** At 2.39s of fixed overhead, re-running three checkups
+   in three processes costs more than the 7.35s full run it was meant to avoid. Batch or don't
+   bother.
+2. **The gate is effectively free.** 18ms to learn whether a 7.35–11.4s run could possibly
+   discover anything is a ~400:1 return, and on the common path the answer is no.
