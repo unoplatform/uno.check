@@ -140,6 +140,12 @@ play. Phase 1 must not ship without them.
 | P0.6 | Remove dead solutions: `CreateFileSolution` (zero references), `LinuxOtherDistGitCliSolution` (zero references) | Both would misreport elevation if revived. |
 | P0.7 | `Solutions/GitSolution.cs` inherits `RequiresElevation => true`, but only starts the Visual Studio Installer, which self-elevates | A host wraps a self-elevating installer in its own elevated child, so the user consents twice for one action. Should be `false`. |
 
+**P0.5 and P0.7 are no longer cosmetic.** A host that batches fixes partitions them by
+`requires_elevation` and runs the machine-scoped group in one elevated child. A checkup
+mis-reporting `true` therefore does not merely add a prompt — it joins the elevated batch, so
+its work runs as administrator. For `windowspyhtonInstallation` that means launching the user's
+browser elevated. Both are one-line fixes and should land before any host ships batching.
+
 P0.4 and P0.5 are confirmed against a live unelevated run on the reference machine: `windowslongpath`
 returns `status: "error"`, `"Requested registry access is not allowed."` and emits **no fix object at
 all**, so the one-time registry fix is currently unreachable without an already-elevated tool.
@@ -260,22 +266,22 @@ changed, the subset to re-run follows the recurrence classification: manifest mo
 manifest-pinned class; otherwise → whatever was not green last time, plus the ambient class.
 
 This must be **a single invocation naming several ids**, never one invocation per checkup.
-Process startup dominates: `dotnet dnx` resolution alone is 2.39s, so one checkup costs 2.59s
-and three cost 2.55s — the same. Sequential per-checkup runs would be slower than the full run
-they were meant to avoid.
+Process startup is a fixed tax on every invocation — 0.85s through `dnx`, 0.20s for an
+installed global tool — so a scoped run of one checkup costs about as much as a scoped run of
+several. Splitting a subset across processes pays that tax once per checkup and can cost more
+than the full run it was meant to avoid.
 
-**P4.5 — two `--only` hazards a host must not hardcode around.** Both were found by measurement:
+**P4.5 — two `--only` behaviours a host must build around.** Both were found by measurement:
 
-- **The workloads id embeds the SDK version.** `--only dotnetworkloads` matches nothing and
-  exits 0 having examined **zero** checkups — a silent no-op that looks like success. The real
-  id is `dotnetworkloads-10.0.201` and it changes with the SDK band. Hosts must take ids from
-  `list --json` or a prior report, never construct them.
+- **The workloads id embeds the SDK version.** Caller-supplied ids match exactly, so
+  `--only dotnetworkloads` matches nothing; the real id is `dotnetworkloads-10.0.201` and it
+  changes with the SDK band. This fails safely — the run exits 1 with
+  `"reason": "unknown checkup id(s) for --only: dotnetworkloads"` rather than silently passing —
+  but it fails the *whole* batch. Hosts must take ids from `list --json` or a prior report and
+  never construct them, and should re-resolve them if the SDK band may have moved since.
 - **`--only` pulls in dependencies.** `--only dotnetworkloads-10.0.201` returns **5** checkup
-  results, not 1, and takes 6.95s. Selective re-runs are cheaper than a full run but not
-  proportionally so, and a host must be ready for results it did not ask for.
-
-Consider making the first case loud: a run whose `--only` set matched no checkup should warn
-rather than exit silently green.
+  results, not 1, and takes 6.95s. Only the caller-named ids are fixed
+  (`CheckCommand.IsCallerNamedForFix`), but a host must be ready for results it did not ask for.
 
 **P4.6 — startup sequence.** The badge must not wait on any of this:
 
@@ -354,8 +360,12 @@ elevation classification) plus a manual matrix, because the failure modes are en
    would most appreciate zero prompts.
 2. Should uno-check write the user `PATH` entry, or only `DOTNET_ROOT` and tell the user? PATH
    is what makes a plain terminal agree; it is also the more invasive edit.
-3. Is `elevation_scope` worth adding to the contract now, or should hosts infer "machine" from
-   `requires_elevation` until a second consumer needs the distinction?
+3. ~~Is `elevation_scope` worth adding to the contract now?~~ **Resolved: no.** A host batching
+   fixes needs exactly two groups — run now, or run in the one elevated child — and the shipped
+   `requires_elevation` boolean already separates them. A three-valued `none | user | machine`
+   would distinguish "writes nothing" from "writes user state", which no consumer acts on
+   differently. Revisit only if something needs that third case. (P2.3's batching itself still
+   stands; it just needs no new field.)
 4. Ownership of the manifest change for OpenJDK archive URLs (P2.1).
 5. What is the max age for a cached report — a day, a week? Long enough that it rarely fires,
    short enough that a machine changed outside the host self-heals without the user knowing to
@@ -375,22 +385,40 @@ Reference machine: Windows 11 Pro 26200, unelevated shell, warm NuGet and dnx ca
 
 | What | Time | Notes |
 |---|---|---|
-| `dotnet --version` | 0.19s | host spin-up floor |
-| `dnx` resolve + tool start | **2.39s** | paid by *every* invocation, before any checkup runs |
+| `dotnet --version` | 0.17s | host spin-up floor |
+| Installed global tool, `--version` | **0.20s** | essentially the host floor |
+| `dnx --version`, package cached | **0.85s** | ~0.65s of resolution, paid by *every* invocation |
+| `dnx --version`, package **not** cached | **6.23s** | one-time download, per pinned version |
 | `list --json` (catalog) | 3.49s first, 2.87s after | |
-| One checkup (`windowshyperv`) | 2.59s | ≈ dnx overhead + 0.2s of actual work |
+| One checkup (`windowshyperv`) | 2.59s | mostly startup plus the checkup's own work |
 | Three checkups, one process | **2.55s** | same as one — startup dominates |
-| `--only dotnetworkloads` | 2.72s | **zero** results; the id is versioned |
+| `--only dotnetworkloads` | 2.72s | exit 1, "unknown checkup id(s)" — the id is versioned |
 | `--only dotnetworkloads-10.0.201` | 6.95s | **five** results; pulls in dependencies |
-| Full run, `skiadesktop` | 7.05 / 7.35 / 7.54s | median **7.35s** |
+| Full run, `skiadesktop` | 7.05 / 7.35 / 7.54s | median **7.35s**, no speed-up across repeats |
 | Full run, `android` + `skiadesktop` | 11.95 / 10.81s | ≈ **11.4s** |
 | Manifest full GET | 424ms | 6,489 bytes |
 | Manifest conditional GET → `304` | **18ms** cold, ~1ms on a reused connection | the freshness gate |
 
-Two conclusions the numbers force:
+Three conclusions the numbers force:
 
-1. **Per-checkup invocation is a trap.** At 2.39s of fixed overhead, re-running three checkups
-   in three processes costs more than the 7.35s full run it was meant to avoid. Batch or don't
-   bother.
-2. **The gate is effectively free.** 18ms to learn whether a 7.35–11.4s run could possibly
+1. **There is no result cache today.** Three identical consecutive full runs took 7.05s, 7.35s
+   and 7.54s — no speed-up at all. Anything that avoids re-running has to be built; the tool
+   will not do it for us.
+2. **Scoped re-runs must be batched.** Startup is a fixed per-invocation tax, so splitting a
+   subset across processes multiplies it while one invocation naming several ids does not.
+3. **The gate is effectively free.** 18ms to learn whether a 7.35–11.4s run could possibly
    discover anything is a ~400:1 return, and on the common path the answer is no.
+
+### On launch mechanism
+
+Three ways to start the tool unelevated on Windows, all measured above:
+
+- **`dotnet dnx`** (what the host uses today): pins an exact version, installs nothing globally.
+  Costs ~0.65s per run, plus ~5.4s once per pinned version.
+- **Installed global tool with `__COMPAT_LAYER=RUNASINVOKER`**: the documented read-only mode
+  (`doc/using-uno-check.md`), and what the VS Code extension already does. Verified to work when
+  the variable is set in the child's environment alone — no `cmd` wrapper. Fastest, but requires
+  the tool to be installed and then inherits whatever version is there. Note it *suppresses*
+  elevation rather than granting it, so a fix batch must drop it and let the manifest elevate.
+- **Changing the shipped manifest to `asInvoker`**: removes the need for either workaround, but
+  changes behaviour for every existing CLI user. Tracked as an open question in spec 003.
