@@ -56,12 +56,20 @@ namespace DotNetCheck
 			return result;
 		}
 
+		/// <summary>
+		/// pkexec keeps the caller's working directory only when asked. Without this it
+		/// switches to the target user's home before running the command, which loses the
+		/// temporary global.json that pins which SDK a workload fix operates on — the fix then
+		/// repairs or installs workloads for a different installation than the one diagnosed.
+		/// </summary>
+		internal const string KeepCwdOption = "--keep-cwd";
+
 		internal static IReadOnlyList<string> BuildArguments(string executable, IEnumerable<string> arguments)
 		{
 			if (string.IsNullOrWhiteSpace(executable))
 				throw new ArgumentException("An executable is required.", nameof(executable));
 
-			var argumentList = new List<string> { executable };
+			var argumentList = new List<string> { KeepCwdOption, executable };
 			argumentList.AddRange(arguments ?? Array.Empty<string>());
 			return argumentList;
 		}

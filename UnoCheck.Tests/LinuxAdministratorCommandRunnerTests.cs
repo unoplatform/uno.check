@@ -12,7 +12,7 @@ public class LinuxAdministratorCommandRunnerTests
             ["workload", "install", "value with spaces", "$(touch /tmp/bad)", "it's-safe"]);
 
         Assert.Equal(
-            ["/home/test user/.dotnet/dotnet", "workload", "install", "value with spaces", "$(touch /tmp/bad)", "it's-safe"],
+            [LinuxAdministratorCommandRunner.KeepCwdOption, "/home/test user/.dotnet/dotnet", "workload", "install", "value with spaces", "$(touch /tmp/bad)", "it's-safe"],
             arguments);
     }
 
@@ -20,6 +20,29 @@ public class LinuxAdministratorCommandRunnerTests
     public void BuildArguments_RequiresAnExecutable()
     {
         Assert.Throws<ArgumentException>(() => LinuxAdministratorCommandRunner.BuildArguments(" ", []));
+    }
+
+    [Fact]
+    public void BuildArguments_KeepsTheCallersWorkingDirectory()
+    {
+        // pkexec switches to the target user's home unless told otherwise, which loses the
+        // temporary global.json that selects which SDK a workload fix operates on.
+        var arguments = LinuxAdministratorCommandRunner.BuildArguments("/usr/bin/dotnet", ["workload", "repair"]);
+
+        Assert.Equal(LinuxAdministratorCommandRunner.KeepCwdOption, arguments[0]);
+        Assert.Equal("/usr/bin/dotnet", arguments[1]);
+    }
+
+    [Fact]
+    public void BuildArguments_KeepCwdPrecedesTheExecutable()
+    {
+        // pkexec reads its own options only before the program name; passing it afterwards
+        // would hand "--keep-cwd" to the program instead.
+        var arguments = LinuxAdministratorCommandRunner.BuildArguments("/bin/sh", ["-c", "apt-get install -y git"]);
+
+        Assert.Equal(
+            [LinuxAdministratorCommandRunner.KeepCwdOption, "/bin/sh", "-c", "apt-get install -y git"],
+            arguments);
     }
 
     [Theory]
