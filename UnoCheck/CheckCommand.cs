@@ -479,6 +479,15 @@ namespace DotNetCheck.Cli
 				checkup.OnStatusUpdated -= CheckupStatusUpdated;
 			}
 
+			// Cancellation raised during the final checkup has no next iteration to observe it.
+			// Without this, Ctrl+C on the last (or only) check returns a healthy report and exit 0.
+			if (cts.IsCancellationRequested)
+			{
+				abnormalReason = "canceled";
+				Environment.ExitCode = 130;
+				return 130;
+			}
+
 			AnsiConsole.Write(new Rule());
 			AnsiConsole.WriteLine();
 
