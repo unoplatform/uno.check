@@ -149,6 +149,72 @@ namespace DotNetCheck.Json
 				|| a.Equals("--json-file", StringComparison.OrdinalIgnoreCase)
 				|| a.StartsWith("--json-file=", StringComparison.OrdinalIgnoreCase)) ?? false;
 
+		/// <summary>
+		/// Raw-args detection of <c>--json</c> specifically — the mode where stdout becomes
+		/// the event stream. <c>--json-file</c> alone leaves stdout as ordinary human output.
+		/// </summary>
+		public static bool IsStdoutStreamRequested(string[]? args)
+			=> args?.Any(a => a.Equals("--json", StringComparison.OrdinalIgnoreCase)) ?? false;
+
+		/// <summary>
+		/// The real stdout, reserved for the event stream before anything else can write to
+		/// it. Null until <see cref="ClaimStdout"/> runs.
+		/// </summary>
+		public static TextWriter? ReservedStdout { get; private set; }
+
+		/// <summary>
+		/// Takes stdout for the JSONL stream and reroutes everything else to stderr.
+		///
+		/// This must happen before the command infrastructure is constructed, not inside a
+		/// command: argument parsing can fail first (an unknown <c>--only</c> value, a missing
+		/// <c>--manifest</c>) and the parser writes those errors to whatever stdout it
+		/// captured when it was built. Claiming stdout afterwards left a JSON report followed
+		/// by plain text on the same stream, which no JSON reader survives.
+		///
+		/// Idempotent, so the command can call it again without stacking redirects.
+		/// </summary>
+		public static void ClaimStdout()
+		{
+			if (ReservedStdout is not null)
+			{
+				return;
+			}
+
+			ReservedStdout = Console.Out;
+			Console.SetOut(Console.Error);
+			Spectre.Console.AnsiConsole.Console = Spectre.Console.AnsiConsole.Create(
+				new Spectre.Console.AnsiConsoleSettings
+				{
+					Ansi = Spectre.Console.AnsiSupport.Detect,
+					Out = new Spectre.Console.AnsiConsoleOutput(Console.Error),
+				});
+		}
+
+		/// <summary>
+		/// Gives stdout back and clears the claim, so a later <see cref="ClaimStdout"/> sees
+		/// the real stream again. A CLI run claims once and exits; only a process that runs
+		/// several checks in a row (the test suite, a host reusing the command in-process)
+		/// needs to undo it — without this the second run would emit its events into the
+		/// first run's writer.
+		/// </summary>
+		public static void ReleaseStdout()
+		{
+			if (ReservedStdout is null)
+			{
+				return;
+			}
+
+			Console.SetOut(ReservedStdout);
+			ReservedStdout = null;
+
+			Spectre.Console.AnsiConsole.Console = Spectre.Console.AnsiConsole.Create(
+				new Spectre.Console.AnsiConsoleSettings
+				{
+					Ansi = Spectre.Console.AnsiSupport.Detect,
+					Out = new Spectre.Console.AnsiConsoleOutput(Console.Out),
+				});
+		}
+
 		public static string StatusName(Status status)
 			=> status switch
 			{

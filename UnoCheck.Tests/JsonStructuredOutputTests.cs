@@ -682,6 +682,7 @@ public class CheckCommandEndToEndTests
         }
         finally
         {
+            JsonlOutput.ReleaseStdout();
             Console.SetOut(originalOut);
             Console.SetError(originalError);
             JsonlOutput.Init(null, null);
@@ -706,7 +707,9 @@ public class CheckCommandEndToEndTests
 
         // Parse throws on any non-JSON stdout line — the purity guarantee.
         var events = lines.Select(l => JsonDocument.Parse(l).RootElement).ToArray();
-        Assert.Equal(
+        // GetString() returns string?; comparing as IEnumerable<string?> keeps the nullability
+        // honest rather than binding an overload whose constraint it does not satisfy (CS8631).
+        Assert.Equal<IEnumerable<string?>>(
             ["run_started", "checkup_started", "checkup_result", "report"],
             events.Select(e => e.GetProperty("type").GetString()).ToArray());
 
