@@ -360,7 +360,7 @@ namespace DotNetCheck.Cli
 				// Cache the status for dependencies
 				checkupStatus[checkup.Id] = diagnosis.Status;
 
-				var healthCheck = BuildHealthCheck(checkup, diagnosis);
+				var healthCheck = BuildHealthCheck(checkup, diagnosis, settings);
 				reportChecks[checkup.Id] = healthCheck;
 
 				// On a post-fix retry this emits a second checkup_result for the same id
@@ -700,7 +700,102 @@ namespace DotNetCheck.Cli
 		}
 #nullable restore
 
-		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis)
+		/// <summary>
+		/// The argument vector a host runs to apply one fix. It must reproduce the diagnosis
+		/// that produced it, not just name the checkup: dropping the channel, manifest, target
+		/// or SDK root sends the fix at a different installation than the one examined. A
+		/// preview-channel diagnosis whose fix arguments omitted the channel came back healthy
+		/// against stable without fixing anything, and a versioned preview workload id became
+		/// unknown.
+		///
+		/// Everything replayed here arrived on this process' own command line, so it is handed
+		/// back verbatim as separate vector elements. The checkup id is the exception — it is
+		/// assembled from manifest data rather than supplied by the caller, so it is
+		/// allow-listed by <see cref="Json.JsonlOutput.IsSafeCheckupId"/> before it gets here.
+		/// Output, logging and correlation options are deliberately absent: those belong to the
+		/// host that launches the fix, not to the diagnosis being reproduced.
+		/// </summary>
+		internal static string[] BuildFixArguments(string checkupId, CheckSettings settings)
+		{
+			var args = new List<string> { "--fix", "--only", checkupId, "--non-interactive" };
+
+			if (settings is null)
+			{
+				return args.ToArray();
+			}
+
+			// Channel. These select which manifest the fix resolves versions from; a fix run on
+			// the wrong channel either no-ops or installs a different version than was examined.
+			if (settings.Preview)
+				args.Add("--pre");
+
+			if (settings.PreviewMajor)
+				args.Add("--preview-major");
+
+			if (settings.Main)
+				args.Add("--dev-manifest");
+
+			if (!string.IsNullOrWhiteSpace(settings.Manifest))
+			{
+				args.Add("--manifest");
+				args.Add(settings.Manifest);
+			}
+
+			// Which SDK installation the fix operates on.
+			if (!string.IsNullOrWhiteSpace(settings.DotNetSdkRoot))
+			{
+				args.Add("--dotnet");
+				args.Add(settings.DotNetSdkRoot);
+			}
+
+			if (settings.ForceDotNet)
+				args.Add("--force-dotnet");
+
+			// Target selection. --tfm derives the target platforms (and trims the skip list), so
+			// replaying the frameworks reproduces that derivation instead of freezing its result.
+			// Only when no framework was given are the platforms themselves replayed.
+			if (settings.Frameworks is { Length: > 0 })
+			{
+				foreach (var tfm in settings.Frameworks)
+				{
+					args.Add("--tfm");
+					args.Add(tfm);
+				}
+			}
+			else
+			{
+				foreach (var target in settings.TargetPlatforms ?? Array.Empty<string>())
+				{
+					args.Add("--target");
+					args.Add(target);
+				}
+			}
+
+			foreach (var skip in settings.Skip ?? Array.Empty<string>())
+			{
+				args.Add("--skip");
+				args.Add(skip);
+			}
+
+			if (!string.IsNullOrWhiteSpace(settings.Ide))
+			{
+				args.Add("--ide");
+				args.Add(settings.Ide);
+			}
+
+			if (!string.IsNullOrWhiteSpace(settings.UnoSdkVersion))
+			{
+				args.Add("--unoSdkVersion");
+				args.Add(settings.UnoSdkVersion);
+			}
+
+			if (settings.CI)
+				args.Add("--ci");
+
+			return args.ToArray();
+		}
+
+		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null)
 		{
 			Json.FixInfo fix = null;
 
@@ -721,7 +816,7 @@ namespace DotNetCheck.Cli
 					AutoFixable = fixable,
 					RequiresElevation = RequiresElevation(diagnosis.Suggestion),
 					Args = fixable
-						? new[] { "--fix", "--only", checkup.Id, "--non-interactive" }
+						? BuildFixArguments(checkup.Id, settings)
 						: null,
 				};
 			}
