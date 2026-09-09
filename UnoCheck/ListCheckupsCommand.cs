@@ -16,16 +16,16 @@ namespace DotNetCheck
 
 			if (settings.Json)
 			{
-				// Same stdout discipline as the check command: the JSON line owns the real
-				// stdout; everything human-readable moves to stderr.
 				settings.NonInteractive = true;
-				jsonOut = Console.Out;
-				Console.SetOut(Console.Error);
-				AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
-				{
-					Ansi = AnsiSupport.Detect,
-					Out = new AnsiConsoleOutput(Console.Error),
-				});
+
+				// Same stdout discipline as the check command: the JSON line owns the real
+				// stdout; everything human-readable moves to stderr. Program.Main already
+				// claimed it before the command app was built — reading Console.Out here
+				// would pick up the stderr it was swapped for and put the catalog on the
+				// wrong stream. Claiming again is a no-op and covers hosts that construct
+				// the command directly.
+				Json.JsonlOutput.ClaimStdout();
+				jsonOut = Json.JsonlOutput.ReservedStdout;
 			}
 
 			var manifest = await ToolInfo.LoadManifest(settings.Manifest, settings.GetManifestChannel());

@@ -181,3 +181,57 @@ public class CommandAppFailureOutputTests
         Assert.NotEqual(string.Empty, capture.Stderr);
     }
 }
+
+/// <summary>Minimal checkup so the catalog has a known entry to look for.</summary>
+file class CatalogProbeCheckup : DotNetCheck.Models.Checkup
+{
+    readonly string _id;
+
+    public CatalogProbeCheckup(string id) => _id = id;
+
+    public override string Id => _id;
+    public override string Title => $"Catalog probe {_id}";
+
+    public override Task<DotNetCheck.Models.DiagnosticResult> Examine(DotNetCheck.Models.SharedState history)
+        => Task.FromResult(DotNetCheck.Models.DiagnosticResult.Ok(this));
+}
+
+/// <summary>
+/// The catalog is the first thing a host asks for, so it has the same stdout discipline as a
+/// check run: the JSON line on stdout, the version banner and everything else on stderr.
+/// </summary>
+[Collection("JsonlOutputState")]
+public class ListCatalogOutputTests
+{
+    [Fact]
+    public async Task The_Catalog_Lands_On_Stdout_And_The_Banner_Does_Not()
+    {
+        using var capture = new ConsoleCapture();
+
+        var probeId = $"catalog-probe-{Guid.NewGuid():n}";
+        DotNetCheck.Models.CheckupManager.RegisterCheckups(new CatalogProbeCheckup(probeId));
+
+        string[] args = ["list", "--json"];
+        JsonlOutput.ClaimStdout();
+
+        var exit = await DotNetCheck.Program.CreateCommandApp()
+            .RunAsync(DotNetCheck.Program.BuildFinalArgs(args));
+
+        Assert.Equal(0, exit);
+
+        var lines = capture.Stdout
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimEnd('\r'))
+            .Where(l => l.Length > 0)
+            .ToArray();
+
+        // Exactly one line, and it parses: reading Console.Out after the claim would have
+        // sent this to stderr and left a host waiting on an empty stream.
+        var only = Assert.Single(lines);
+        var root = JsonDocument.Parse(only).RootElement;
+        Assert.Equal("checkup_catalog", root.GetProperty("type").GetString());
+        Assert.Contains(
+            root.GetProperty("checkups").EnumerateArray(),
+            c => c.GetProperty("id").GetString() == probeId);
+    }
+}
