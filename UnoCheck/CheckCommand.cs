@@ -26,7 +26,16 @@ namespace DotNetCheck.Cli
 			if (settings.Json || !string.IsNullOrEmpty(settings.JsonFile))
 			{
 				settings.NonInteractive = true;
-				Json.JsonlOutput.Init(settings.Json ? Console.Out : null, settings.JsonFile, settings.CorrelationId);
+
+				// Program.Main already claimed stdout for --json before the command app was
+				// built, so parse errors could not land on the stream. Calling again is a
+				// no-op and covers hosts that construct the command directly.
+				if (settings.Json)
+				{
+					Json.JsonlOutput.ClaimStdout();
+				}
+
+				Json.JsonlOutput.Init(settings.Json ? Json.JsonlOutput.ReservedStdout : null, settings.JsonFile, settings.CorrelationId);
 
 				// If the only requested sink could not be created (e.g. --json-file pointing
 				// at an existing path), proceeding would run completely blind: no events and
@@ -39,19 +48,6 @@ namespace DotNetCheck.Cli
 					return -1;
 				}
 
-				if (settings.Json)
-				{
-					// stdout carries pure JSONL: the event stream owns the real stdout
-					// (captured by Init above), and everything else — Spectre and any
-					// direct Console.Out writer anywhere in the process — is rerouted
-					// to stderr so no stray write can corrupt the stream.
-					Console.SetOut(Console.Error);
-					AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
-					{
-						Ansi = AnsiSupport.Detect,
-						Out = new AnsiConsoleOutput(Console.Error),
-					});
-				}
 			}
 
 			TelemetryClient.TrackStartCheck(settings.Frameworks);
