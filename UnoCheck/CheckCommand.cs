@@ -5,9 +5,12 @@ using Spectre.Console.Cli;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using NuGet.Frameworks;
 
@@ -871,8 +874,16 @@ namespace DotNetCheck.Cli
 					if (solution.RequiresElevation)
 						return true;
 				}
-				catch (Exception ex)
+				catch (Exception ex) when (
+					ex is IOException
+					|| ex is UnauthorizedAccessException
+					|| ex is SecurityException
+					|| ex is NotSupportedException
+					|| ex is CryptographicException)
 				{
+					// A probe can only fail on the filesystem/permission families above.
+					// Treat any of them as "cannot prove it is user-writable" and keep the
+					// conservative answer: a needless prompt beats a fix that cannot write.
 					Util.Exception(ex);
 					return true;
 				}
