@@ -232,6 +232,17 @@ namespace DotNetCheck
 		}
 
 		/// <summary>
+		/// Wraps a shell command so <c>sudo</c> covers all of it, not just its first command.
+		/// A chained command like <c>mkdir -p d &amp;&amp; cp a b</c> prefixed with <c>sudo</c>
+		/// elevates only the <c>mkdir</c>; the copy then runs as the current user and fails on
+		/// the protected destinations the sudo path exists for. Running the shell itself under
+		/// sudo keeps the whole chain elevated.
+		/// Pure and internal so the quoting is unit-testable without invoking sudo.
+		/// </summary>
+		internal static string BuildElevatedShellCommand(string command)
+			=> $"sudo {ShellProcessRunner.MacOSShell} -c {MacOsAdministratorCommandRunner.PosixShellQuote(command)}";
+
+		/// <summary>
 		/// Whether the current user can create files under <paramref name="path"/> — probed by
 		/// actually creating one, since ACLs, redirection and read-only mounts all make an
 		/// attribute check unreliable. Used to decide <see cref="Models.Solution.RequiresElevation"/>
@@ -729,12 +740,15 @@ namespace DotNetCheck
 					return true;
 				}
 
-				// Copy a file to a destination as su
-				//		sudo mkdir -p destDir && sudo cp -pP intermediate destination
-
-				// Copy a folder recursively to the destination as su
-				//		sudo mkdir -p destDir && sudo cp -pPR intermediate/ destination
-				var args = $"-c 'sudo {copyCommand.Replace("'", "'\\''")}'";
+				// Elevate the whole chain, not just its first command. copyCommand is
+				//		mkdir -p destDir && cp -pP intermediate destination
+				// so a leading "sudo " applies to mkdir alone and leaves the copy running as
+				// the current user — which fails against exactly the protected destinations
+				// this fallback exists for. Running the shell itself under sudo keeps both
+				// halves elevated:
+				//		sudo /bin/sh -c 'mkdir -p destDir && cp -pP intermediate destination'
+				var innerCommand = BuildElevatedShellCommand(copyCommand);
+				var args = $"-c '{innerCommand.Replace("'", "'\\''")}'";
 
 				if (Verbose)
 					Console.WriteLine($"{ShellProcessRunner.MacOSShell} {args}");
