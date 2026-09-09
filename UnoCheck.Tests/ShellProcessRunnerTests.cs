@@ -136,7 +136,12 @@ public class ShellProcessRunnerTests
 	[Fact]
 	public void WaitForExit_CancellationToken_KillsNeverEndingCommand()
 	{
-		using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(800));
+		// Cancel once the child has actually announced itself rather than on a fixed timer:
+		// on a loaded machine the interpreter's own startup can outlast a short deadline, the
+		// process is killed before it prints anything, and the test then fails for a reason it
+		// is not testing. The outer deadline only stops a hang.
+		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		using var started = new ManualResetEventSlim(false);
 		var sw = Stopwatch.StartNew();
 
 		var (executable, args) = GetNeverEndingCommand();
@@ -145,6 +150,20 @@ public class ShellProcessRunnerTests
 		{
 			UseSystemShell = false,
 			RedirectOutput = true,
+			OutputCallback = line =>
+			{
+				if (line?.IndexOf("started", StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					started.Set();
+				}
+			},
+		});
+
+		// WaitForExit blocks, so the cancellation has to come from somewhere else.
+		_ = Task.Run(() =>
+		{
+			started.Wait(TimeSpan.FromSeconds(20));
+			cts.Cancel();
 		});
 
 		var result = sut.WaitForExit();
@@ -153,7 +172,7 @@ public class ShellProcessRunnerTests
 		var output = string.Join(Environment.NewLine, result.StandardOutput);
 
 		Assert.Contains("started", output);
-		Assert.True(sw.Elapsed < TimeSpan.FromSeconds(12), $"Expected cancellation before 12s but took {sw.Elapsed}.");
+		Assert.True(sw.Elapsed < TimeSpan.FromSeconds(25), $"Expected cancellation before 25s but took {sw.Elapsed}.");
 		Assert.NotEqual(0, result.ExitCode);
 	}
 
