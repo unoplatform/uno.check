@@ -57,3 +57,33 @@ public class ThrowIfFailedTests
     }
 }
 
+
+/// <summary>
+/// Enabling Hyper-V needs a restart, and DISM says so with exit code 3010. Every other
+/// non-zero code is a real failure — and used to be reported as "please restart your
+/// computer" too, which sent the user to reboot over a fix that had not run at all.
+/// </summary>
+public class HyperVActivationOutcomeTests
+{
+    static ShellProcessRunner.ShellProcessResult Dism(int exitCode, params string[] output)
+        => new([.. output], [], exitCode);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3010)]
+    public void SucceedsWhenDismAppliedTheChange(int exitCode)
+        => Assert.True(Dism(exitCode).ExitCode is 0 or 3010);
+
+    [Fact]
+    public void A_Refused_Dism_Reports_Its_Own_Reason()
+    {
+        // 740 is the elevation refusal; the message has to carry that, not a reboot prompt.
+        var message = Util.BuildCommandFailureMessage(
+            "Enabling Hyper-V",
+            Dism(740, "Error: 740", "The requested operation requires elevation."));
+
+        Assert.Contains("740", message);
+        Assert.Contains("requires elevation", message);
+        Assert.DoesNotContain("restart", message, StringComparison.OrdinalIgnoreCase);
+    }
+}
