@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\UnoCheck\UnoCheck.csproj" />
+    <ProjectReference Include="..\UnoCheck.Client\UnoCheck.Client.csproj" />
     </ItemGroup>
 
 </Project>
