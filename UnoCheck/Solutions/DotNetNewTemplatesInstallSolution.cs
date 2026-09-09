@@ -38,6 +38,9 @@ internal class DotNetNewTemplatesInstallSolution : Solution
         var version = _requestedVersion ??
             await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, ToolInfo.CurrentVersion.IsPrerelease);
 
+        // The uninstalls are best-effort housekeeping: 'dotnet new uninstall' exits non-zero
+        // when the package was never installed, which is the expected state here and must not
+        // fail the fix. Only the install below determines whether the fix worked.
         if (_uninstallLegacy)
         {
             var uninstallCli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new uninstall {UnoLegacyTemplatesPackageName}"));
@@ -51,6 +54,8 @@ internal class DotNetNewTemplatesInstallSolution : Solution
         }
 
         var cli = new ShellProcessRunner(new ShellProcessRunnerOptions("dotnet", $"new install {UnoTemplatesPackageName}::{version}") { Verbose = Util.Verbose });
-        cli.WaitForExit();
+
+        // Discarding this exit code reported an applied fix for an install that never ran.
+        Util.ThrowIfFailed(cli.WaitForExit(), $"'dotnet new install {UnoTemplatesPackageName}::{version}'");
     }
 }

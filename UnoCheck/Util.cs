@@ -232,6 +232,35 @@ namespace DotNetCheck
 		}
 
 		/// <summary>
+		/// Turns a failed command into a thrown fix failure. A solution that discards an exit
+		/// code leaves the fix runner with nothing to observe, so the run reports the fix as
+		/// applied while the underlying command did nothing — hosts then show a successful fix
+		/// next to a check that still fails. The tail of the output travels with the exception
+		/// because that is where the actionable reason (permissions, network, missing package)
+		/// lives.
+		/// </summary>
+		internal static void ThrowIfFailed(ShellProcessRunner.ShellProcessResult result, string description)
+		{
+			if (result is null || result.Success)
+				return;
+
+			throw new InvalidOperationException(BuildCommandFailureMessage(description, result));
+		}
+
+		internal static string BuildCommandFailureMessage(string description, ShellProcessRunner.ShellProcessResult result)
+		{
+			var tail = string.Join(
+				System.Environment.NewLine,
+				result.StandardOutput
+					.Concat(result.StandardError)
+					.Where(line => !string.IsNullOrWhiteSpace(line))
+					.TakeLast(10));
+
+			return $"{description} exited with code {result.ExitCode}."
+				+ (tail.Length == 0 ? string.Empty : $" Output:{System.Environment.NewLine}{tail}");
+		}
+
+		/// <summary>
 		/// Wraps a shell command so <c>sudo</c> covers all of it, not just its first command.
 		/// A chained command like <c>mkdir -p d &amp;&amp; cp a b</c> prefixed with <c>sudo</c>
 		/// elevates only the <c>mkdir</c>; the copy then runs as the current user and fails on
