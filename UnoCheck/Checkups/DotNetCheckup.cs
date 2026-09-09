@@ -99,7 +99,7 @@ namespace DotNetCheck.Checkups
 				if (Util.CI || Util.IsLinux)
 				{
 					remedies.AddRange(missingSdks
-						.Select(ms => new DotNetSdkScriptInstallSolution(ms.Version)));
+						.Select(ms => new DotNetSdkScriptInstallSolution(ms.Version, history)));
 				}
 				else
 				{
