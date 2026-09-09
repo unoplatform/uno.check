@@ -16,11 +16,24 @@ namespace DotNetCheck.Solutions
 		const string installScriptPwsh = "https://dot.net/v1/dotnet-install.ps1";
 
 		public DotNetSdkScriptInstallSolution(string version)
+			: this(version, null)
+		{
+		}
+
+		public DotNetSdkScriptInstallSolution(string version, SharedState state)
 		{
 			Version = version;
+			InstallRoot = ResolveInstallRoot(state);
 		}
 
 		public readonly string Version;
+
+		/// <summary>
+		/// The single root this solution both probes for writability and installs into.
+		/// Resolved once, at construction, so the elevation answer a host receives cannot
+		/// describe a different installation than the one the fix will write to.
+		/// </summary>
+		internal string InstallRoot { get; }
 
 		/// <summary>
 		/// Depends on the machine layout: the default Windows root is under Program Files
@@ -28,39 +41,69 @@ namespace DotNetCheck.Solutions
 		/// user-writable. Probed rather than assumed, so a user-local SDK does not make a
 		/// host prompt needlessly.
 		/// </summary>
-		public override bool RequiresElevation => !Util.IsDirectoryWritable(DefaultSdkRoot());
+		public override bool RequiresElevation => !Util.IsDirectoryWritable(InstallRoot);
 
 		/// <summary>
-		/// The root <see cref="Implement"/> installs into when SharedState carries no
-		/// DOTNET_ROOT. Kept in sync with the resolution there.
+		/// Resolves the root the install script writes to. The run's shared state carries the
+		/// explicitly requested SDK root and therefore outranks the process environment: a
+		/// writable DOTNET_ROOT in the environment must not make an install into a protected
+		/// requested root look as though it needs no elevation.
 		/// </summary>
-		internal static string DefaultSdkRoot()
+		internal static string ResolveInstallRoot(SharedState state)
 		{
+			if (state != null
+				&& state.TryGetEnvironmentVariable("DOTNET_ROOT", out var stateRoot)
+				&& !string.IsNullOrEmpty(stateRoot)
+				&& Directory.Exists(stateRoot))
+			{
+				return stateRoot;
+			}
+
 			var envRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
 			if (!string.IsNullOrEmpty(envRoot) && Directory.Exists(envRoot))
 				return envRoot;
 
-			return Util.IsWindows
-				? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet")
-				: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
+			return DefaultSdkRoot();
 		}
-		
+
+		/// <summary>
+		/// The root used when neither the run nor the environment names one.
+		/// </summary>
+		internal static string DefaultSdkRoot()
+		{
+			if (Util.IsWindows)
+			{
+				var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+				if (string.IsNullOrEmpty(programFiles))
+					programFiles = Environment.GetEnvironmentVariable("ProgramFiles");
+
+				return AppendFolder(programFiles, "dotnet", @"C:\Program Files\dotnet");
+			}
+
+			var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+			if (string.IsNullOrEmpty(home))
+				home = Environment.GetEnvironmentVariable("HOME");
+
+			return AppendFolder(home, ".dotnet", "/usr/local/share/dotnet");
+		}
+
+		/// <summary>
+		/// Joins <paramref name="folder"/> under <paramref name="root"/>. Path.Combine returns
+		/// the child on its own when the root is empty — GetFolderPath yields an empty string
+		/// whenever the folder is unavailable — and discards the root entirely when the child is
+		/// rooted. Either would send the install to an unintended location, so both cases fall
+		/// back to <paramref name="fallback"/> rather than silently producing a different path.
+		/// </summary>
+		static string AppendFolder(string root, string folder, string fallback)
+			=> string.IsNullOrEmpty(root) || Path.IsPathRooted(folder)
+				? fallback
+				: Path.Combine(root, folder);
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);
 
-			string sdkRoot = default;
-
-			if (sharedState != null && sharedState.TryGetEnvironmentVariable("DOTNET_ROOT", out var envSdkRoot))
-			{
-				if (Directory.Exists(envSdkRoot))
-					sdkRoot = envSdkRoot;
-			}
-
-			if (string.IsNullOrEmpty(sdkRoot))
-				sdkRoot = Util.IsWindows
-					? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet")
-					: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
+			var sdkRoot = InstallRoot;
 
 			var scriptUrl = Util.IsWindows ? installScriptPwsh : installScriptBash;
 			var scriptPath = Path.Combine(Path.GetTempPath(), Util.IsWindows ? "dotnet-install.ps1" : "dotnet-install.sh");
@@ -87,7 +130,7 @@ namespace DotNetCheck.Solutions
 			Util.Log($"\t{exe} {string.Join(" ", args)}");
 
 			// A user-local SDK install stays in the user's context. Only a protected
-			// DOTNET_ROOT is elevated, and then only the install command itself.
+			// root is elevated, and then only the install command itself.
 			var result = !Util.IsWindows && IsDirectoryWritableOrCreatable(sdkRoot)
 				? await Util.ShellCommand(exe, workingDir: null, verbose: Util.Verbose, cancellationToken: cancellationToken, args: args)
 				: await Util.WrapShellCommandWithSudo(exe, workingDir: null, verbose: Util.Verbose, cancellationToken: cancellationToken, args: args);
