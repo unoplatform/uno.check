@@ -57,7 +57,11 @@ namespace DotNetCheck.Solutions
 
 			File.WriteAllText(Path.Combine(tempPath, "Uno.Sdk.csproj"), csprojContents);
 
-			new ShellProcessRunner(new("dotnet", "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit();
+			// A failed restore leaves the SDK unresolved; reporting the fix as applied would
+			// hide that behind a check that still fails.
+			Util.ThrowIfFailed(
+				new ShellProcessRunner(new("dotnet", "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit(),
+				"Restoring the Uno.Sdk package");
 		}
 
 		private static async Task<ZipArchive> GetArchiveForPackageAsync(FindPackageByIdResource resource, string packageId, string packageVersion, CancellationToken ct)

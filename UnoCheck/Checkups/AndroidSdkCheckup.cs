@@ -239,7 +239,11 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 						}
 						catch (Exception ex)
 						{
+							// Swallowing here reported an applied fix for packages that were
+							// never installed; the check that follows still failed. Log for the
+							// verbose transcript, then let the fix runner see the failure.
 							Util.Exception(ex);
+							throw;
 						}
 						finally
 						{
