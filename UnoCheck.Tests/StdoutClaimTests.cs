@@ -145,14 +145,15 @@ public class CommandAppFailureOutputTests
 
     static void AssertEveryLineIsJson(string stdout)
     {
-        foreach (var line in stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var trimmed = line.TrimEnd('\r');
-            if (trimmed.Length == 0)
-                continue;
+        var lines = stdout
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.Length > 0);
 
+        foreach (var line in lines)
+        {
             // Throws on the plain-text error that used to follow the report.
-            JsonDocument.Parse(trimmed);
+            JsonDocument.Parse(line);
         }
     }
 
