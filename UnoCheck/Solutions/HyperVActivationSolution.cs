@@ -38,14 +38,19 @@ namespace DotNetCheck.Solutions
 
 		private static ShellProcessRunner.ShellProcessResult RunDism()
 		{
-			var dismPath = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "system32", "dism.exe");
+			// The Windows directory comes from the OS rather than from %windir%: this path is
+			// executed, and under a host that cannot elevate itself it is run through an
+			// elevated child — so an environment block that redirected %windir% would be
+			// choosing which binary runs as administrator.
+			var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
 
-			if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
-			{
-				// For 32-bit processes on 64-bit systems, %windir%\system32 folder
-				// can only be accessed by specifying %windir%\sysnative folder.
-				dismPath = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "sysnative", "dism.exe");
-			}
+			// For 32-bit processes on 64-bit systems, the system32 folder can only be reached
+			// through sysnative.
+			var systemDirectory = Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess
+				? "sysnative"
+				: "system32";
+
+			var dismPath = Path.Combine(windowsDirectory, systemDirectory, "dism.exe");
 
 			return ShellProcessRunner.Run(dismPath, "/Online /Enable-Feature /Quiet /NoRestart /All /FeatureName:Microsoft-Hyper-V");
 		}
