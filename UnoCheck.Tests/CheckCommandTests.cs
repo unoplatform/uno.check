@@ -163,4 +163,28 @@ public class DiagnosticResultTests
         Assert.Null(result.Message);
         Assert.False(result.HasSuggestion);
     }
+
+    [Fact]
+    public void Util_Declares_No_Unconditional_Skips()
+    {
+        // "list" advertises every checkup the graph builds; only "check" ever applied a skip
+        // list on top, so any default skip made the two commands disagree about what the tool
+        // checks. The IDE lists stay: those are asked for with --ide.
+        Assert.Null(typeof(Util).GetField("BaseSkips"));
+    }
+
+    [Theory]
+    [InlineData("net8.0-android")]
+    [InlineData("net9.0-android")]
+    [InlineData("net10.0-android")]
+    public void ParseTfmsToTargetPlatforms_Leaves_The_Skip_List_Alone(string tfm)
+    {
+        // It used to strip four ids here for TFMs below net9, which never took effect: the
+        // caller had already built its skip list from this collection before the call.
+        var settings = new CheckSettings { Frameworks = [tfm], Skip = ["git", "psexecpolicy"] };
+
+        CheckCommand.ParseTfmsToTargetPlatforms(settings);
+
+        Assert.Equal<IEnumerable<string>>(["git", "psexecpolicy"], settings.Skip);
+    }
 }
