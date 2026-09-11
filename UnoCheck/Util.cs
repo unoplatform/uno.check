@@ -11,7 +11,10 @@ namespace DotNetCheck
 {
 	public class Util
 	{
-		public static string[] BaseSkips = ["git", "linuxninja", "psexecpolicy", "windowspyhtonInstallation"];
+        // Skips that an IDE makes redundant: with one of these installed the workloads are its
+        // responsibility, and the user asked for this by passing --ide. There is deliberately no
+        // unconditional list beside them — a checkup that "list" advertises has to be one that a
+        // run will actually examine, or the two commands disagree about what the tool checks.
         public static string[] RiderSkips = ["vswin","vswinworkloads"];
         public static string[] VSCodeSkips = ["vswin","vswinworkloads"];
         public static string[] VSSkips = ["vswin","vswinworkloads"];
