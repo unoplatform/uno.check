@@ -135,10 +135,16 @@ namespace DotNetCheck.Checkups
 						Status.Error,
 						this,
 						new Suggestion("Run xcode-select -s <Path>",
-							new Solutions.ActionSolution((sln, cancelToken) =>
+							new Solutions.ActionSolution(async (sln, cancelToken) =>
 							{
-								ShellProcessRunner.Run("xcode-select", "-s " + eligibleXcode.Path);
-								return Task.CompletedTask;
+								var result = await Util.WrapShellCommandWithSudo(
+									"/usr/bin/xcode-select",
+									workingDir: null,
+									verbose: Util.Verbose,
+									cancellationToken: cancelToken,
+									args: new[] { "-s", eligibleXcode.Path });
+								if (!result.Success)
+									throw new InvalidOperationException(result.GetOutput());
 							}))));
 				}
 

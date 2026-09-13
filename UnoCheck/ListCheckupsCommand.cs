@@ -12,6 +12,22 @@ namespace DotNetCheck
 	{
 		public override async Task<int> ExecuteAsync(CommandContext context, ListCheckupSettings settings)
 		{
+			System.IO.TextWriter jsonOut = null;
+
+			if (settings.Json)
+			{
+				settings.NonInteractive = true;
+
+				// Same stdout discipline as the check command: the JSON line owns the real
+				// stdout; everything human-readable moves to stderr. Program.Main already
+				// claimed it before the command app was built — reading Console.Out here
+				// would pick up the stderr it was swapped for and put the catalog on the
+				// wrong stream. Claiming again is a no-op and covers hosts that construct
+				// the command directly.
+				Json.JsonlOutput.ClaimStdout();
+				jsonOut = Json.JsonlOutput.ReservedStdout;
+			}
+
 			var manifest = await ToolInfo.LoadManifest(settings.Manifest, settings.GetManifestChannel());
 
 			if (!ToolInfo.Validate(manifest))
@@ -23,6 +39,34 @@ namespace DotNetCheck
 			var sharedState = new SharedState();
 
 			var checkups = CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms);
+
+			if (jsonOut is not null)
+			{
+				var items = new List<Json.CheckupCatalogItem>();
+
+				foreach (var c in checkups)
+				{
+					// Titles can derive from manifest values; set it the same way the
+					// check loop does, and fall back to the type name if a checkup's
+					// title cannot resolve outside a real run.
+					c.Manifest = manifest;
+
+					string title;
+					try { title = c.Title; }
+					catch { title = c.GetType().Name; }
+
+					items.Add(new Json.CheckupCatalogItem
+					{
+						Id = c.Id,
+						Name = title,
+						TypeName = c.GetType().Name,
+					});
+				}
+
+				jsonOut.WriteLine(Json.JsonlOutput.Render(new Json.CheckupCatalogEvent { Checkups = items }));
+				jsonOut.Flush();
+				return 0;
+			}
 
 			foreach (var c in checkups)
 			{

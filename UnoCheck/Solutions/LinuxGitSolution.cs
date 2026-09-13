@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -9,9 +9,18 @@ namespace DotNetCheck.Solutions
 	{
 		public override async Task Implement(SharedState state, CancellationToken ct)
 		{
-			await Util.WrapShellCommandWithSudo("apt", workingDir: null, verbose: true, new[] { "update" });
+			// One elevated invocation for the whole fix: update && install as a single
+			// shell chain, so the graphical authorization flow (pkexec) shows one dialog
+			// instead of one per apt command.
+			var result = await Util.WrapShellCommandWithSudo(
+				"/bin/sh",
+				workingDir: null,
+				verbose: true,
+				new[] { "-c", "apt-get update && apt-get install -y git" });
 
-			await Util.WrapShellCommandWithSudo("apt", workingDir: null, verbose: true, new[] { "install", "git" });
+			// A declined or failed authorization exits non-zero without throwing; without
+			// this the run reports the fix as applied and git is still missing.
+			Util.ThrowIfFailed(result, "Installing git");
 		}
 	}
 }

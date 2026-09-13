@@ -18,6 +18,12 @@ namespace DotNetCheck.Solutions
 {
 	internal class UnoSdkSolution : Solution
 	{
+		/// <summary>
+		/// Restores the Uno.Sdk package through a scratch project in the temp directory and
+		/// the per-user NuGet cache — no machine location is written.
+		/// </summary>
+		public override bool RequiresElevation => false;
+
 		public override async Task Implement(SharedState state, CancellationToken ct)
 		{
 			var resource =
@@ -51,7 +57,11 @@ namespace DotNetCheck.Solutions
 
 			File.WriteAllText(Path.Combine(tempPath, "Uno.Sdk.csproj"), csprojContents);
 
-			new ShellProcessRunner(new("dotnet", "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit();
+			// A failed restore leaves the SDK unresolved; reporting the fix as applied would
+			// hide that behind a check that still fails.
+			Util.ThrowIfFailed(
+				new ShellProcessRunner(new("dotnet", "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit(),
+				"Restoring the Uno.Sdk package");
 		}
 
 		private static async Task<ZipArchive> GetArchiveForPackageAsync(FindPackageByIdResource resource, string packageId, string packageVersion, CancellationToken ct)

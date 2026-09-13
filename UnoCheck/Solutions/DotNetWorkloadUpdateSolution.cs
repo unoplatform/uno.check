@@ -23,6 +23,14 @@ namespace DotNetCheck.Solutions
 			_dotnetExePath = dotnetExePath;
 		}
 
+		/// <summary>
+		/// Workload manifests are written under the .NET root that owns this muxer, so the
+		/// answer follows that root's writability: a machine-wide SDK needs elevation, a
+		/// user-local one does not.
+		/// </summary>
+		public override bool RequiresElevation
+			=> !Util.IsDirectoryWritable(System.IO.Path.GetDirectoryName(_dotnetExePath) ?? _dotnetExePath);
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);

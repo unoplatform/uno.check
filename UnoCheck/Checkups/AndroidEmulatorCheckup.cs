@@ -169,12 +169,16 @@ namespace DotNetCheck.Checkups
 							}
 							catch (Exception ex)
 							{
+								// The status line alone left the fix runner with nothing to
+								// observe, so a failed AVD creation was reported as an applied
+								// fix. Surface the message, then propagate the failure.
 								ReportStatus(UnableToFindEmulatorsMessage, Status.Warning);
 								Util.Exception(ex);
+								throw;
 							}
-
-							return Task.CompletedTask;
-						})).ToArray())));
+						},
+						// Creating an AVD writes the per-user Android home (~/.android).
+						requiresElevation: false)).ToArray())));
 		}
 	}
 
