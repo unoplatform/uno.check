@@ -500,7 +500,15 @@ namespace DotNetCheck.DotNet
 		/// to leverage cached credentials or NOPASSWD rules without hanging. In interactive mode,
 		/// falls back to prompting for the password in-process and piping it to <c>sudo -S</c>.
 		/// </summary>
-		async Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
+		Task<ShellProcessRunner.ShellProcessResult> RetryWithSudo(string dotnetExe, CancellationToken cancellationToken, string[] args)
+			=> RunWithSudoAsync(dotnetExe, DotNetCliWorkingDir, cancellationToken, args);
+
+		/// <summary>
+		/// Runs a dotnet CLI command elevated, with the English CLI environment: the system
+		/// authorization dialog on structured macOS/Linux hosts, otherwise <c>sudo -n</c> first
+		/// and, in interactive mode, a password prompt piped to <c>sudo -S</c>.
+		/// </summary>
+		internal static async Task<ShellProcessRunner.ShellProcessResult> RunWithSudoAsync(string dotnetExe, string workingDir, CancellationToken cancellationToken, string[] args)
 		{
 			// Structured macOS/Linux hosts opt into the system authorization dialog. Do not
 			// use an unrelated terminal sudo ticket: authorization belongs to this fix request.
@@ -511,7 +519,7 @@ namespace DotNetCheck.DotNet
 			{
 				return await Util.WrapShellCommandWithSudo(
 					"env",
-					DotNetCliWorkingDir,
+					workingDir,
 					Util.Verbose,
 					cancellationToken,
 					BuildEnglishCliSudoArgsForShell(dotnetExe, args));
@@ -524,7 +532,7 @@ namespace DotNetCheck.DotNet
 			// for the right consumer — see the two builders for why a single shared array breaks
 			// when the path contains $/backtick/quote/backslash.
 			var shellSudoArgs = BuildEnglishCliSudoArgsForShell(dotnetExe, args);
-			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, shellSudoArgs);
+			var result = await Util.WrapShellCommandWithSudoNoPrompt("env", workingDir, Util.Verbose, cancellationToken, shellSudoArgs);
 
 			if (result.ExitCode == 0)
 				return result;
@@ -536,7 +544,7 @@ namespace DotNetCheck.DotNet
 			// Interactive mode: prompt for password in-process and pipe to sudo -S
 			Util.Log("Elevated privileges required. You may be prompted for your password.");
 			var processSudoArgs = BuildEnglishCliSudoArgsForProcess(dotnetExe, args);
-			return await Util.WrapShellCommandWithSudoInteractive("env", DotNetCliWorkingDir, Util.Verbose, cancellationToken, processSudoArgs);
+			return await Util.WrapShellCommandWithSudoInteractive("env", workingDir, Util.Verbose, cancellationToken, processSudoArgs);
 		}
 
 		internal static bool ShouldRetryWithSudo(string output)
