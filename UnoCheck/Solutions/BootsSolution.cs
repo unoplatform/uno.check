@@ -28,7 +28,7 @@ namespace DotNetCheck.Solutions
 
 			ReportStatus($"Installing {Title ?? Url.ToString()}...");
 
-			// Logger stays null: under --json, stdout carries the JSONL stream.
+			// Logger is TextWriter.Null: under --json, stdout carries the JSONL stream.
 			var boots = new Boots.Core.Bootstrapper
 			{
 				Url = Url.ToString(),
