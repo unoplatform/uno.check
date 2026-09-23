@@ -41,5 +41,17 @@ namespace UnoCheck.Tests
 			Assert.Contains("line 41", message);
 			Assert.Contains("line 50", message);
 		}
+
+		[Theory]
+		[InlineData(false, true, true)]
+		[InlineData(false, false, false)]
+		[InlineData(true, true, false)]
+		[InlineData(true, false, false)]
+		public void ShouldRunElevated_Only_Off_Windows_For_A_Protected_Root(bool isWindows, bool requiresElevation, bool expected)
+		{
+			// A root-owned SDK on macOS/Linux has to go through sudo or the authorization
+			// dialog; Windows elevates the whole fix child instead.
+			Assert.Equal(expected, DotNetWorkloadUpdateSolution.ShouldRunElevated(isWindows, requiresElevation));
+		}
 	}
 }
