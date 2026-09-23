@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using DotNetCheck.Models;
@@ -44,21 +45,25 @@ namespace DotNetCheck.Checkups
             var suggestion = new Suggestion(
                 "Trust HTTPS developer certificates",
                 "This command will trust your local dev certs so that HTTPS works correctly in WebAssembly apps.",
-                new ActionSolution(async (_, _) =>
-                {
-                    await Util.ShellCommand(
+                new ActionSolution(
+                    (_, _) => TrustDevCertAsync(() => Util.ShellCommand(
                         "dotnet",
                         Directory.GetCurrentDirectory(),
                         Util.Verbose,
-                        ["dev-certs", "https", "--trust"]);
-                },
-                // Windows/macOS trust the cert in the user's own store — the OS may still
-                // show its own trust confirmation, which is not elevation. Linux writes the
-                // system trust store and does need root.
-                requiresElevation: Util.IsLinux)
+                        ["dev-certs", "https", "--trust"])),
+                    // The certificate is trusted in the user's own store; Windows shows its own
+                    // confirmation, which is not elevation.
+                    requiresElevation: false)
             );
 
             return new DiagnosticResult(Status.Error, this, suggestion);
+        }
+
+        /// <summary>Runs the trust command and fails the fix with its output when it did not succeed.</summary>
+        internal static async Task TrustDevCertAsync(Func<Task<ShellProcessRunner.ShellProcessResult>> runTrust)
+        {
+            var result = await runTrust();
+            Util.ThrowIfFailed(result, "Trusting the HTTPS developer certificate");
         }
     }
 }
