@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
@@ -46,11 +47,12 @@ namespace DotNetCheck.Checkups
                 "Trust HTTPS developer certificates",
                 "This command will trust your local dev certs so that HTTPS works correctly in WebAssembly apps.",
                 new ActionSolution(
-                    (_, _) => TrustDevCertAsync(() => Util.ShellCommand(
+                    (_, cancel) => TrustDevCertAsync(token => Util.ShellCommand(
                         "dotnet",
                         Directory.GetCurrentDirectory(),
                         Util.Verbose,
-                        ["dev-certs", "https", "--trust"])),
+                        token,
+                        ["dev-certs", "https", "--trust"]), cancel),
                     // The certificate is trusted in the user's own store; Windows shows its own
                     // confirmation, which is not elevation.
                     requiresElevation: false)
@@ -60,9 +62,13 @@ namespace DotNetCheck.Checkups
         }
 
         /// <summary>Runs the trust command and fails the fix with its output when it did not succeed.</summary>
-        internal static async Task TrustDevCertAsync(Func<Task<ShellProcessRunner.ShellProcessResult>> runTrust)
+        internal static async Task TrustDevCertAsync(
+            Func<CancellationToken, Task<ShellProcessRunner.ShellProcessResult>> runTrust,
+            CancellationToken cancellationToken)
         {
-            var result = await runTrust();
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = await runTrust(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             Util.ThrowIfFailed(result, "Trusting the HTTPS developer certificate");
         }
     }
