@@ -6,6 +6,30 @@ namespace UnoCheck.Tests;
 public class ShellProcessRunnerTests
 {
 	[Fact]
+	public async Task WaitForExitAsync_Yields_Until_Process_Exits_And_Captures_Output()
+	{
+		var (executable, args) = GetShellCommand(
+			"read answer; echo out-line; echo err-line >&2; exit 7",
+			"set /p answer= & echo out-line & echo err-line 1>&2 & exit /b 7");
+		var sut = new ShellProcessRunner(new ShellProcessRunnerOptions(executable, args)
+		{
+			UseSystemShell = false,
+			RedirectInput = true,
+			RedirectOutput = true,
+		});
+
+		var pending = sut.WaitForExitAsync();
+		Assert.False(pending.IsCompleted);
+		sut.Write("continue\n");
+		sut.FlushAndCloseInput();
+		var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+		Assert.Equal(7, result.ExitCode);
+		Assert.Contains("out-line", string.Join(Environment.NewLine, result.StandardOutput));
+		Assert.Contains("err-line", string.Join(Environment.NewLine, result.StandardError));
+	}
+
+	[Fact]
 	public void WaitForExit_ArgumentList_PreservesArgumentBoundaries()
 	{
 		if (OperatingSystem.IsWindows())

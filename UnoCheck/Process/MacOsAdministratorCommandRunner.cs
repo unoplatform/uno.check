@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace DotNetCheck
 {
@@ -18,6 +19,15 @@ namespace DotNetCheck
 		const string EndHandler = "end run";
 
 		public static ShellProcessRunner.ShellProcessResult Run(
+			string executable,
+			string workingDirectory,
+			bool verbose,
+			CancellationToken cancellationToken,
+			IReadOnlyList<string> arguments)
+			// File-copy callers are synchronous; package installs use RunAsync.
+			=> RunAsync(executable, workingDirectory, verbose, cancellationToken, arguments).GetAwaiter().GetResult();
+
+		internal static async Task<ShellProcessRunner.ShellProcessResult> RunAsync(
 			string executable,
 			string workingDirectory,
 			bool verbose,
@@ -42,7 +52,7 @@ namespace DotNetCheck
 				RedirectOutput = true,
 			});
 
-			var result = runner.WaitForExit();
+			var result = await runner.WaitForExitAsync().ConfigureAwait(false);
 			cancellationToken.ThrowIfCancellationRequested();
 
 			if (WasDeclined(result))

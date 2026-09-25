@@ -5,6 +5,13 @@ namespace UnoCheck.Tests;
 public class MacOsAdministratorCommandRunnerTests
 {
     [Fact]
+    public void Already_Root_Does_Not_Request_An_Administrator_Dialog()
+    {
+        Assert.False(Util.ShouldUseMacOsAdministratorPrompt(true, false, true, true, isAdmin: true));
+        Assert.True(Util.ShouldUseMacOsAdministratorPrompt(true, false, true, true, isAdmin: false));
+    }
+
+    [Fact]
     public void BuildCommandLine_QuotesExecutableAndEveryArgument()
     {
         var command = MacOsAdministratorCommandRunner.BuildCommandLine(
