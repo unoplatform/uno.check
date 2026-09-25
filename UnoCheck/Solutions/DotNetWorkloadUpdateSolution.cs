@@ -45,9 +45,9 @@ namespace DotNetCheck.Solutions
 
 			ReportStatus($"Running '{_dotnetExePath} workload update'...");
 
-			// The muxer path is fully resolved, so invoke it directly instead of going
-			// through the system shell (temp script + zsh/bash on unix): no quoting or
-			// injection surface, same output capture.
+			// Both paths use the resolved muxer. Protected macOS/Linux roots use the
+			// elevation helper, which quotes the command and arguments for its shell;
+			// other roots run the muxer directly without a shell. Both capture output.
 			var result = ShouldRunElevated(Util.IsWindows, RequiresElevation)
 				? await DotNetWorkloadManager.RunWithSudoAsync(_dotnetExePath, workingDir: null, cancellationToken, new[] { "workload", "update" })
 				: await Task.Run(
