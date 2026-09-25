@@ -68,10 +68,10 @@ namespace DotNetCheck
 		/// CI remains strictly non-interactive.
 		/// </summary>
 		public static bool UseMacOsAdministratorPrompt
-			=> ShouldUseMacOsAdministratorPrompt(IsMac, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt);
+			=> ShouldUseMacOsAdministratorPrompt(IsMac, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt, IsMac && IsAdmin());
 
-		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt)
-			=> isMac && !ci && structuredOutput && allowElevationPrompt;
+		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt, bool isAdmin = false)
+			=> isMac && !ci && structuredOutput && allowElevationPrompt && !isAdmin;
 
 		/// <summary>
 		/// Linux analog of <see cref="UseMacOsAdministratorPrompt"/>: the polkit dialog
@@ -337,12 +337,12 @@ namespace DotNetCheck
 		{
 			if (!noPrompt && UseMacOsAdministratorPrompt)
 			{
-				return Task.FromResult(MacOsAdministratorCommandRunner.Run(
+				return MacOsAdministratorCommandRunner.RunAsync(
 					cmd,
 					workingDir,
 					verbose,
 					cancellationToken,
-					args));
+					args);
 			}
 
 			if (!noPrompt && UseLinuxAdministratorPrompt)
@@ -375,7 +375,7 @@ namespace DotNetCheck
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
-			return Task.FromResult(cli.WaitForExit());
+			return cli.WaitForExitAsync();
 		}
 
 		/// <summary>
