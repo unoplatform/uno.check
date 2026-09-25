@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
@@ -44,21 +46,30 @@ namespace DotNetCheck.Checkups
             var suggestion = new Suggestion(
                 "Trust HTTPS developer certificates",
                 "This command will trust your local dev certs so that HTTPS works correctly in WebAssembly apps.",
-                new ActionSolution(async (_, _) =>
-                {
-                    await Util.ShellCommand(
+                new ActionSolution(
+                    (_, cancel) => TrustDevCertAsync(token => Util.ShellCommand(
                         "dotnet",
                         Directory.GetCurrentDirectory(),
                         Util.Verbose,
-                        ["dev-certs", "https", "--trust"]);
-                },
-                // Windows/macOS trust the cert in the user's own store — the OS may still
-                // show its own trust confirmation, which is not elevation. Linux writes the
-                // system trust store and does need root.
-                requiresElevation: Util.IsLinux)
+                        token,
+                        ["dev-certs", "https", "--trust"]), cancel),
+                    // The certificate is trusted in the user's own store; Windows shows its own
+                    // confirmation, which is not elevation.
+                    requiresElevation: false)
             );
 
             return new DiagnosticResult(Status.Error, this, suggestion);
+        }
+
+        /// <summary>Runs the trust command and fails the fix with its output when it did not succeed.</summary>
+        internal static async Task TrustDevCertAsync(
+            Func<CancellationToken, Task<ShellProcessRunner.ShellProcessResult>> runTrust,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = await runTrust(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            Util.ThrowIfFailed(result, "Trusting the HTTPS developer certificate");
         }
     }
 }
