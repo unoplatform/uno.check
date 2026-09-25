@@ -235,7 +235,10 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 								await Task.WhenAll(downloads.Where(d => (d.HostArch == null) || (d.HostArch == (Util.IsArm64 ? "aarch64" : "x64"))).Select(d => Download(httpClient, d)));
 							}
 
-							installer.Install(sdkInstance, installationSet);
+							if (ShouldInstallThroughStaging(Util.IsWindows, Util.IsDirectoryWritable(sdkInstance.Path)))
+								await InstallThroughStagingAsync(installer, sdkInstance.Path, installationSet);
+							else
+								installer.Install(sdkInstance, installationSet);
 						}
 						catch (Exception ex)
 						{
@@ -264,6 +267,51 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 					// location needs no elevation, a shared/Program Files one does.
 					requiresElevation: !Util.IsDirectoryWritable(sdkInstance.Path)))));
 
+		}
+
+		/// <summary>
+		/// The installer writes straight into the SDK, which macOS/Linux cannot elevate
+		/// in-process; Windows elevates the whole fix child instead.
+		/// </summary>
+		internal static bool ShouldInstallThroughStaging(bool isWindows, bool sdkWritable)
+			=> !isWindows && !sdkWritable;
+
+		/// <summary>
+		/// Installs into a user-writable staging folder laid out like the SDK, then copies it
+		/// into <paramref name="sdkPath"/> with elevation (sudo or the authorization dialog).
+		/// </summary>
+		static async Task InstallThroughStagingAsync(AndroidSDKInstaller installer, string sdkPath, IList<IAndroidComponent> installationSet)
+		{
+			string staging = null;
+			try
+			{
+				await Util.WrapCopyWithShellSudo(sdkPath, isFile: false, intermediate =>
+				{
+					staging = intermediate;
+					Directory.CreateDirectory(staging);
+
+					installer.Discover(new List<string> { staging }, fromScratch: false);
+					var stagingInstance = installer.FindInstance(staging)
+						?? throw new InvalidOperationException($"Could not prepare the Android SDK staging folder '{staging}'.");
+
+					installer.Install(stagingInstance, installationSet);
+					return Task.FromResult(true);
+				});
+			}
+			finally
+			{
+				if (staging != null && Directory.Exists(staging))
+				{
+					try
+					{
+						Directory.Delete(staging, recursive: true);
+					}
+					catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+					{
+						Util.Log($"Could not delete the Android SDK staging folder '{staging}': {ex.Message}");
+					}
+				}
+			}
 		}
 
 		IAndroidComponent FindInstalledPackage(IEnumerable<IAndroidComponent> installed, params Manifest.AndroidPackage[] acceptablePackages)

@@ -68,10 +68,10 @@ namespace DotNetCheck
 		/// CI remains strictly non-interactive.
 		/// </summary>
 		public static bool UseMacOsAdministratorPrompt
-			=> ShouldUseMacOsAdministratorPrompt(IsMac, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt);
+			=> ShouldUseMacOsAdministratorPrompt(IsMac, CI, Json.JsonlOutput.Enabled, AllowElevationPrompt, IsMac && IsAdmin());
 
-		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt)
-			=> isMac && !ci && structuredOutput && allowElevationPrompt;
+		internal static bool ShouldUseMacOsAdministratorPrompt(bool isMac, bool ci, bool structuredOutput, bool allowElevationPrompt, bool isAdmin = false)
+			=> isMac && !ci && structuredOutput && allowElevationPrompt && !isAdmin;
 
 		/// <summary>
 		/// Linux analog of <see cref="UseMacOsAdministratorPrompt"/>: the polkit dialog
@@ -337,12 +337,12 @@ namespace DotNetCheck
 		{
 			if (!noPrompt && UseMacOsAdministratorPrompt)
 			{
-				return Task.FromResult(MacOsAdministratorCommandRunner.Run(
+				return MacOsAdministratorCommandRunner.RunAsync(
 					cmd,
 					workingDir,
 					verbose,
 					cancellationToken,
-					args));
+					args);
 			}
 
 			if (!noPrompt && UseLinuxAdministratorPrompt)
@@ -375,7 +375,7 @@ namespace DotNetCheck
 			}
 
 			var cli = new ShellProcessRunner(new ShellProcessRunnerOptions(actualCmd, actualArgs, cancellationToken) { WorkingDirectory = workingDir, Verbose = verbose } );
-			return Task.FromResult(cli.WaitForExit());
+			return cli.WaitForExitAsync();
 		}
 
 		/// <summary>
@@ -705,6 +705,22 @@ namespace DotNetCheck
 			}
 		}
 
+		/// <summary>
+		/// The shell command that copies <paramref name="intermediate"/> into place. A directory
+		/// is copied as <c>src/.</c>: <c>src/</c> merges on BSD <c>cp</c> but nests
+		/// <c>src</c> inside an existing destination on GNU <c>cp</c>.
+		/// </summary>
+		internal static string BuildElevatedCopyCommand(string destDir, string intermediate, string destination, bool isFile)
+		{
+			var quotedDestDir = MacOsAdministratorCommandRunner.PosixShellQuote(destDir);
+			var quotedIntermediate = MacOsAdministratorCommandRunner.PosixShellQuote(intermediate);
+			var quotedDestination = MacOsAdministratorCommandRunner.PosixShellQuote(destination);
+
+			return isFile
+				? $"mkdir -p {quotedDestDir} && cp -pP {quotedIntermediate} {quotedDestination}"
+				: $"mkdir -p {quotedDestDir} && cp -pPR {quotedIntermediate}/. {quotedDestination}";
+		}
+
 		public static async Task<bool> WrapCopyWithShellSudo(string destination, bool isFile, Func<string, Task<bool>> wrapping)
 		{
 			var intermediate = destination;
@@ -734,12 +750,7 @@ namespace DotNetCheck
 
 			if (r && !Util.IsWindows)
 			{
-				var quotedDestDir = MacOsAdministratorCommandRunner.PosixShellQuote(destDir);
-				var quotedIntermediate = MacOsAdministratorCommandRunner.PosixShellQuote(intermediate);
-				var quotedDestination = MacOsAdministratorCommandRunner.PosixShellQuote(destination);
-				var copyCommand = isFile
-					? $"mkdir -p {quotedDestDir} && cp -pP {quotedIntermediate} {quotedDestination}"
-					: $"mkdir -p {quotedDestDir} && cp -pPR {quotedIntermediate}/ {quotedDestination}";
+				var copyCommand = BuildElevatedCopyCommand(destDir, intermediate, destination, isFile);
 
 				if (UseMacOsAdministratorPrompt)
 				{

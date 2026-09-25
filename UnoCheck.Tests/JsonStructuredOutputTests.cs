@@ -276,6 +276,7 @@ public class RequiresElevationTests
         Assert.False(new DotNetCheck.Solutions.UnoSdkSolution().RequiresElevation);
         Assert.False(new DotNetCheck.Solutions.PSExecutionPolicySolution().RequiresElevation);
         Assert.False(new DotNetCheck.Solutions.LinuxNinjaOpenUrlSolution().RequiresElevation);
+        Assert.False(new DotNetCheck.Solutions.PythonIsInstalledSolution().RequiresElevation);
     }
 
     [Fact]

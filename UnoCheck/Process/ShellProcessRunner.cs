@@ -64,6 +64,7 @@ namespace DotNetCheck
 		readonly List<string> standardError;
 		readonly Process process;
 		readonly bool verbose;
+		readonly TaskCompletionSource<bool> processExited = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		readonly TaskCompletionSource<bool> outputReadCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		readonly TaskCompletionSource<bool> errorReadCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -76,7 +77,8 @@ namespace DotNetCheck
 			standardOutput = new List<string>();
 			standardError = new List<string>();
 
-			process = new Process();
+			process = new Process { EnableRaisingEvents = true };
+			process.Exited += (s, e) => processExited.TrySetResult(true);
 
 			if (Options.UseSystemShell)
 			{
@@ -252,15 +254,16 @@ namespace DotNetCheck
 			=> process?.Kill();
 
 		public ShellProcessResult WaitForExit()
+			// Existing synchronous callers need this bridge; async callers use WaitForExitAsync.
+			=> WaitForExitAsync().GetAwaiter().GetResult();
+
+		internal async Task<ShellProcessResult> WaitForExitAsync()
 		{
 			var exitCode = -1;
 
 			try
 			{
-				while (process?.HasExited == false)
-				{
-					process.WaitForExit(250);
-				}
+				await processExited.Task.ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -273,8 +276,8 @@ namespace DotNetCheck
 
 				try
 				{
-					drainCompleted = Task.WhenAll(outputReadCompleted.Task, errorReadCompleted.Task)
-						.Wait(StreamDrainTimeout);
+					var drain = Task.WhenAll(outputReadCompleted.Task, errorReadCompleted.Task);
+					drainCompleted = await Task.WhenAny(drain, Task.Delay(StreamDrainTimeout)).ConfigureAwait(false) == drain;
 				}
 				catch
 				{

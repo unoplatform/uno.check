@@ -12,6 +12,9 @@ namespace DotNetCheck.Solutions
 		{
 		}
 
+		/// <summary>Only opens a web page in the user's session; elevating would open the browser as administrator.</summary>
+		public override bool RequiresElevation => false;
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);

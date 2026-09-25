@@ -40,3 +40,26 @@ public class BuildElevatedShellCommandTests
         Assert.Contains("'\"'\"'", command);
     }
 }
+
+/// <summary>
+/// <c>cp -R src/ dest</c> merges on BSD (macOS) but nests <c>src</c> inside an existing
+/// <c>dest</c> on GNU (Linux); <c>src/.</c> merges on both.
+/// </summary>
+public class BuildElevatedCopyCommandTests
+{
+    [Fact]
+    public void Directory_Copy_Merges_The_Contents_On_Bsd_And_Gnu()
+    {
+        var command = Util.BuildElevatedCopyCommand("/opt/android-sdk", "/tmp/staging", "/opt/android-sdk", isFile: false);
+
+        Assert.Equal("mkdir -p '/opt/android-sdk' && cp -pPR '/tmp/staging'/. '/opt/android-sdk'", command);
+    }
+
+    [Fact]
+    public void File_Copy_Targets_The_Destination_File()
+    {
+        var command = Util.BuildElevatedCopyCommand("/usr/local/bin", "/tmp/file", "/usr/local/bin/tool", isFile: true);
+
+        Assert.Equal("mkdir -p '/usr/local/bin' && cp -pP '/tmp/file' '/usr/local/bin/tool'", command);
+    }
+}

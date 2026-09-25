@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 
 namespace DotNetCheck.Solutions
@@ -31,18 +32,27 @@ namespace DotNetCheck.Solutions
 		public override bool RequiresElevation
 			=> !Util.IsDirectoryWritable(System.IO.Path.GetDirectoryName(_dotnetExePath) ?? _dotnetExePath);
 
+		/// <summary>
+		/// macOS/Linux elevate the command itself (sudo or the authorization dialog); Windows
+		/// elevates the whole fix child from <see cref="RequiresElevation"/> instead.
+		/// </summary>
+		internal static bool ShouldRunElevated(bool isWindows, bool requiresElevation)
+			=> !isWindows && requiresElevation;
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);
 
 			ReportStatus($"Running '{_dotnetExePath} workload update'...");
 
-			// The muxer path is fully resolved, so invoke it directly instead of going
-			// through the system shell (temp script + zsh/bash on unix): no quoting or
-			// injection surface, same output capture.
-			var result = await Task.Run(
-				() => new ShellProcessRunner(new ShellProcessRunnerOptions(_dotnetExePath, "workload update", cancellationToken) { Verbose = true, UseSystemShell = false }).WaitForExit(),
-				cancellationToken);
+			// Both paths use the resolved muxer. Protected macOS/Linux roots use the
+			// elevation helper, which quotes the command and arguments for its shell;
+			// other roots run the muxer directly without a shell. Both capture output.
+			var result = ShouldRunElevated(Util.IsWindows, RequiresElevation)
+				? await DotNetWorkloadManager.RunWithSudoAsync(_dotnetExePath, workingDir: null, cancellationToken, new[] { "workload", "update" })
+				: await Task.Run(
+					() => new ShellProcessRunner(new ShellProcessRunnerOptions(_dotnetExePath, "workload update", cancellationToken) { Verbose = true, UseSystemShell = false }).WaitForExit(),
+					cancellationToken);
 
 			if (result.Success)
 			{
