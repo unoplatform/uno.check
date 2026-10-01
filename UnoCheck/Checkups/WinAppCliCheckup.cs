@@ -1,7 +1,9 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -21,6 +23,8 @@ namespace DotNetCheck.Checkups
 		private const int ErrorFileNotFound = 2;
 		private const int ErrorPathNotFound = 3;
 
+		private static readonly Regex VersionLine = new(@"^\d+(\.\d+)+(-[0-9A-Za-z.-]+)?$", RegexOptions.Compiled);
+
 		private readonly Func<Task<ShellProcessRunner.ShellProcessResult>> probeVersion;
 
 		public WinAppCliCheckup()
@@ -37,8 +41,13 @@ namespace DotNetCheck.Checkups
 
 		public override bool IsPlatformSupported(Platform platform) => platform == Platform.Windows;
 
+		// Same gate as EdgeWebView2Checkup, CI included. A build agent does not need the
+		// CLI to compile, and leaving it on would make every Windows CI run reach out to
+		// winget for a network install - one of which already came back 500 and failed the
+		// job. Developers, who are who the check is for, still get it.
 		public override bool ShouldExamine(SharedState history)
-			=> Manifest?.Check?.VSWin != null;
+			=> Manifest?.Check?.VSWin != null
+				&& !history.GetEnvironmentVariableFlagSet("CI");
 
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
@@ -58,7 +67,7 @@ namespace DotNetCheck.Checkups
 				return NotInstalled();
 			}
 
-			var version = string.Join(" ", result.StandardOutput).Trim();
+			var version = ExtractVersion(result.StandardOutput);
 
 			ReportStatus(
 				string.IsNullOrEmpty(version)
@@ -67,6 +76,25 @@ namespace DotNetCheck.Checkups
 				Status.Ok);
 
 			return DiagnosticResult.Ok(this);
+		}
+
+		/// <summary>
+		/// <c>--version</c> prints the version on a line of its own, but the CLI's first run
+		/// prefixes the same stream with an ASCII-art banner and a telemetry notice. Joining
+		/// every line put all of that into the status message, so take the last line that is
+		/// a version and nothing else.
+		/// </summary>
+		private static string? ExtractVersion(IReadOnlyList<string> standardOutput)
+		{
+			for (var i = standardOutput.Count - 1; i >= 0; i--)
+			{
+				var candidate = standardOutput[i]?.Trim();
+
+				if (!string.IsNullOrEmpty(candidate) && VersionLine.IsMatch(candidate))
+					return candidate;
+			}
+
+			return null;
 		}
 
 		private DiagnosticResult NotInstalled()
