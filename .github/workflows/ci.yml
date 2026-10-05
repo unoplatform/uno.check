@@ -545,3 +545,16 @@ jobs:
 
       - name: Tag Release
         uses: ./.github/workflows/actions/tag-release
+
+  ci_status:
+    name: CI Status
+    if: always()
+    needs: [build_tool, run_tests, testwin, testmac, testlinux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a CI job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "Job results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+      - run: echo "All CI jobs passed"
