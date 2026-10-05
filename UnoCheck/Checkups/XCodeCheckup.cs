@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Claunia.PropertyList;
 using DotNetCheck.Models;
@@ -33,9 +34,45 @@ namespace DotNetCheck.Checkups
 		public string VersionName
 			=> ExactVersionName ?? MinimumVersionName ?? ExactVersion?.ToString() ?? MinimumVersion?.ToString();
 
+		// The manifest's version name is the Xcode build (e.g. "15F31d"); it falls back to the version itself,
+		// which used to print the version twice ("26.5 26.5").
+		internal string RequiredVersion
+			=> FormatRequiredVersion(Version, ExactVersionName ?? MinimumVersionName);
+
+		internal string Requirement
+			=> FormatRequirement(RequiredVersion, exact: ExactVersion is not null);
+
 		public override string Id => "xcode";
 
-		public override string Title => $"Required Xcode {VersionName} (newer version might not be supported)";
+		public override string Title => $"Required Xcode {RequiredVersion} (newer version might not be supported)";
+
+		internal const string DownloadUrl = "https://developer.apple.com/download/all/";
+
+		internal static string FormatRequiredVersion(NuGetVersion version, string versionName)
+		{
+			var v = version?.ToString();
+
+			if (string.IsNullOrEmpty(versionName) || versionName == v)
+				return v ?? versionName ?? string.Empty;
+
+			return string.IsNullOrEmpty(v) ? versionName : $"{v} ({versionName})";
+		}
+
+		internal static string FormatRequirement(string requiredVersion, bool exact)
+			=> exact ? requiredVersion : $"{requiredVersion} or newer";
+
+		internal static string FormatMissingMessage(string requirement, IEnumerable<string> installedVersions)
+		{
+			var installed = (installedVersions ?? Enumerable.Empty<string>())
+				.Where(v => !string.IsNullOrWhiteSpace(v))
+				.Distinct()
+				.ToList();
+
+			if (installed.Count == 0)
+				return $"Xcode is not installed. Xcode {requirement} is required.";
+
+			return $"Xcode {string.Join(", ", installed)} {(installed.Count == 1 ? "is" : "are")} installed, but Xcode {requirement} is required.";
+		}
 
 		public override bool ShouldExamine(SharedState history)
 			=> Manifest?.Check?.XCode != null;
@@ -115,7 +152,7 @@ namespace DotNetCheck.Checkups
 
 				XCodeInfo eligibleXcode = null;
 
-				var xcodes = FindXCodeInstalls();
+				var xcodes = FindXCodeInstalls().ToList();
 
 				foreach (var x in xcodes)
 				{
@@ -149,12 +186,18 @@ namespace DotNetCheck.Checkups
 				}
 
 
-				ReportStatus($"Xcode.app ({Version} {VersionName}) not installed.", Status.Error);
+				// The selected Xcode may live outside the likely paths, so it's listed too.
+				var installedVersions = xcodes
+					.Concat(selected is null ? Enumerable.Empty<XCodeInfo>() : new[] { selected })
+					.GroupBy(x => x.Path)
+					.Select(g => FormatInstalledVersion(g.First()));
+
+				ReportStatus(FormatMissingMessage(Requirement, installedVersions), Status.Error);
 
 				return Task.FromResult(new DiagnosticResult(
 					Status.Error,
 					this,
-					new Suggestion($"Download XCode {Version} {VersionName}")));
+					new Suggestion($"Download Xcode {RequiredVersion} from {DownloadUrl}")));
 			}
 			catch(InvalidDataException)
 			{
@@ -163,7 +206,7 @@ namespace DotNetCheck.Checkups
 						Status.Error,
 						this,
 						install_tries > 1 ?
-							new Suggestion($"Download XCode {VersionName}") :
+							new Suggestion($"Download Xcode {RequiredVersion} from {DownloadUrl}") :
 							new Suggestion("Run xcode-select --install",
 								new Solutions.ActionSolution((sln, cancelToken) =>
 								{
@@ -178,6 +221,9 @@ namespace DotNetCheck.Checkups
 								}))));
 			}
 		}
+
+		static string FormatInstalledVersion(XCodeInfo x)
+			=> string.IsNullOrEmpty(x.BuildVersion) ? x.VersionString : $"{x.VersionString} ({x.BuildVersion})";
 
 		XCodeInfo GetSelectedXCode()
 		{
