@@ -297,7 +297,8 @@ namespace DotNetCheck.Checkups
 			{
 				return PropertyListParser.Parse(file) as NSDictionary;
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PropertyListFormatException
+				or FormatException or System.Xml.XmlException or ArgumentException)
 			{
 				Util.Log($"Could not read {file}: {ex.Message}");
 				return null;
