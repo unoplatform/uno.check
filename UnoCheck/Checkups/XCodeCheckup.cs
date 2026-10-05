@@ -31,37 +31,35 @@ namespace DotNetCheck.Checkups
 		public NuGetVersion Version
 			=> ExactVersion ?? MinimumVersion;
 
-		public string VersionName
-			=> ExactVersionName ?? MinimumVersionName ?? ExactVersion?.ToString() ?? MinimumVersion?.ToString();
-
-		// The manifest's version name is the Xcode build (e.g. "15F31d"); it falls back to the version itself,
-		// which used to print the version twice ("26.5 26.5").
+		// The manifest's version name is the Xcode build (e.g. "15F31d"), taken from the same entry as the version.
 		internal string RequiredVersion
-			=> FormatRequiredVersion(Version, ExactVersionName ?? MinimumVersionName);
-
-		internal string Requirement
-			=> FormatRequirement(RequiredVersion, exact: ExactVersion is not null);
+			=> ExactVersion is not null
+				? FormatRequiredVersion(ExactVersion, ExactVersionName)
+				: FormatRequiredVersion(MinimumVersion, MinimumVersionName);
 
 		public override string Id => "xcode";
 
-		public override string Title => $"Required Xcode {RequiredVersion} (newer version might not be supported)";
+		// The title keeps the plain version, so a build name never nests inside the caveat's parentheses.
+		public override string Title => $"Required Xcode {Version} (newer version might not be supported)";
 
 		internal const string DownloadUrl = "https://developer.apple.com/download/all/";
 
+		// Suggestion names are rendered as Spectre markup, so the manifest-provided part is escaped.
+		internal string DownloadSuggestion
+			=> $"Download Xcode {Spectre.Console.Markup.Escape(RequiredVersion)} from {DownloadUrl}";
+
 		internal static string FormatRequiredVersion(NuGetVersion version, string versionName)
 		{
-			var v = version?.ToString();
+			if (version is null)
+				return versionName ?? string.Empty;
 
-			if (string.IsNullOrEmpty(versionName) || versionName == v)
-				return v ?? versionName ?? string.Empty;
+			if (string.IsNullOrEmpty(versionName) || (NuGetVersion.TryParse(versionName, out var named) && named == version))
+				return version.ToString();
 
-			return string.IsNullOrEmpty(v) ? versionName : $"{v} ({versionName})";
+			return $"{version} ({versionName})";
 		}
 
-		internal static string FormatRequirement(string requiredVersion, bool exact)
-			=> exact ? requiredVersion : $"{requiredVersion} or newer";
-
-		internal static string FormatMissingMessage(string requirement, IEnumerable<string> installedVersions)
+		internal static string FormatMissingMessage(string requiredVersion, IEnumerable<string> installedVersions)
 		{
 			var installed = (installedVersions ?? Enumerable.Empty<string>())
 				.Where(v => !string.IsNullOrWhiteSpace(v))
@@ -69,9 +67,30 @@ namespace DotNetCheck.Checkups
 				.ToList();
 
 			if (installed.Count == 0)
-				return $"Xcode is not installed. Xcode {requirement} is required.";
+				return $"Xcode is not installed. Xcode {requiredVersion} is required.";
 
-			return $"Xcode {string.Join(", ", installed)} {(installed.Count == 1 ? "is" : "are")} installed, but Xcode {requirement} is required.";
+			return $"Xcode {string.Join(", ", installed)} {(installed.Count == 1 ? "is" : "are")} installed, but Xcode {requiredVersion} is required.";
+		}
+
+		// The message also goes on the result, so --json reports it instead of falling back to the suggestion.
+		internal DiagnosticResult MissingXcodeResult(IEnumerable<XCodeInfo> installs)
+		{
+			var message = FormatMissingMessage(RequiredVersion, (installs ?? Enumerable.Empty<XCodeInfo>()).Select(FormatInstalledVersion));
+
+			ReportStatus(message, Status.Error);
+
+			return new DiagnosticResult(Status.Error, this, message, new Suggestion(DownloadSuggestion));
+		}
+
+		internal static string FormatInstalledVersion(XCodeInfo x)
+		{
+			// The Info.plist fallback can leave the short version empty; the parsed version or the path still names it.
+			var version = string.IsNullOrEmpty(x.VersionString) ? x.Version?.ToString() : x.VersionString;
+
+			if (string.IsNullOrEmpty(version))
+				return x.Path;
+
+			return string.IsNullOrEmpty(x.BuildVersion) ? version : $"{version} ({x.BuildVersion})";
 		}
 
 		public override bool ShouldExamine(SharedState history)
@@ -186,18 +205,8 @@ namespace DotNetCheck.Checkups
 				}
 
 
-				// The selected Xcode may live outside the likely paths, so it's listed too.
-				var installedVersions = xcodes
-					.Concat(selected is null ? Enumerable.Empty<XCodeInfo>() : new[] { selected })
-					.GroupBy(x => x.Path)
-					.Select(g => FormatInstalledVersion(g.First()));
-
-				ReportStatus(FormatMissingMessage(Requirement, installedVersions), Status.Error);
-
-				return Task.FromResult(new DiagnosticResult(
-					Status.Error,
-					this,
-					new Suggestion($"Download Xcode {RequiredVersion} from {DownloadUrl}")));
+				// The selected Xcode may live outside /Applications, so it's listed too.
+				return Task.FromResult(MissingXcodeResult(selected is null ? xcodes : xcodes.Append(selected)));
 			}
 			catch(InvalidDataException)
 			{
@@ -206,7 +215,7 @@ namespace DotNetCheck.Checkups
 						Status.Error,
 						this,
 						install_tries > 1 ?
-							new Suggestion($"Download Xcode {RequiredVersion} from {DownloadUrl}") :
+							new Suggestion(DownloadSuggestion) :
 							new Suggestion("Run xcode-select --install",
 								new Solutions.ActionSolution((sln, cancelToken) =>
 								{
@@ -221,9 +230,6 @@ namespace DotNetCheck.Checkups
 								}))));
 			}
 		}
-
-		static string FormatInstalledVersion(XCodeInfo x)
-			=> string.IsNullOrEmpty(x.BuildVersion) ? x.VersionString : $"{x.VersionString} ({x.BuildVersion})";
 
 		XCodeInfo GetSelectedXCode()
 		{
@@ -256,11 +262,45 @@ namespace DotNetCheck.Checkups
 
 		IEnumerable<XCodeInfo> FindXCodeInstalls()
 		{
-			foreach (var p in LikelyPaths)
+			foreach (var p in OrderXcodePaths(FindXcodeApps()))
 			{
 				var i = GetXcodeInfo(p, false);
 				if (i != null)
 					yield return i;
+			}
+		}
+
+		// Side-by-side installs are usually renamed (Xcode_26.5.app, or Xcode-26.5.0.app from Xcodes.app).
+		static IEnumerable<string> FindXcodeApps()
+		{
+			try
+			{
+				return Directory.EnumerateDirectories("/Applications", "Xcode*.app").ToList();
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				Util.Exception(ex);
+				return Enumerable.Empty<string>();
+			}
+		}
+
+		// The usual locations come first, so the same Xcode is picked as before when it's compatible.
+		internal static IEnumerable<string> OrderXcodePaths(IEnumerable<string> found)
+			=> LikelyPaths.Concat((found ?? Enumerable.Empty<string>())
+				.Where(p => !LikelyPaths.Contains(p, StringComparer.Ordinal))
+				.OrderBy(p => p, StringComparer.Ordinal));
+
+		// A corrupt or half-extracted Xcode is skipped rather than failing the whole check.
+		static NSDictionary TryReadPlist(string file)
+		{
+			try
+			{
+				return PropertyListParser.Parse(file) as NSDictionary;
+			}
+			catch (Exception ex)
+			{
+				Util.Log($"Could not read {file}: {ex.Message}");
+				return null;
 			}
 		}
 
@@ -270,9 +310,9 @@ namespace DotNetCheck.Checkups
 
 			if (File.Exists(versionPlist))
 			{
-				NSDictionary rootDict = (NSDictionary)PropertyListParser.Parse(versionPlist);
-				string cfBundleShortVersion = rootDict.ObjectForKey("CFBundleShortVersionString")?.ToString();
-				string productBuildVersion = rootDict.ObjectForKey("ProductBuildVersion")?.ToString();
+				NSDictionary rootDict = TryReadPlist(versionPlist);
+				string cfBundleShortVersion = rootDict?.ObjectForKey("CFBundleShortVersionString")?.ToString();
+				string productBuildVersion = rootDict?.ObjectForKey("ProductBuildVersion")?.ToString();
 
 				if (NuGetVersion.TryParse(cfBundleShortVersion, out var v))
 					return new XCodeInfo(v, cfBundleShortVersion, productBuildVersion, path, selected);
@@ -283,9 +323,9 @@ namespace DotNetCheck.Checkups
 
 				if (File.Exists(infoPlist))
 				{
-					NSDictionary rootDict = (NSDictionary)PropertyListParser.Parse(infoPlist);
-					string cfBundleVersion = rootDict.ObjectForKey("CFBundleVersion")?.ToString();
-					string cfBundleShortVersion = rootDict.ObjectForKey("CFBundleShortVersionString")?.ToString();
+					NSDictionary rootDict = TryReadPlist(infoPlist);
+					string cfBundleVersion = rootDict?.ObjectForKey("CFBundleVersion")?.ToString();
+					string cfBundleShortVersion = rootDict?.ObjectForKey("CFBundleShortVersionString")?.ToString();
 					if (NuGetVersion.TryParse(cfBundleVersion, out var v))
 						return new XCodeInfo(v, cfBundleShortVersion, string.Empty, path, selected);
 				}
