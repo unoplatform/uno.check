@@ -387,6 +387,9 @@ jobs:
            tool_params: '--tfm net10.0-tvos'
 
     steps:
+      - name: 'TEST ONLY: fail one Linux run to check the CI Status gate'
+        if: matrix.manifest_name == 'Stable'
+        run: exit 1
       - name: Checkout
         uses: actions/checkout@v2
         with:
