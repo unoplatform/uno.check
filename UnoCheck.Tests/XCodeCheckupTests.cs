@@ -1,3 +1,4 @@
+using Claunia.PropertyList;
 using DotNetCheck.Checkups;
 using DotNetCheck.Cli;
 using DotNetCheck.Manifest;
@@ -137,6 +138,48 @@ public class XCodeCheckupTests
         Assert.Equal(
             new[] { "/Applications/Xcode.app", "/Applications/Xcode-beta.app", "/Applications/Xcode-26.5.0.app", "/Applications/Xcode_27.0.app" },
             XCodeCheckup.OrderXcodePaths(found));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ACutOffPlistIsSkippedRatherThanFailingTheCheck(bool binary)
+    {
+        var plist = new NSDictionary
+        {
+            { "CFBundleShortVersionString", "26.5" },
+            { "CFBundleVersion", "24109" },
+            { "ProductBuildVersion", "17F42" },
+        };
+        var bytes = binary
+            ? BinaryPropertyListWriter.WriteToArray(plist)
+            : System.Text.Encoding.UTF8.GetBytes(plist.ToXmlPropertyList());
+        // Binary: the start (format detection) and the end (offset table and trailer, where plist-cil throws
+        // IndexOutOfRangeException). The lengths in between all hit the same slow ArgumentOutOfRangeException path.
+        var lengths = binary
+            ? Enumerable.Range(0, 12).Concat(Enumerable.Range(bytes.Length - 12, 12))
+            : Enumerable.Range(0, bytes.Length);
+        var file = Path.GetTempFileName();
+
+        try
+        {
+            // A truncated plist, like a half-extracted Xcode, must be skipped rather than throw out of the checkup.
+            foreach (var length in lengths)
+            {
+                File.WriteAllBytes(file, bytes[..length]);
+
+                var exception = Record.Exception(() => XCodeCheckup.TryReadPlist(file));
+
+                Assert.True(exception is null, $"{length}/{bytes.Length} bytes threw {exception?.GetType().Name}: {exception?.Message}");
+            }
+
+            File.WriteAllBytes(file, bytes);
+            Assert.Equal("26.5", XCodeCheckup.TryReadPlist(file)?.ObjectForKey("CFBundleShortVersionString")?.ToString());
+        }
+        finally
+        {
+            File.Delete(file);
+        }
     }
 
     [Fact]

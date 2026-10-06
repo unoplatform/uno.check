@@ -291,14 +291,14 @@ namespace DotNetCheck.Checkups
 				.OrderBy(p => p, StringComparer.Ordinal));
 
 		// A corrupt or half-extracted Xcode is skipped rather than failing the whole check.
-		static NSDictionary TryReadPlist(string file)
+		internal static NSDictionary TryReadPlist(string file)
 		{
 			try
 			{
 				return PropertyListParser.Parse(file) as NSDictionary;
 			}
 			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PropertyListFormatException
-				or FormatException or System.Xml.XmlException or ArgumentException)
+				or FormatException or System.Xml.XmlException or ArgumentException or IndexOutOfRangeException)
 			{
 				Util.Log($"Could not read {file}: {ex.Message}");
 				return null;
