@@ -32,6 +32,7 @@ namespace DotNetCheck.DotNet
 			SdkRoot = sdkRoot;
 			SdkVersion = sdkVersion;
 			NuGetPackageSources = nugetPackageSources;
+			IsUserLocalInstall = IsUserLocalWorkloadInstall(sdkRoot, sdkVersion);
 
 			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "uno-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
 			Directory.CreateDirectory(DotNetCliWorkingDir);
@@ -47,6 +48,57 @@ namespace DotNetCheck.DotNet
 		public readonly string SdkVersion;
 
 		public readonly string[] NuGetPackageSources;
+
+		/// <summary>
+		/// Whether this SDK installs workloads per user instead of into <see cref="SdkRoot"/>.
+		/// See <see cref="IsUserLocalWorkloadInstall"/>.
+		/// </summary>
+		public readonly bool IsUserLocalInstall;
+
+		/// <summary>
+		/// Whether installing workloads needs elevation: only when they go into a
+		/// <see cref="SdkRoot"/> the current user cannot write to.
+		/// </summary>
+		public bool RequiresElevation => RequiresElevationFor(IsUserLocalInstall, IsSdkPathWritable(SdkRoot));
+
+		internal static bool RequiresElevationFor(bool isUserLocalInstall, bool isSdkRootWritable)
+			=> !isUserLocalInstall && !isSdkRootWritable;
+
+		/// <summary>
+		/// Whether running a workload command under <c>sudo</c> reaches the workloads the
+		/// current user sees. Never on Windows, which has no sudo. Never for a user-local
+		/// install either: the CLI then writes to the invoking user's home, which under sudo is
+		/// root's (<c>/root/.dotnet</c>), so the install "succeeds" where the user's builds and
+		/// <c>dotnet workload list</c> never look (issue #515).
+		/// </summary>
+		internal static bool CanUseSudoFor(bool isWindows, bool isUserLocalInstall)
+			=> !isWindows && !isUserLocalInstall;
+
+		bool CanUseSudo => CanUseSudoFor(Util.IsWindows, IsUserLocalInstall);
+
+		/// <summary>
+		/// Whether the SDK at <paramref name="sdkRoot"/> installs workloads per user for the
+		/// feature band of <paramref name="sdkVersion"/>. A distribution opts in by shipping an
+		/// empty <c>metadata/workloads/&lt;band&gt;/userlocal</c> marker under the .NET root, as
+		/// Ubuntu's apt packages do for <c>/usr/lib/dotnet</c>. The CLI then installs workloads
+		/// into <c>$DOTNET_CLI_HOME/.dotnet</c> (or <c>$HOME/.dotnet</c>), so the root never needs
+		/// to be writable. The band in the marker path never carries a preview label: 10.0.100-rc.1
+		/// and 10.0.112 both use <c>10.0.100</c>. See
+		/// https://github.com/dotnet/sdk/blob/main/documentation/general/workloads/user-local-workloads.md
+		/// </summary>
+		/// <remarks>
+		/// The band comes from the requested SDK version. The CLI runs from a global.json with
+		/// <c>rollForward: latestFeature</c>, so it could resolve a higher band in the same root;
+		/// distribution packages ship a single band per root, which this covers.
+		/// </remarks>
+		internal static bool IsUserLocalWorkloadInstall(string sdkRoot, string sdkVersion)
+		{
+			if (string.IsNullOrEmpty(sdkRoot) || !NuGetVersion.TryParse(sdkVersion, out var version))
+				return false;
+
+			var featureBand = $"{version.Major}.{version.Minor}.{version.Patch / 100 * 100}";
+			return File.Exists(Path.Combine(sdkRoot, "metadata", "workloads", featureBand, "userlocal"));
+		}
 
 		/// <summary>
 		/// Environment overlay applied to every <c>dotnet workload</c> invocation in this class so
@@ -138,8 +190,8 @@ namespace DotNetCheck.DotNet
 		/// — while the plain console is still active — lets the in-spinner elevation use
 		/// <c>sudo -n</c> against cached credentials and avoid prompting at all.
 		///
-		/// Returns true if the install can proceed (Windows, writable SDK, non-interactive
-		/// run, or sudo credentials successfully cached). Returns false only when the
+		/// Returns true if the install can proceed (Windows, user-local or writable SDK,
+		/// non-interactive run, or sudo credentials successfully cached). Returns false only when the
 		/// interactive <c>sudo -v</c> handshake itself failed (wrong password, sudo
 		/// unavailable, policy denial); callers must NOT enter the live spinner in that
 		/// case, because the in-spinner sudo retry would re-prompt for the password from
@@ -150,7 +202,7 @@ namespace DotNetCheck.DotNet
 			if (Util.IsWindows)
 				return Task.FromResult(true);
 
-			if (IsSdkPathWritable(SdkRoot))
+			if (!RequiresElevation)
 				return Task.FromResult(true);
 
 			if (Util.NonInteractive || Util.CI)
@@ -270,9 +322,10 @@ namespace DotNetCheck.DotNet
 			// elevated install, and the user-context call may also fail outright with "Inadequate
 			// permissions" when the SDK is root-owned. Probe with `sudo -n` (no prompt, fails fast
 			// without cached credentials) and union the results so mixed/elevated installs aren't
-			// reported as missing.
+			// reported as missing. A user-local SDK skips the probe: under sudo it lists root's
+			// workloads, which the current user cannot use.
 			string[] sudoInstalled = null;
-			var sudoContextAttempted = !Util.IsWindows;
+			var sudoContextAttempted = CanUseSudo;
 			var sudoContextSucceeded = false;
 			if (sudoContextAttempted)
 			{
@@ -391,25 +444,7 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			ShellProcessRunner.ShellProcessResult r;
-
-			// On Linux/macOS, check if SDK path is writable before attempting user-level install.
-			// If not writable, use sudo directly to avoid doomed user-level attempts that
-			// fail with download/restore errors instead of clear permission-denied messages.
-			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
-			{
-				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
-				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-			}
-			else
-			{
-				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
-
-				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
-				{
-					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-				}
-			}
+			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -426,22 +461,7 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			ShellProcessRunner.ShellProcessResult r;
-
-			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
-			{
-				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
-				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-			}
-			else
-			{
-				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
-
-				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
-				{
-					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-				}
-			}
+			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -449,6 +469,34 @@ namespace DotNetCheck.DotNet
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
 				throw new Exception(BuildCliFailureMessage("Workload Repair", "dotnet " + string.Join(' ', args), r.GetOutput()));
+		}
+
+		/// <summary>
+		/// Runs a workload command that writes workloads, elevating on Linux/macOS when the
+		/// workloads go into an SDK root the current user cannot write to.
+		/// </summary>
+		async Task<ShellProcessRunner.ShellProcessResult> RunWorkloadCommand(string dotnetExe, string[] args, CancellationToken cancellationToken)
+		{
+			if (IsUserLocalInstall)
+				Util.Log($"SDK '{SdkRoot}' installs workloads per user; running as the current user without elevation.");
+
+			// Check writability before the user-level attempt: when the root isn't writable, use
+			// sudo directly to avoid doomed user-level attempts that fail with download/restore
+			// errors instead of clear permission-denied messages.
+			if (CanUseSudo && RequiresElevation)
+			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
+				return await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+			if (CanUseSudo && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			{
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+
+			return r;
 		}
 
 		internal static string BuildCliFailureMessage(string operationName, string command, string output)
