@@ -22,22 +22,25 @@ concurrency:
 env:
   DOTNET_VERSION: '10.0.302'
 
+permissions:
+  contents: read
+
 jobs:
   build_tool:
     name: Build
     runs-on: windows-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
       with:
         dotnet-version: '${{ env.DOTNET_VERSION }}'
 
-    - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+    - uses: dotnet/nbgv@705dad19ab067f12f4e9eeaa60812e01edef5d25 # v0.5.2
       id: nbgv
       with:
         toolVersion: 3.6.139
@@ -49,7 +52,7 @@ jobs:
         dotnet pack -c Release -p:PackageVersion=$adjustedPackageVersion -p:Version=${{ steps.nbgv.outputs.SimpleVersion }} -o .\artifacts UnoCheck\UnoCheck.csproj
 
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: NuGet
         path: .\artifacts
@@ -66,12 +69,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '${{ env.DOTNET_VERSION }}'
 
@@ -161,22 +164,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet
           path: ${{ github.workspace }}\NuGet
 
       - name: Install base .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '${{ env.DOTNET_VERSION }}'
       
-      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+      - uses: dotnet/nbgv@705dad19ab067f12f4e9eeaa60812e01edef5d25 # v0.5.2
         id: nbgv
         with:
           toolVersion: 3.6.139
@@ -269,19 +272,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
 
       # Preinstall .NET as it may fail on some build agents
       - name: Setup .NET Core ${{ env.DOTNET_VERSION }}
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '${{ env.DOTNET_VERSION }}'
 
@@ -290,7 +293,7 @@ jobs:
       #   run: |
       #     dotnet workload install android ios maccatalyst maui tvos macos --source https://api.nuget.org/v3/index.json
 
-      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+      - uses: dotnet/nbgv@705dad19ab067f12f4e9eeaa60812e01edef5d25 # v0.5.2
         id: nbgv
         with:
           toolVersion: 3.6.139
@@ -388,7 +391,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -396,23 +399,23 @@ jobs:
         uses: ./.github/actions/host-cleanup-linux
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet
           path: ${{ github.workspace }}/NuGet
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '${{ env.DOTNET_VERSION }}'
 
-      - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
+      - uses: dotnet/nbgv@705dad19ab067f12f4e9eeaa60812e01edef5d25 # v0.5.2
         id: nbgv
         with:
           toolVersion: 3.6.139
           setAllVars: true
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: 'microsoft' # See 'Supported distributions' for available options
           java-version: '21'
@@ -449,16 +452,16 @@ jobs:
       - build_tool
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet
           path: artifacts\NuGet
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '9.0.x'
 
@@ -468,7 +471,7 @@ jobs:
       
       # Login to Azure using a ServicePrincipal configured to authenticate agaist a GitHub Action
       - name: 'Az CLI login'
-        uses: azure/login@v1
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           allow-no-subscriptions: true
           client-id: ${{ secrets.SIGN_AZURE_CLIENT_ID }}
@@ -490,7 +493,7 @@ jobs:
           --verbosity information
 
       - name: Upload Signed Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: NuGet-Signed
           path: .\artifacts\NuGet
@@ -505,7 +508,7 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet-Signed
           path: artifacts
@@ -528,12 +531,12 @@ jobs:
   
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
   
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: NuGet-Signed
           path: artifacts
