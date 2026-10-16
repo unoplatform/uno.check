@@ -391,25 +391,7 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
 
-			ShellProcessRunner.ShellProcessResult r;
-
-			// On Linux/macOS, check if SDK path is writable before attempting user-level install.
-			// If not writable, use sudo directly to avoid doomed user-level attempts that
-			// fail with download/restore errors instead of clear permission-denied messages.
-			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
-			{
-				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
-				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-			}
-			else
-			{
-				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
-
-				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
-				{
-					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-				}
-			}
+			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -426,22 +408,7 @@ namespace DotNetCheck.DotNet
 
 			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
 
-			ShellProcessRunner.ShellProcessResult r;
-
-			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
-			{
-				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
-				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-			}
-			else
-			{
-				r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
-
-				if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
-				{
-					r = await RetryWithSudo(dotnetExe, cancellationToken, args);
-				}
-			}
+			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 
 			if (cancellationToken.IsCancellationRequested)
 				throw new OperationCanceledException(cancellationToken);
@@ -449,6 +416,31 @@ namespace DotNetCheck.DotNet
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
 				throw new Exception(BuildCliFailureMessage("Workload Repair", "dotnet " + string.Join(' ', args), r.GetOutput()));
+		}
+
+		/// <summary>
+		/// Runs a workload command that writes workloads, elevating on Linux/macOS when the
+		/// workloads go into an SDK root the current user cannot write to.
+		/// </summary>
+		async Task<ShellProcessRunner.ShellProcessResult> RunWorkloadCommand(string dotnetExe, string[] args, CancellationToken cancellationToken)
+		{
+			// Check writability before the user-level attempt: when the root isn't writable, use
+			// sudo directly to avoid doomed user-level attempts that fail with download/restore
+			// errors instead of clear permission-denied messages.
+			if (!Util.IsWindows && !IsSdkPathWritable(SdkRoot))
+			{
+				Util.Log($"SDK path '{SdkRoot}' is not writable by the current user. Using elevated privileges.");
+				return await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+
+			var r = await Util.ShellCommand(dotnetExe, DotNetCliWorkingDir, Util.Verbose, cancellationToken, args);
+
+			if (!Util.IsWindows && r.ExitCode != 0 && ShouldRetryWithSudo(r.GetOutput()))
+			{
+				r = await RetryWithSudo(dotnetExe, cancellationToken, args);
+			}
+
+			return r;
 		}
 
 		internal static string BuildCliFailureMessage(string operationName, string command, string output)
