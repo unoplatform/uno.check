@@ -309,8 +309,9 @@ namespace DotNetCheck.Checkups
 					history.ContributeState(StateKey.EntryPoint, StateKey.ShouldRestartVs, true);
 				},
 				// Workloads install into this SDK root: a machine-wide SDK needs elevation,
-				// a user-local one (DOTNET_ROOT, ~/.dotnet) does not.
-				requiresElevation: !Util.IsDirectoryWritable(SdkRoot))));
+				// a user-local one (DOTNET_ROOT, ~/.dotnet) does not, and neither does one
+				// that installs workloads per user (Ubuntu's apt SDK).
+				requiresElevation: genericWorkloadManager.RequiresElevation)));
 		}
 	}
 }

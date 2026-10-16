@@ -217,6 +217,123 @@ public class DotNetWorkloadFeedbackTests
         }
     }
 
+    [Theory]
+    [InlineData("10.0.100", "10.0.112")]
+    [InlineData("10.0.100", "10.0.100")]
+    [InlineData("10.0.200", "10.0.201")]
+    [InlineData("11.0.100", "11.0.100-rc.1.26425.128")]
+    public void IsUserLocalWorkloadInstall_WhenMarkerForFeatureBandExists_ReturnsTrue(string markerBand, string sdkVersion)
+    {
+        // The layout Ubuntu's apt SDK ships under /usr/lib/dotnet (issue #515). The marker's
+        // band never carries a preview label.
+        var sdkRoot = CreateSdkRootWithUserLocalMarker(markerBand);
+        try
+        {
+            var isUserLocal = DotNetWorkloadManager.IsUserLocalWorkloadInstall(sdkRoot, sdkVersion);
+
+            Assert.True(isUserLocal);
+        }
+        finally
+        {
+            Directory.Delete(sdkRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IsUserLocalWorkloadInstall_WhenMarkerIsForAnotherFeatureBand_ReturnsFalse()
+    {
+        var sdkRoot = CreateSdkRootWithUserLocalMarker("10.0.200");
+        try
+        {
+            Assert.False(DotNetWorkloadManager.IsUserLocalWorkloadInstall(sdkRoot, "10.0.112"));
+        }
+        finally
+        {
+            Directory.Delete(sdkRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IsUserLocalWorkloadInstall_WhenNoMarker_ReturnsFalse()
+    {
+        var sdkRoot = Path.Combine(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(sdkRoot);
+        try
+        {
+            Assert.False(DotNetWorkloadManager.IsUserLocalWorkloadInstall(sdkRoot, "10.0.112"));
+        }
+        finally
+        {
+            Directory.Delete(sdkRoot, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-version")]
+    public void IsUserLocalWorkloadInstall_WhenSdkVersionIsUnparseable_ReturnsFalse(string sdkVersion)
+    {
+        var sdkRoot = CreateSdkRootWithUserLocalMarker("10.0.100");
+        try
+        {
+            Assert.False(DotNetWorkloadManager.IsUserLocalWorkloadInstall(sdkRoot, sdkVersion));
+        }
+        finally
+        {
+            Directory.Delete(sdkRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DotNetWorkloadManager_WithUserLocalMarker_ReportsUserLocalInstall()
+    {
+        var sdkRoot = CreateSdkRootWithUserLocalMarker("10.0.100");
+        try
+        {
+            var manager = new DotNetWorkloadManager(sdkRoot, "10.0.108");
+
+            Assert.True(manager.IsUserLocalInstall);
+            Assert.False(manager.RequiresElevation);
+        }
+        finally
+        {
+            Directory.Delete(sdkRoot, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    public void RequiresElevationFor_OnlyForMachineWideRootTheUserCannotWrite(bool isUserLocalInstall, bool isSdkRootWritable, bool expected)
+    {
+        // A read-only root with a userlocal marker (Ubuntu's /usr/lib/dotnet) needs no
+        // elevation: workloads go into the user's ~/.dotnet.
+        Assert.Equal(expected, DotNetWorkloadManager.RequiresElevationFor(isUserLocalInstall, isSdkRootWritable));
+    }
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    public void CanUseSudoFor_NeverForWindowsOrUserLocalInstall(bool isWindows, bool isUserLocalInstall, bool expected)
+    {
+        // Under sudo a user-local install lands in root's home (/root/.dotnet), where the
+        // current user's builds and `dotnet workload list` never look (issue #515).
+        Assert.Equal(expected, DotNetWorkloadManager.CanUseSudoFor(isWindows, isUserLocalInstall));
+    }
+
+    static string CreateSdkRootWithUserLocalMarker(string featureBand)
+    {
+        var sdkRoot = Path.Combine(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
+        var markerDir = Path.Combine(sdkRoot, "metadata", "workloads", featureBand);
+        Directory.CreateDirectory(markerDir);
+        File.WriteAllText(Path.Combine(markerDir, "userlocal"), string.Empty);
+        return sdkRoot;
+    }
+
     [Fact]
     public void ParseInstalledWorkloadIds_ParsesMachineReadableJson()
     {
