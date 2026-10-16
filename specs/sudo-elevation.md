@@ -7,7 +7,9 @@ Issue: [unoplatform/uno.check#515](https://github.com/unoplatform/uno.check/issu
 
 On Linux/macOS, `dotnet workload install` writes into the SDK directory
 (e.g. `/usr/share/dotnet`, `/usr/local/share/dotnet`). Most package-managed
-installs make that path root-owned, so the install needs `sudo`.
+installs make that path root-owned, so the install needs `sudo`. The
+exception is an SDK that opts in to user-local workloads: it installs them
+into the user's home and must never run under `sudo` (see *User-local SDKs*).
 
 `uno-check` runs the install inside `AnsiConsole.Status().StartAsync(...)` —
 a Spectre.Console live spinner that owns the terminal and rewrites the line
@@ -132,12 +134,40 @@ satisfied the pre-handshake covers all practical cases.
   administration choice users can make themselves; uno-check should not
   require or recommend it.
 
+## User-local SDKs
+
+A distribution can ship an empty `metadata/workloads/<band>/userlocal`
+marker under the .NET root. Ubuntu's apt SDK does, at
+`/usr/lib/dotnet/metadata/workloads/10.0.100/userlocal`. With the marker, the
+CLI installs workloads into `$DOTNET_CLI_HOME/.dotnet` or `$HOME/.dotnet` and
+skips its own write check on the root
+([user-local workloads](https://github.com/dotnet/sdk/blob/main/documentation/general/workloads/user-local-workloads.md)).
+The band in the marker path never carries a preview label: `10.0.100-rc.1`
+and `10.0.112` both use `10.0.100`.
+
+Such a root is read-only, yet elevating is wrong. Ubuntu's `sudo` sets
+`HOME=/root`, so an elevated install writes to `/root/.dotnet`. It reports
+success, but the user's builds and `dotnet workload list` never look there,
+and the next run asks to install again
+([#515 comment](https://github.com/unoplatform/uno.check/issues/515#issuecomment-6025482570)).
+
+`DotNetWorkloadManager.IsUserLocalInstall` is true when the marker exists for
+the feature band of the requested SDK version. Then:
+
+- `PrepareForInstallAsync` skips the `sudo -v` handshake.
+- Workload install and repair run as the current user. They are never
+  elevated up front and never retried with `sudo` on a permission error.
+- `GetInstalledWorkloads` skips the `sudo -n` probe, which would list root's
+  workloads as installed.
+- The fix reports `requires_elevation: false`.
+
 ## Behavior matrix
 
 | Platform | SDK writable | sudo -n cached | NonInteractive/CI | Result |
 | --- | --- | --- | --- | --- |
 | Windows | n/a | n/a | n/a | no-op |
 | Linux/macOS | yes | n/a | n/a | no-op (no elevation needed) |
+| Linux/macOS | no, but user-local marker | n/a | n/a | no-op; install and repair run as the current user, never under sudo |
 | Linux/macOS | no | yes | n/a | no-op (creds already cached) |
 | Linux/macOS | no | no | yes | returns true (no-op); install will surface its own clear error |
 | Linux/macOS | no | no | no | `sudo -v` prompts the user; on success install proceeds with `sudo -n`; on failure `PrepareForInstallAsync` returns false and the checkup aborts before the spinner |
@@ -145,10 +175,12 @@ satisfied the pre-handshake covers all practical cases.
 ## Files
 
 - `UnoCheck/Util.cs` — `EnsureSudoCredentialsCachedAsync`
-- `UnoCheck/DotNet/DotNetWorkloadManager.cs` — `PrepareForInstallAsync`
+- `UnoCheck/DotNet/DotNetWorkloadManager.cs` — `PrepareForInstallAsync`,
+  and `IsUserLocalWorkloadInstall`, `CanUseSudoFor` and
+  `RequiresElevationFor` for user-local SDKs
 - `UnoCheck/Checkups/DotNetWorkloadsCheckup.cs` — call site, before
   `RunWithHeartbeat`
 - `UnoCheck.Tests/DotNetWorkloadFeedbackTests.cs` — short-circuit tests
-  (Windows / writable SDK / NonInteractive). The interactive `sudo -v`
-  path requires a real TTY and is covered by manual QA on the issue's
-  Linux VM.
+  (Windows / writable SDK / NonInteractive) and user-local marker and
+  elevation-rule tests. The interactive `sudo -v` path requires a real TTY
+  and is covered by manual QA on the issue's Linux VM.
