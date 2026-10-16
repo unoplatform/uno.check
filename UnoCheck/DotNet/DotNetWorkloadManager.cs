@@ -97,7 +97,7 @@ namespace DotNetCheck.DotNet
 				return false;
 
 			var featureBand = $"{version.Major}.{version.Minor}.{version.Patch / 100 * 100}";
-			return File.Exists(Path.Combine(sdkRoot, "metadata", "workloads", featureBand, "userlocal"));
+			return File.Exists(Path.Join(sdkRoot, "metadata", "workloads", featureBand, "userlocal"));
 		}
 
 		/// <summary>

@@ -256,7 +256,7 @@ public class DotNetWorkloadFeedbackTests
     [Fact]
     public void IsUserLocalWorkloadInstall_WhenNoMarker_ReturnsFalse()
     {
-        var sdkRoot = Path.Combine(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
+        var sdkRoot = Path.Join(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(sdkRoot);
         try
         {
@@ -327,10 +327,10 @@ public class DotNetWorkloadFeedbackTests
 
     static string CreateSdkRootWithUserLocalMarker(string featureBand)
     {
-        var sdkRoot = Path.Combine(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
-        var markerDir = Path.Combine(sdkRoot, "metadata", "workloads", featureBand);
+        var sdkRoot = Path.Join(Path.GetTempPath(), "uno-check-sdk-" + Guid.NewGuid().ToString("N")[..8]);
+        var markerDir = Path.Join(sdkRoot, "metadata", "workloads", featureBand);
         Directory.CreateDirectory(markerDir);
-        File.WriteAllText(Path.Combine(markerDir, "userlocal"), string.Empty);
+        File.WriteAllText(Path.Join(markerDir, "userlocal"), string.Empty);
         return sdkRoot;
     }
 
