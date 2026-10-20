@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Xml;
 
 using DotNetCheck.Models;
+using DotNetCheck.DotNet;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Protocol;
@@ -60,7 +61,7 @@ namespace DotNetCheck.Solutions
 			// A failed restore leaves the SDK unresolved; reporting the fix as applied would
 			// hide that behind a check that still fails.
 			Util.ThrowIfFailed(
-				new ShellProcessRunner(new("dotnet", "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit(),
+				new ShellProcessRunner(new(DotNetSdk.ResolveExecutable(state), "restore") { Verbose = true, WorkingDirectory = tempPath }).WaitForExit(),
 				"Restoring the Uno.Sdk package");
 		}
 

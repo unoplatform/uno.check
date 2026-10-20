@@ -25,6 +25,28 @@ namespace DotNetCheck.DotNet
 		public static string DotNetExeName
 			=> Util.IsWindows ? "dotnet.exe" : "dotnet";
 
+		/// <summary>
+		/// The dotnet executable a step should run: the one under the root the examination settled on,
+		/// recorded in <paramref name="state"/> as <c>DOTNET_ROOT</c>. A step that calls <c>dotnet</c> by
+		/// name depends on the host process's PATH instead, and a desktop host started from a launcher
+		/// can have a PATH without the install. Falls back to the bare name when no root is recorded.
+		/// </summary>
+		public static string ResolveExecutable(SharedState state)
+		{
+			if (state != null
+				&& state.TryGetEnvironmentVariable("DOTNET_ROOT", out var root)
+				&& !string.IsNullOrEmpty(root))
+			{
+				var executable = Path.Combine(root, DotNetExeName);
+				if (File.Exists(executable))
+				{
+					return executable;
+				}
+			}
+
+			return "dotnet";
+		}
+
 		public DotNetSdk(SharedState sharedState)
 		{
 			KnownDotnetLocations = Util.Platform switch

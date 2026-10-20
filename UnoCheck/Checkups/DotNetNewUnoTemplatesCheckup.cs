@@ -31,7 +31,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
 
     public override async Task<DiagnosticResult> Examine(SharedState history)
     {
-        var dotnetOutput = GetDotNetNewInstalledList();
+        var dotnetOutput = GetDotNetNewInstalledList(DotNetSdk.ResolveExecutable(history));
 
         var legacyVersion = GetInstalledVersion(dotnetOutput, _unoLegacyTemplatesOutputRegex);
         var version = GetInstalledVersion(dotnetOutput, _unoTemplatesOutputRegex);
@@ -63,11 +63,11 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
         return DiagnosticResult.Ok(this);
     }
 
-    private string GetDotNetNewInstalledList()
+    private string GetDotNetNewInstalledList(string dotnet)
     {
         // Running 'dotnet new uninstall' without any package ID will list all installed
         // dotnet new templates along with their versions.
-        var processInfo = new ProcessStartInfo("dotnet", "new uninstall");
+        var processInfo = new ProcessStartInfo(dotnet, "new uninstall");
         processInfo.RedirectStandardOutput = true;
         processInfo.UseShellExecute = false;
         processInfo.EnvironmentVariables["DOTNET_CLI_UI_LANGUAGE"] = "en-US";
