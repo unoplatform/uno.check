@@ -217,6 +217,22 @@ namespace DotNetCheck.DotNet
 
 		string WriteRollbackFile(Manifest.DotNetWorkload[] workloads)
 		{
+			var json = BuildRollbackJson(workloads);
+
+			var rollbackFile = Path.Combine(DotNetCliWorkingDir, "workload.json");
+			File.WriteAllText(rollbackFile, json);
+
+			Util.Log($"Updating with Rollback File:" + Environment.NewLine + json);
+
+			return rollbackFile;
+		}
+
+		/// <summary>
+		/// Builds the rollback file content: one entry per workload manifest, since several
+		/// workloads can come from the same manifest (maui-android and maui-ios).
+		/// </summary>
+		internal static string BuildRollbackJson(IEnumerable<Manifest.DotNetWorkload> workloads)
+		{
 			var workloadRollback = new Dictionary<string, string>();
 
 			foreach (var workload in workloads)
@@ -225,15 +241,10 @@ namespace DotNetCheck.DotNet
 			var json = new StringBuilder();
 			json.AppendLine("{");
 			json.AppendLine(string.Join("," + Environment.NewLine,
-				workloads.Select(wl => $"    \"{wl.WorkloadManifestId}\": \"{wl.Version}\"")));
+				workloadRollback.Select(wl => $"    \"{wl.Key}\": \"{wl.Value}\"")));
 			json.AppendLine("}");
 
-			var rollbackFile = Path.Combine(DotNetCliWorkingDir, "workload.json");
-			File.WriteAllText(rollbackFile, json.ToString());
-
-			Util.Log($"Updating with Rollback File:" + Environment.NewLine + json.ToString());
-
-			return rollbackFile;
+			return json.ToString();
 		}
 
 		private (string begin, string end) RollbackOutputMarker = (

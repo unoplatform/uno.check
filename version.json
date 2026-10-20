@@ -6,6 +6,7 @@
   },
   "publicReleaseRefSpec": [
     "^refs/heads/main$",
+    "^refs/heads/feature/.*$",
     "^refs/heads/release/stable/\\d+(?:\\.\\d+)?$"
   ],
   "cloudBuild": {

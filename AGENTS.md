@@ -66,6 +66,8 @@ In order to update the workloads manifest to the latest version, you need to:
     ```bash
     dotnet workload install ios android maui catalyst tvos wasm-tools
     ```
+
+    For `manifests/uno.ui-preview-major.manifest.json` (.NET 11, which only Uno Platform 7 supports), install `ios android tvos maui-android maui-ios wasm-tools` instead: Uno 7 has no Mac Catalyst head, and `maui` would install Mac Catalyst.
 - Get the installed workloads list:
 
     ```bash

@@ -2,9 +2,8 @@
   "check": {
     "toolVersion": "1.14.0",
     "variables": {
-      "OPENJDK_VERSION": "17.0.19",
+      "OPENJDK_VERSION": "21.0.12",
       "DOTNET_SDK_VERSION": "11.0.100-rc.2.26504.105",
-      "MACCATALYST_SDK_VERSION": "27.0.12212-net11-rc.2/11.0.100-rc.2",
       "IOS_SDK_VERSION": "27.0.12212-net11-rc.2/11.0.100-rc.2",
       "TVOS_SDK_VERSION": "27.0.12212-net11-rc.2/11.0.100-rc.2",
       "ANDROID_SDK_VERSION": "37.2.0-rc.2.84/11.0.100-rc.2",
@@ -14,7 +13,7 @@
     "variableMappers": [
     ],
     "openjdk": {
-      "version": "17.0.19",
+      "version": "21.0.12",
       "urls": {
         "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
         "winArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-aarch64.msi",
@@ -112,13 +111,6 @@
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
-              "workloadId": "maccatalyst",
-              "workloadManifestId": "microsoft.net.sdk.maccatalyst",
-              "packageId": "Microsoft.NET.Sdk.MacCatalyst.Manifest-11.0.100-rc.2",
-              "version": "$(MACCATALYST_SDK_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
-            },
-            {
               "workloadId": "tvos",
               "workloadManifestId": "microsoft.net.sdk.tvos",
               "packageId": "Microsoft.NET.Sdk.tvos.Manifest-11.0.100-rc.2",
@@ -126,18 +118,18 @@
               "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
-              "workloadId": "maui",
-              "workloadManifestId": "microsoft.net.sdk.maui",
-              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-rc.2",
-              "version": "$(MAUI_VERSION)",
-              "supportedPlatforms": [ "Windows", "OSX" ]
-            },
-            {
               "workloadId": "maui-android",
               "workloadManifestId": "microsoft.net.sdk.maui",
               "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-rc.2",
               "version": "$(MAUI_VERSION)",
-              "supportedPlatforms": [ "Linux/x64" ]
+              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64" ]
+            },
+            {
+              "workloadId": "maui-ios",
+              "workloadManifestId": "microsoft.net.sdk.maui",
+              "packageId": "Microsoft.NET.Sdk.Maui.Manifest-11.0.100-rc.2",
+              "version": "$(MAUI_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX" ]
             },
             {
               "workloadId": "wasm-tools",

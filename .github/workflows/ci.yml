@@ -143,18 +143,19 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
+         # Uno Platform 7 TFMs: .NET 11 is Uno 7 only, which has no Mac Catalyst head.
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test default Uno template TFMs with net10
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
+           manifest_name: Test default Uno 7 template TFMs with net11
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios --tfm net11.0-windows10.0.19041 --tfm net11.0-browserwasm --tfm net11.0-desktop'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-android\ios TFMs
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios'
+           manifest_name: Test net11.0-android\ios TFMs
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-browserwasm TFM
-           tool_params: '--tfm net10.0-browserwasm'
+           manifest_name: Test net11.0-browserwasm TFM
+           tool_params: '--tfm net11.0-browserwasm'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-tvos TFM
-           tool_params: '--tfm net10.0-tvos'
+           manifest_name: Test net11.0-tvos TFM
+           tool_params: '--tfm net11.0-tvos'
 
     env:
       DOTNET_INSTALL_DIR: '${{ github.workspace }}\.dotnet'
@@ -372,19 +373,19 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
-         # preview major
+         # preview major: Uno Platform 7 TFMs (.NET 11 is Uno 7 only, which has no Mac Catalyst head)
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test default Uno template TFMs with net10
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
+           manifest_name: Test default Uno 7 template TFMs with net11
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios --tfm net11.0-windows10.0.19041 --tfm net11.0-browserwasm --tfm net11.0-desktop'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-android\ios TFMs
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios'
+           manifest_name: Test net11.0-android\ios TFMs
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-browserwasm TFM
-           tool_params: '--tfm net10.0-browserwasm'
+           manifest_name: Test net11.0-browserwasm TFM
+           tool_params: '--tfm net11.0-browserwasm'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-tvos TFM
-           tool_params: '--tfm net10.0-tvos'
+           manifest_name: Test net11.0-tvos TFM
+           tool_params: '--tfm net11.0-tvos'
 
     steps:
       - name: Checkout
