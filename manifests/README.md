@@ -19,6 +19,11 @@ Used with `--pre` / `--preview`. Tracks in-band previews of the current .NET maj
 Used with `--pre-major` / `--preview-major`. Tracks previews of the *next* .NET major:
 - `uno.ui-preview-major.manifest.json`
 
+This is currently .NET 11, which only Uno Platform 7 supports, so this manifest provisions Uno 7 machines.
+Uno 7 removed the Mac Catalyst head, so this manifest installs no `maccatalyst` workload, and it uses
+`maui-android` and `maui-ios` instead of `maui`, because `maui` also installs Mac Catalyst. The .NET 11
+Android workload requires JDK 21 or later. `ManifestVersionGuardTests` enforces these rules for every .NET 11+ manifest.
+
 ### Main
 Used with `--main` / `--dev-manifest`. This is the only channel that is **not** embedded: it is fetched at
 runtime from `main`, so changes take effect without a tool release.
@@ -33,6 +38,7 @@ To update the manifest, the usual process is:
    ```bash
    dotnet workload install ios android maccatalyst tvos maui wasm-tools
    ```
+   For `uno.ui-preview-major.manifest.json` (Uno Platform 7), install `ios android tvos maui-android maui-ios wasm-tools` instead.
 3. Run:
    ```bash
    dotnet workload list

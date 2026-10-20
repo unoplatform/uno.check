@@ -839,7 +839,7 @@ function New-Report {
         [void] $body.AppendLine('**How to act on this**')
         [void] $body.AppendLine()
         [void] $body.AppendLine('1. Do not copy the "Available" column straight into the manifest. It is a drift signal, not a validated set.')
-        [void] $body.AppendLine('2. Follow `AGENTS.md` section 5: install the target SDK into a clean folder, `dotnet workload install ios android maui catalyst tvos wasm-tools`, then `dotnet workload list` and transcribe the **Manifest Version** column verbatim (the `version/band` form).')
+        [void] $body.AppendLine('2. Follow `AGENTS.md` section 5: install the target SDK into a clean folder, `dotnet workload install ios android maui catalyst tvos wasm-tools` (`ios android maui-android maui-ios tvos wasm-tools` for the Uno Platform 7 `preview-major` manifest), then `dotnet workload list` and transcribe the **Manifest Version** column verbatim (the `version/band` form).')
         [void] $body.AppendLine('3. Update the `check.variables` block of the affected manifest(s) and open a PR. The CI matrix validates all three manifests on Windows, macOS and Linux.')
         [void] $body.AppendLine('4. Merging to `main` only publishes a `-dev` prerelease. Users get nothing until a `release/stable/X.Y` branch is cut.')
     }

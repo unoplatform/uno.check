@@ -70,12 +70,16 @@ Supported target platforms and their `--target` values:
 |------------------|-----------------------------------------------|
 | WebAssembly      | `web`, `webassembly`, `wasm`                  |
 | iOS              | `ios`                                         |
+| tvOS             | `tvos`                                        |
 | Android          | `android`, `droid`                            |
-| macOS            | `macos`                                       |
+| Mac Catalyst     | `macos`                                       |
 | SkiaDesktop      | `skiadesktop`, `skia`, `desktop`, `linux`     |
 | WinAppSDK        | `winappsdk`, `wasdk`                          |
 | Windows          | `windows`, `win32desktop`, `win32`            |
 | All Platforms    | `all`                                         |
+
+> [!NOTE]
+> `macos` selects the Mac Catalyst head, which Uno Platform 7 removed. With Uno Platform 7, macOS apps use the desktop head: use `--target desktop`.
 
 ### `-m <FILE_OR_URL>`, `--manifest <FILE_OR_URL>` Manifest File or Url
 
@@ -117,6 +121,8 @@ uno-check --pre
 ### `--pre-major`, `--preview-major`
 
 This generally uses the preview builds of the next major version of .NET available.
+
+It currently installs the .NET 11 SDK. Only Uno Platform 7 ships `net11.0` assets, so this channel sets up an Uno Platform 7 machine: it installs no Mac Catalyst workload, splits MAUI into `maui-android` and `maui-ios`, and requires OpenJDK 21 or later for Android. For Uno Platform 7 on .NET 10, use the default channel.
 
 The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 

@@ -50,25 +50,34 @@ namespace DotNetCheck.Checkups
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
-			if (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
+			return (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
+				&& IsRequiredFor(w.Id, TargetPlatforms, _skipMaui);
+		}
+
+		/// <summary>
+		/// Whether a manifest workload is needed for the selected targets. A workload id not listed
+		/// here is never installed, whatever the manifest declares.
+		/// </summary>
+		internal static bool IsRequiredFor(string workloadId, TargetPlatform targetPlatforms, bool skipMaui)
+		{
+			switch (workloadId)
 			{
-				switch (w.Id)
-				{
-					case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
-					case "maui-android" when !_skipMaui && TargetPlatforms.HasFlag(TargetPlatform.Android):
-					case "maui" when !_skipMaui && (TargetPlatforms.HasFlag(TargetPlatform.Android)
-									|| TargetPlatforms.HasFlag(TargetPlatform.iOS)
-									|| TargetPlatforms.HasFlag(TargetPlatform.macOS)):
-					case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
-					case "tvos" when TargetPlatforms.HasFlag(TargetPlatform.tvOS):
-					case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
-					case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
-						return true;
-				}
-
+				case "android" when targetPlatforms.HasFlag(TargetPlatform.Android):
+				case "maui-android" when !skipMaui && targetPlatforms.HasFlag(TargetPlatform.Android):
+				// The Uno 7 channel splits MAUI per platform, because the umbrella "maui" workload
+				// also installs Mac Catalyst, which Uno 7 no longer targets.
+				case "maui-ios" when !skipMaui && targetPlatforms.HasFlag(TargetPlatform.iOS):
+				case "maui" when !skipMaui && (targetPlatforms.HasFlag(TargetPlatform.Android)
+								|| targetPlatforms.HasFlag(TargetPlatform.iOS)
+								|| targetPlatforms.HasFlag(TargetPlatform.macOS)):
+				case "ios" when targetPlatforms.HasFlag(TargetPlatform.iOS):
+				case "tvos" when targetPlatforms.HasFlag(TargetPlatform.tvOS):
+				case "maccatalyst" when targetPlatforms.HasFlag(TargetPlatform.macOS):
+				case "wasm-tools" when targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
+					return true;
+				default:
+					return false;
 			}
-
-			return false;
 		}
 
 		public readonly string SdkRoot;
