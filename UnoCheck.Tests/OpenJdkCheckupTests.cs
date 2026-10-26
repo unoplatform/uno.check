@@ -28,7 +28,7 @@ public class OpenJdkCheckupTests
         => Path.GetFullPath(path);
 
     static OpenJdkInfo Jdk(string home, string? version)
-        => new(Path.Combine(Home(home), "bin", "javac"), version is null ? null! : NuGetVersion.Parse(version));
+        => new(Path.Join(Home(home), "bin", "javac"), version is null ? null! : NuGetVersion.Parse(version));
 
     [Theory]
     [InlineData("javac 17.0.16", "17.0.16")]
