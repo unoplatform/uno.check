@@ -26,6 +26,7 @@ namespace DotNetCheck.Checkups
 		public DirectoryInfo Directory
 			=> new DirectoryInfo(Path.Combine(JavaC.Directory.FullName, ".."));
 
+		// Null when `javac -version` didn't give a version we could read.
 		public NuGetVersion Version { get; set; }
 	}
 
@@ -36,6 +37,11 @@ namespace DotNetCheck.Checkups
 
 		public bool RequireExact
 			=> Manifest?.Check?.OpenJdk?.RequireExact ?? false;
+
+		internal string Requirement
+			=> RequireExact ? $"OpenJDK {Version}" : $"OpenJDK {Version} or later";
+
+		const string LinuxInstallUrl = "https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu";
 
 		public string MajorVersion
 		{
@@ -79,9 +85,16 @@ namespace DotNetCheck.Checkups
 				Util.Exception(ex);
 			}
 
-			var jdks = xamJdks.Concat(FindJdks())
+			var found = xamJdks.Concat(FindJdks())
 				.GroupBy(j => j.Directory.FullName)
 				.Select(g => g.First())
+				.ToList();
+
+			foreach (var unreadable in found.Where(j => j.Version is null))
+				ReportStatus($"{unreadable.JavaC.FullName} (version not recognized)", null);
+
+			var jdks = found
+				.Where(j => j.Version is not null)
 				.OrderBy(s => s.Version);
 
 			var ok = false;
@@ -120,18 +133,48 @@ namespace DotNetCheck.Checkups
             if (ok)
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
+			return Task.FromResult(NoCompatibleJdkResult(found));
+		}
+
+		// OpenJDK is only reported missing when no javac was found at all. Otherwise the message names what was found,
+		// and goes on the result too, so --json reports it instead of falling back to the suggestion.
+		internal DiagnosticResult NoCompatibleJdkResult(IEnumerable<OpenJdkInfo> found)
+		{
+			var message = FormatIncompatibleMessage(Requirement, found);
+
+			if (message is not null)
+				ReportStatus(message, Status.Error);
+
 			if (Util.IsLinux)
 			{
-				return Task.FromResult(new DiagnosticResult(Status.Error, this,
-					new Suggestion($"Install OpenJDK{MajorVersion}", $"OpenJDK {MajorVersion} is missing, follow the installation instructions here: https://learn.microsoft.com/en-us/java/openjdk/install#install-on-ubuntu")));
+				var description = message is null
+					? $"OpenJDK {MajorVersion} is missing, follow the installation instructions here: {LinuxInstallUrl}"
+					: $"Follow the installation instructions here: {LinuxInstallUrl}";
+
+				return new DiagnosticResult(Status.Error, this, message,
+					new Suggestion($"Install OpenJDK{MajorVersion}", description));
 			}
 			else
 			{
 				var url = Manifest?.Check?.OpenJdk?.Url;
-				return Task.FromResult(new DiagnosticResult(Status.Error, this,
+				return new DiagnosticResult(Status.Error, this, message,
 					new Suggestion($"Install OpenJDK{MajorVersion}",
-						new BootsSolution(url, $"Download and Install Microsoft OpenJDK {MajorVersion}"))));
+						new BootsSolution(url, $"Download and Install Microsoft OpenJDK {MajorVersion}")));
 			}
+		}
+
+		internal static string FormatIncompatibleMessage(string requirement, IEnumerable<OpenJdkInfo> found)
+		{
+			var names = (found ?? Enumerable.Empty<OpenJdkInfo>())
+				.Select(j => j.Version is null
+					? $"{j.JavaC.FullName} (version not recognized)"
+					: $"{j.Version} ({j.Directory.FullName})")
+				.ToList();
+
+			if (names.Count == 0)
+				return null;
+
+			return $"{requirement} is required, but none of the JDKs found is compatible: {string.Join(", ", names)}.";
 		}
 
 		IEnumerable<OpenJdkInfo> FindJdks()
@@ -218,10 +261,7 @@ namespace DotNetCheck.Checkups
 						readlinkResult.Success
 						&& r.StandardOutput.Count > 0)
 					{
-						if (TryGetJavaJdkInfo(readlinkResult.StandardOutput[0], out var jdkInfo))
-						{
-							paths.Add(jdkInfo);
-						}
+						paths.Add(GetJavaJdkInfo(readlinkResult.StandardOutput[0]));
 					}
 				}
 			}
@@ -244,28 +284,44 @@ namespace DotNetCheck.Checkups
 
 				foreach (var file in files)
 				{
-					if (!found.Any(f => f.JavaC.FullName.Equals(file.FullName)) && TryGetJavaJdkInfo(file.FullName, out var jdkInfo))
-						found.Add(jdkInfo);
+					if (!found.Any(f => f.JavaC.FullName.Equals(file.FullName)))
+						found.Add(GetJavaJdkInfo(file.FullName));
 				}
 			}
 		}
 
 		static readonly Regex rxJavaCVersion = new Regex("[0-9\\.\\-_]+", RegexOptions.Singleline);
 
-		bool TryGetJavaJdkInfo(string javacFilename, out OpenJdkInfo javaJdkInfo)
+		// Captures the first four numeric parts of a longer version, e.g. 17.0.21.0 in 17.0.21.0.2.
+		static readonly Regex rxExtraVersionParts = new Regex("^([0-9]+(?:\\.[0-9]+){3})(?:\\.[0-9]+)+");
+
+		// A javac whose version can't be read is kept, with no version, so it's reported rather than dropped.
+		static OpenJdkInfo GetJavaJdkInfo(string javacFilename)
 		{
 			var r = ShellProcessRunner.Run(javacFilename, "-version");
-			var m = rxJavaCVersion.Match(r.GetOutput() ?? string.Empty);
 
-			var v = m?.Value;
+			TryParseJavaCVersion(r.GetOutput(), out var version);
 
-			if (!string.IsNullOrEmpty(v) && NuGetVersion.TryParse(v, out var version))
+			return new OpenJdkInfo(javacFilename, version);
+		}
+
+		internal static bool TryParseJavaCVersion(string javacOutput, out NuGetVersion version)
+		{
+			var v = rxJavaCVersion.Match(javacOutput ?? string.Empty).Value;
+
+			// NuGetVersion takes at most four numeric parts, but Microsoft OpenJDK builds can report five (17.0.21.0.2).
+			// The first four are enough to compare against the manifest, and the full string is kept for display.
+			var trimmed = rxExtraVersionParts.Replace(v, "$1");
+
+			if (!string.IsNullOrEmpty(trimmed) && NuGetVersion.TryParse(trimmed, out var parsed))
 			{
-				javaJdkInfo = new OpenJdkInfo(javacFilename, version);
+				version = trimmed == v
+					? parsed
+					: new NuGetVersion(parsed.Version, parsed.ReleaseLabels, parsed.Metadata, v);
 				return true;
 			}
 
-			javaJdkInfo = default;
+			version = null;
 			return false;
 		}
 	}
