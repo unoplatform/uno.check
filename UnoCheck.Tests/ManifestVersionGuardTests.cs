@@ -51,7 +51,7 @@ public class ManifestVersionGuardTests
             var mismatched = (sdk.Workloads ?? [])
                 .Where(workload => workload.Version?.Contains('/') == true)
                 .Select(workload => (workload.Id, Band: workload.Version!.Split('/')[1]))
-                .Where(workload => workload.Band != sdkBand)
+                .Where(workload => !IsVisibleToSdkBand(workload.Band, sdkBand))
                 .ToArray();
 
             Assert.True(
@@ -62,6 +62,36 @@ public class ManifestVersionGuardTests
                 + "NETSDK1147, and --fix installs the out-of-band SDK over the one they provisioned.");
         }
     }
+
+    /// <summary>
+    /// A workload band matches the SDK band, or is an earlier prerelease of the same feature band:
+    /// out-of-band RCs ship a new SDK band while the workload set keeps the previous RC's manifests
+    /// (11.0.100-rc.3 pairs android 37.2.0-rc.2.84/11.0.100-rc.2).
+    /// </summary>
+    private static bool IsVisibleToSdkBand(string workloadBand, string sdkBand)
+    {
+        if (workloadBand == sdkBand)
+        {
+            return true;
+        }
+
+        return NuGetVersion.TryParse(workloadBand, out var workload)
+            && NuGetVersion.TryParse(sdkBand, out var sdk)
+            && workload.IsPrerelease
+            && sdk.IsPrerelease
+            && workload.Version == sdk.Version
+            && workload < sdk;
+    }
+
+    [Theory]
+    [InlineData("11.0.100-rc.2", "11.0.100-rc.3", true)]
+    [InlineData("11.0.100-rc.3", "11.0.100-rc.3", true)]
+    [InlineData("11.0.100-rc.3", "11.0.100-rc.2", false)]
+    [InlineData("10.0.100", "10.0.300", false)]
+    [InlineData("11.0.100-rc.2", "11.0.100", false)]
+    [InlineData("10.0.100-rc.2", "11.0.100-rc.3", false)]
+    public void IsVisibleToSdkBand_AllowsOnlyEarlierPrereleasesOfTheSameBand(string workloadBand, string sdkBand, bool expected)
+        => Assert.Equal(expected, IsVisibleToSdkBand(workloadBand, sdkBand));
 
     /// <summary>
     /// The SDK feature band, as it appears after the slash in a workload manifest version:
