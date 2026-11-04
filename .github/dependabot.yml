@@ -1,0 +1,16 @@
+version: 2
+updates:
+  # GitHub Actions used by the workflows and the tag-release composite action. The actions are pinned to commit SHAs;
+  # Dependabot proposes new releases by updating both the SHA and the version comment.
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/workflows/actions/tag-release"
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci
