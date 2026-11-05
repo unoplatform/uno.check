@@ -43,14 +43,14 @@ public class TelemetryClientTests
     [Fact]
     public void FormatRequestedFrameworks_KeepsAtMostTenFrameworks()
     {
-        // Arrange
-        var frameworks = Enumerable.Range(10, 15).Select(i => $"net{i}.0").ToArray();
+        // Arrange: reversed, so keeping 10 before sorting would keep net15.0 to net24.0
+        var frameworks = Enumerable.Range(10, 15).Reverse().Select(i => $"net{i}.0").ToArray();
 
         // Act
         var result = TelemetryClient.FormatRequestedFrameworks(frameworks);
 
         // Assert
-        Assert.Equal(10, result.Split(',').Length);
+        Assert.Equal("net10.0,net11.0,net12.0,net13.0,net14.0,net15.0,net16.0,net17.0,net18.0,net19.0", result);
     }
 
     [Fact]
