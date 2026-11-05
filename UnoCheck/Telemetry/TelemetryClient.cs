@@ -32,18 +32,15 @@ internal static class TelemetryClient
         }
     }
 
+    // Caps keep the RequestedFrameworks property short and bounded in size.
+    private const int MaxFrameworkLength = 32;
+    private const int MaxFrameworkCount = 10;
+
     public static void TrackStartCheck(string[] requestedFrameworks)
     {
         try
         {
-            // Remove strings that are not of the format net8.0 or net8.0-XXXXX, using a regex
-            var frameworks = string.Join(
-                ",",
-                requestedFrameworks?
-                    .OrderBy(s => s)
-                    .Where(f => System.Text.RegularExpressions.Regex.IsMatch(f, @"^net\d+(\.0)(?:-[a-zA-Z0-9.]+)*$"))
-                    .Select(s => s[..32])
-                    .Take(10) ?? []);
+            var frameworks = FormatRequestedFrameworks(requestedFrameworks);
 
             _telemetry.TrackEvent(
                 "check-start",
@@ -60,6 +57,19 @@ internal static class TelemetryClient
 #endif
         }
     }
+
+    /// <summary>
+    /// Builds the RequestedFrameworks value: the TFMs shaped like net8.0 or net8.0-xxx, sorted,
+    /// each cut to <see cref="MaxFrameworkLength"/> characters, at most <see cref="MaxFrameworkCount"/>.
+    /// </summary>
+    internal static string FormatRequestedFrameworks(string[] requestedFrameworks)
+        => string.Join(
+            ",",
+            requestedFrameworks?
+                .OrderBy(s => s)
+                .Where(f => System.Text.RegularExpressions.Regex.IsMatch(f, @"^net\d+(\.0)(?:-[a-zA-Z0-9.]+)*$"))
+                .Select(s => s.Length > MaxFrameworkLength ? s[..MaxFrameworkLength] : s)
+                .Take(MaxFrameworkCount) ?? []);
 
     public static void TrackCheckSuccess(TimeSpan elapsed)
     {
