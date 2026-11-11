@@ -143,18 +143,19 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
+         # Uno Platform 7 TFMs: .NET 11 is Uno 7 only, which has no Mac Catalyst head.
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test default Uno template TFMs with net10
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
+           manifest_name: Test default Uno 7 template TFMs with net11
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios --tfm net11.0-windows10.0.19041 --tfm net11.0-browserwasm --tfm net11.0-desktop'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-android\ios TFMs
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios'
+           manifest_name: Test net11.0-android\ios TFMs
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-browserwasm TFM
-           tool_params: '--tfm net10.0-browserwasm'
+           manifest_name: Test net11.0-browserwasm TFM
+           tool_params: '--tfm net11.0-browserwasm'
          - manifest: 'manifests\uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-tvos TFM
-           tool_params: '--tfm net10.0-tvos'
+           manifest_name: Test net11.0-tvos TFM
+           tool_params: '--tfm net11.0-tvos'
 
     env:
       DOTNET_INSTALL_DIR: '${{ github.workspace }}\.dotnet'
@@ -372,19 +373,19 @@ jobs:
            manifest_name: Test net9.0-tvos TFM
            tool_params: '--tfm net9.0-tvos'
 
-         # preview major
+         # preview major: Uno Platform 7 TFMs (.NET 11 is Uno 7 only, which has no Mac Catalyst head)
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test default Uno template TFMs with net10
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios --tfm net10.0-maccatalyst --tfm net10.0-windows10.0.19041 --tfm net10.0-browserwasm --tfm net10.0-desktop'
+           manifest_name: Test default Uno 7 template TFMs with net11
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios --tfm net11.0-windows10.0.19041 --tfm net11.0-browserwasm --tfm net11.0-desktop'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-android\ios TFMs
-           tool_params: '--tfm net10.0-android --tfm net10.0-ios'
+           manifest_name: Test net11.0-android\ios TFMs
+           tool_params: '--tfm net11.0-android --tfm net11.0-ios'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-browserwasm TFM
-           tool_params: '--tfm net10.0-browserwasm'
+           manifest_name: Test net11.0-browserwasm TFM
+           tool_params: '--tfm net11.0-browserwasm'
          - manifest: 'manifests/uno.ui-preview-major.manifest.json'
-           manifest_name: Test net10.0-tvos TFM
-           tool_params: '--tfm net10.0-tvos'
+           manifest_name: Test net11.0-tvos TFM
+           tool_params: '--tfm net11.0-tvos'
 
     steps:
       - name: Checkout
@@ -412,10 +413,32 @@ jobs:
           toolVersion: 3.6.139
           setAllVars: true
 
-      - uses: actions/setup-java@v3
-        with:
-          distribution: 'microsoft' # See 'Supported distributions' for available options
-          java-version: '21'
+      # On Linux uno-check cannot install a JDK, so the job must provide the one the manifest under
+      # test requires; its check.openjdk.version is read here so the two cannot drift apart.
+      # setup-java's Microsoft list stops at 21.0.11 and packages.microsoft.com has no OpenJDK packages
+      # for Ubuntu 26.04, so install the Microsoft tarball, the same source as the manifest's Windows
+      # and macOS URLs. The OpenJDK checkup only accepts a JDK whose path contains "microsoft" or
+      # "openjdk", hence the directory name.
+      - name: Install the manifest's OpenJDK
+        env:
+          MANIFEST: ${{ matrix.manifest }}
+        run: |
+          MSOPENJDK_VERSION="$(jq -r '.check.openjdk.version' "${MANIFEST}")"
+          if [[ ! "${MSOPENJDK_VERSION}" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            echo "::error file=${MANIFEST}::check.openjdk.version must be a literal version, got '${MSOPENJDK_VERSION}'."
+            exit 1
+          fi
+          echo "Installing Microsoft OpenJDK ${MSOPENJDK_VERSION}, required by ${MANIFEST}"
+          archive="microsoft-jdk-${MSOPENJDK_VERSION}-linux-x64.tar.gz"
+          jdk_home="${RUNNER_TEMP}/microsoft-jdk-${MSOPENJDK_VERSION}"
+          cd "${RUNNER_TEMP}"
+          curl -fsSL -o "${archive}" "https://aka.ms/download-jdk/${archive}"
+          curl -fsSL "https://aka.ms/download-jdk/${archive}.sha256sum.txt" | sha256sum -c -
+          mkdir -p "${jdk_home}"
+          tar -xzf "${archive}" -C "${jdk_home}" --strip-components=1
+          "${jdk_home}/bin/javac" -version
+          echo "JAVA_HOME=${jdk_home}" >> "$GITHUB_ENV"
+          echo "${jdk_home}/bin" >> "$GITHUB_PATH"
 
       - name: Install and Run Previous Tool
         if: ${{ contains(matrix.previous_tool_version, '.') }}

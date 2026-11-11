@@ -79,6 +79,38 @@ public class ToolInfoTests
         Assert.NotNull(manifest.Check.Variables);
     }
 
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(null, false)]
+    public void IncludePrereleaseUnoPackages_FollowsManifest(bool? manifestIncludePrerelease, bool expected)
+    {
+        // Arrange
+        var manifest = new Manifest
+        {
+            Check = new Check
+            {
+                UnoPackages = manifestIncludePrerelease is { } include ? new UnoPackages { IncludePrerelease = include } : null
+            }
+        };
+
+        // Act
+        var actual = ToolInfo.IncludePrereleaseUnoPackages(manifest);
+
+        // Assert
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void IncludePrereleaseUnoPackages_NoManifest_UsesStableVersions()
+    {
+        // Act
+        var actual = ToolInfo.IncludePrereleaseUnoPackages(null);
+
+        // Assert
+        Assert.False(actual);
+    }
+
     [Fact]
     public void Validate_MissingToolVersion_NonStrict_ReturnsTrue()
     {

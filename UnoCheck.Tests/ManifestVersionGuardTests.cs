@@ -112,6 +112,121 @@ public class ManifestVersionGuardTests
         return labels.Length == 0 ? band : $"{band}-{string.Join('.', labels)}";
     }
 
+    /// <summary>
+    /// The pre-major manifest tracks the next .NET major, which only Uno Platform 7 and later support,
+    /// and Uno 7 removed the Mac Catalyst target. Any workload that installs Mac Catalyst is excluded:
+    /// maccatalyst and maui-maccatalyst directly, and maui and maui-desktop because they extend
+    /// maui-maccatalyst. The default and preview manifests keep maccatalyst and maui, since they also
+    /// serve Uno Platform 6 projects with a Mac Catalyst head.
+    /// </summary>
+    [Fact]
+    public async Task PreMajorManifest_DoesNotInstallMacCatalyst()
+    {
+        var manifest = await Manifest.FromEmbeddedResource(Manifest.PreviewMajorManifestResourceName);
+
+        var catalystWorkloads = manifest.Check.DotNet.Sdks
+            .SelectMany(sdk => sdk.Workloads ?? [])
+            .Select(workload => workload.Id)
+            .Where(InstallsMacCatalyst)
+            .ToArray();
+
+        Assert.True(
+            catalystWorkloads.Length == 0,
+            $"The pre-major manifest targets Uno 7, which has no Mac Catalyst head, but installs: {string.Join(", ", catalystWorkloads)}. "
+            + "Use maui-android and maui-ios instead of maui.");
+    }
+
+    [Theory]
+    [InlineData("maccatalyst", true)]
+    [InlineData("maui-maccatalyst", true)]
+    [InlineData("maui", true)]
+    [InlineData("maui-desktop", true)]
+    [InlineData("maui-android", false)]
+    [InlineData("maui-ios", false)]
+    [InlineData("ios", false)]
+    public void InstallsMacCatalyst_MatchesEveryWorkloadThatInstallsIt(string workloadId, bool expected)
+        => Assert.Equal(expected, InstallsMacCatalyst(workloadId));
+
+    private static bool InstallsMacCatalyst(string workloadId)
+        => workloadId.Contains("maccatalyst", StringComparison.OrdinalIgnoreCase)
+            || workloadId is "maui" or "maui-desktop";
+
+    /// <summary>
+    /// The .NET 11 Android workload requires JDK 21 or newer (MinimumSupportedJavaSdkVersion 21.0,
+    /// dotnet/android#12478); an older JDK passes this check but fails the build with XA0031.
+    /// </summary>
+    [Fact]
+    public async Task EmbeddedManifests_OnDotNet11OrLater_RequireJdk21OrLater()
+    {
+        var manifests = await LoadDotNet11OrLaterManifestsAsync();
+
+        Assert.NotEmpty(manifests);
+        foreach (var (name, manifest) in manifests)
+        {
+            Assert.True(
+                Version.TryParse(manifest.Check.OpenJdk?.CompatVersion, out var jdkVersion),
+                $"{name} does not pin a parsable OpenJDK version.");
+            Assert.True(
+                jdkVersion!.Major >= 21,
+                $"{name} pins OpenJDK {jdkVersion}, but the .NET 11 Android workload requires JDK 21 or newer.");
+        }
+    }
+
+    /// <summary>
+    /// The .NET 11 SDK requires MSBuild 18.7 or newer (dotnet/sdk src/Layout/redist/minimumMSBuildVersion);
+    /// an older Visual Studio passes this check but cannot load the SDK.
+    /// </summary>
+    [Fact]
+    public async Task EmbeddedManifests_OnDotNet11OrLater_RequireVisualStudio18_7OrLater()
+    {
+        var manifests = await LoadDotNet11OrLaterManifestsAsync();
+
+        Assert.NotEmpty(manifests);
+        foreach (var (name, manifest) in manifests)
+        {
+            Assert.True(
+                NuGetVersion.TryParse(manifest.Check.VSWin?.MinimumVersion, out var vsVersion),
+                $"{name} does not set a parsable Visual Studio minimum version.");
+            Assert.True(
+                vsVersion! >= new NuGetVersion(18, 7, 0),
+                $"{name} requires Visual Studio {vsVersion}, but the .NET 11 SDK needs MSBuild 18.7 or newer.");
+        }
+    }
+
+    /// <summary>
+    /// Uno Platform 7.0 is stable, so every manifest, pre-major included, installs stable Uno templates and Uno.Sdk.
+    /// Set <c>unoPackages.includePrerelease</c> only while a manifest's .NET SDK needs an unreleased Uno major.
+    /// </summary>
+    [Theory]
+    [InlineData(Manifest.DefaultManifestResourceName)]
+    [InlineData(Manifest.PreviewManifestResourceName)]
+    [InlineData(Manifest.PreviewMajorManifestResourceName)]
+    public async Task EmbeddedManifest_InstallsStableUnoPackages(string manifestResourceName)
+    {
+        var manifest = await Manifest.FromEmbeddedResource(manifestResourceName);
+
+        Assert.False(manifest.Check.UnoPackages?.IncludePrerelease ?? false);
+    }
+
+    private static async Task<(string Name, Manifest Manifest)[]> LoadDotNet11OrLaterManifestsAsync()
+    {
+        var manifests = new List<(string, Manifest)>();
+
+        foreach (var name in EmbeddedManifestResourceNames.Select(row => (string)row[0]))
+        {
+            var manifest = await Manifest.FromEmbeddedResource(name);
+
+            if (manifest.Check.Variables.TryGetValue("DOTNET_SDK_VERSION", out var sdkVersion)
+                && NuGetVersion.TryParse(sdkVersion?.ToString(), out var version)
+                && version.Major >= 11)
+            {
+                manifests.Add((name, manifest));
+            }
+        }
+
+        return manifests.ToArray();
+    }
+
     [Theory]
     [MemberData(nameof(EmbeddedManifestResourceNames))]
     public async Task EmbeddedManifest_DefinesWasmToolsWorkloadForWebAssembly(string manifestResourceName)

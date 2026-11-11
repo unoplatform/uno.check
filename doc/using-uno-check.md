@@ -128,6 +128,16 @@ uno-check --target desktop --target web # or ios, android, windows
 
 This command avoids installing tooling that is not needed.
 
+### Run uno-check for Uno Platform 7
+
+Use the default channel, without `--pre` or `--pre-major`:
+
+```bash
+uno-check --target desktop --target web --target android --target ios
+```
+
+Uno Platform 7 removed the Mac Catalyst head: macOS apps use the desktop head, so use `--target desktop` instead of `--target macos`. You can also pass your project's target frameworks with `--tfm` (for example `--tfm net11.0-android --tfm net11.0-desktop`), and uno-check derives the targets from them.
+
 See [Command line arguments](xref:UnoCheck.Configuration#command-line-arguments) for more details
 
 ### Run uno-check in readonly mode on Windows

@@ -16,6 +16,7 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     private readonly bool _uninstallLegacy;
     private readonly bool _uninstallExisting;
     private readonly NuGetVersion? _requestedVersion;
+    private readonly bool _includePrerelease;
 
     /// <summary>
     /// <c>dotnet new install/uninstall</c> writes the per-user template engine store
@@ -23,20 +24,25 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     /// </summary>
     public override bool RequiresElevation => false;
 
+    /// <param name="includePrerelease">
+    /// Without <paramref name="requestedVersion"/>, install the latest prerelease instead of the latest stable version.
+    /// </param>
     public DotNetNewTemplatesInstallSolution(
-        bool uninstallLegacy, 
-        bool uninstallExisting, 
-        NuGetVersion? requestedVersion = null)
+        bool uninstallLegacy,
+        bool uninstallExisting,
+        NuGetVersion? requestedVersion = null,
+        bool includePrerelease = false)
     {
         _uninstallLegacy = uninstallLegacy;
         _uninstallExisting = uninstallExisting;
         _requestedVersion = requestedVersion;
+        _includePrerelease = includePrerelease;
     }
 
     public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
     {
         var version = _requestedVersion ??
-            await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, ToolInfo.CurrentVersion.IsPrerelease);
+            await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, _includePrerelease);
         var dotnet = DotNetSdk.ResolveExecutable(sharedState);
 
         // The uninstalls are best-effort housekeeping: 'dotnet new uninstall' exits non-zero

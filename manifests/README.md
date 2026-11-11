@@ -19,6 +19,17 @@ Used with `--pre` / `--preview`. Tracks in-band previews of the current .NET maj
 Used with `--pre-major` / `--preview-major`. Tracks previews of the *next* .NET major:
 - `uno.ui-preview-major.manifest.json`
 
+Only Uno Platform 7 and later support the next .NET major, and Uno 7 removed the Mac Catalyst head, so this
+manifest installs no `maccatalyst` workload, and it uses `maui-android` and `maui-ios` instead of `maui`, because
+`maui` also installs Mac Catalyst. Today it otherwise pins the same .NET 11 SDK and workload versions as the default
+and preview manifests. Those keep `maccatalyst` and `maui`, since they also serve Uno Platform 6 projects with a
+Mac Catalyst head. uno-check doesn't uninstall workloads, so a machine set up by an earlier pre-major manifest
+keeps `maui` and `maccatalyst`.
+The .NET 11 Android workload requires JDK 21 or later, and the .NET 11 SDK requires Visual Studio (MSBuild) 18.7
+or later. `ManifestVersionGuardTests` enforces these two rules for every .NET 11+ manifest, and the Mac Catalyst
+rule for this one. Uno Platform 7.0 is stable, so this manifest installs the latest stable Uno Platform templates and
+Uno.Sdk, like the others. Set `unoPackages.includePrerelease` only while a manifest's .NET SDK needs an unreleased Uno major.
+
 ### Main
 Used with `--main` / `--dev-manifest`. This is the only channel that is **not** embedded: it is fetched at
 runtime from `main`, so changes take effect without a tool release.
@@ -33,6 +44,7 @@ To update the manifest, the usual process is:
    ```bash
    dotnet workload install ios android maccatalyst tvos maui wasm-tools
    ```
+   For `uno.ui-preview-major.manifest.json` (Uno Platform 7), install `ios android tvos maui-android maui-ios wasm-tools` instead.
 3. Run:
    ```bash
    dotnet workload list

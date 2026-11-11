@@ -84,6 +84,14 @@ namespace DotNetCheck
 		public static NuGetVersion CurrentVersion
 			=> NuGetVersion.Parse(FileVersionInfo.GetVersionInfo(typeof(ToolInfo).Assembly.Location).FileVersion);
 
+		/// <summary>
+		/// Whether the Uno Platform packages uno-check installs (Uno.Templates, Uno.Sdk) resolve to
+		/// their latest prerelease. The manifest decides (<c>unoPackages.includePrerelease</c>), not the
+		/// command line, so a manifest loaded with <c>--manifest</c> behaves like its channel.
+		/// </summary>
+		internal static bool IncludePrereleaseUnoPackages(Manifest.Manifest? manifest)
+			=> manifest?.Check?.UnoPackages?.IncludePrerelease ?? false;
+
 		public static bool Validate(Manifest.Manifest manifest, bool strictManifest = false)
 		{
 			var toolVersion = manifest?.Check?.ToolVersion;
