@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using DotNetCheck.Models;
+using Polly;
 using Xamarin.Android.Tools;
 using Xamarin.Installer.AndroidSDK;
 using Xamarin.Installer.AndroidSDK.Common;
@@ -25,6 +29,11 @@ namespace DotNetCheck.Checkups
 		public override string Title => "Android SDK";
 
 		List<string> temporaryFiles = new List<string>();
+
+		const int DownloadRetries = 3;
+
+		// Bounds each network read rather than the whole download, as a system image is ~1.5 GB.
+		static readonly TimeSpan DownloadStallTimeout = TimeSpan.FromMinutes(5);
 
 		public override bool IsPlatformSupported(Platform platform)
 			=> platform == Platform.OSX || platform == Platform.Windows || platform == Platform.Linux;
@@ -232,7 +241,7 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 							{
 									// Provide a default timeout value of 7 minutes if a value is not provided.
 								httpClient.Timeout = TimeSpan.FromMinutes(120);
-								await Task.WhenAll(downloads.Where(d => (d.HostArch == null) || (d.HostArch == (Util.IsArm64 ? "aarch64" : "x64"))).Select(d => Download(httpClient, d)));
+								await Task.WhenAll(downloads.Where(d => (d.HostArch == null) || (d.HostArch == (Util.IsArm64 ? "aarch64" : "x64"))).Select(d => Download(httpClient, d, cancelToken)));
 							}
 
 							if (ShouldInstallThroughStaging(Util.IsWindows, Util.IsDirectoryWritable(sdkInstance.Path)))
@@ -336,42 +345,124 @@ For more information see: [underline]https://aka.ms/dotnet-androidsdk-help[/]";
 			return default;
 		}
 
-		async Task Download(HttpClient httpClient, Archive archive)
+		async Task Download(HttpClient httpClient, Archive archive, CancellationToken cancellationToken)
 		{
 			ReportStatus($"Downloading {archive.Url} ...", null);
 
-			using (var response = await httpClient.GetAsync(archive.Url, HttpCompletionOption.ResponseHeadersRead))
-			{
-				response.EnsureSuccessStatusCode();
-				var fileLength = response.Content.Headers.ContentLength.Value;
-				var path = Path.GetTempFileName();
+			var path = Path.GetTempFileName();
+			lock (temporaryFiles)
 				temporaryFiles.Add(path);
-				using (var fileStream = File.OpenWrite(path))
+
+			await DownloadArchiveAsync(httpClient, archive.Url, path, (long)archive.Size, DownloadRetries, DownloadStallTimeout,
+				status => ReportStatus(status, null), Task.Delay, cancellationToken);
+
+			ReportStatus($"Wrote '{archive.Url}' to '{path}'.", null);
+			archive.DownloadedFilePath = path;
+		}
+
+		/// <summary>
+		/// Downloads <paramref name="url"/> to <paramref name="path"/>. A dropped, stalled or short transfer is
+		/// retried, resuming from the bytes already written when the server honors the Range request.
+		/// </summary>
+		internal static async Task DownloadArchiveAsync(HttpClient client, Uri url, string path, long expectedSize,
+			int retries, TimeSpan stallTimeout, Action<string> reportStatus,
+			Func<TimeSpan, CancellationToken, Task> delay, CancellationToken cancellationToken)
+		{
+			var fileName = Path.GetFileName(url.AbsolutePath);
+			EntityTagHeaderValue etag = null;
+
+			await Policy.Handle<HttpRequestException>().Or<TimeoutException>()
+				.RetryAsync(retries, async (exception, attempt) =>
 				{
-					using (var httpStream = await response.Content.ReadAsStreamAsync())
+					reportStatus($"Download of {fileName} interrupted ({exception.Message}); retrying ({attempt}/{retries}) ...");
+					await delay(TimeSpan.FromSeconds(Math.Pow(2, Math.Min(attempt - 1, 4))), cancellationToken);
+				})
+				.ExecuteAsync(async token =>
+				{
+					using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+					timeout.CancelAfter(stallTimeout);
+					try
 					{
-						var buffer = new byte[16 * 1024];
-						int bytesRead;
-						double bytesWritten = 0;
-						double previousProgress = 0;
-						while ((bytesRead = httpStream.Read(buffer, 0, buffer.Length)) > 0)
+						var written = new FileInfo(path) is { Exists: true } file ? file.Length : 0;
+
+						using var request = new HttpRequestMessage(HttpMethod.Get, url);
+						if (written > 0)
 						{
-							fileStream.Write(buffer, 0, bytesRead);
-							bytesWritten += bytesRead;
-							// Log download progress roughly every 10%.
-							var progress = bytesWritten / fileLength;
-							if (progress - previousProgress > .10)
+							request.Headers.Range = new RangeHeaderValue(written, null);
+							// If the file changed on the server since, it answers 200 with all of it.
+							if (etag != null)
+								request.Headers.IfRange = new RangeConditionHeaderValue(etag);
+						}
+
+						using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+						var status = (int)response.StatusCode;
+						var resumed = response.StatusCode == HttpStatusCode.PartialContent
+							&& response.Content.Headers.ContentRange?.From == written;
+						if (status == 416 || (response.StatusCode == HttpStatusCode.PartialContent && !resumed))
+						{
+							// The bytes written don't match the file on the server: start over.
+							File.Delete(path);
+							throw new HttpRequestException($"Downloading {fileName} could not resume (HTTP {status}).");
+						}
+						if (status == 408 || status == 429 || status >= 500)
+							throw new HttpRequestException($"Downloading {fileName} returned HTTP {status}.");
+						if (!response.IsSuccessStatusCode)
+							throw new InvalidOperationException($"Downloading {fileName} returned HTTP {status} ({response.ReasonPhrase}).");
+
+						if (!resumed)
+						{
+							written = 0;
+							etag = response.Headers.ETag is { IsWeak: false } tag ? tag : null;
+						}
+
+						var total = response.Content.Headers.ContentRange?.Length
+							?? written + response.Content.Headers.ContentLength
+							?? (expectedSize > 0 ? expectedSize : null);
+
+						using (var input = await response.Content.ReadAsStreamAsync())
+						using (var output = new FileStream(path, resumed ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+						{
+							var buffer = new byte[81920];
+							var previousProgress = total > 0 ? (double)written / total.Value : 0;
+							while (true)
 							{
-								ReportStatus($"Downloaded {progress:P0} of {Path.GetFileName(archive.Url.AbsolutePath)} ...", null);
-								previousProgress = progress;
+								timeout.CancelAfter(stallTimeout);
+								int read;
+								try
+								{
+									read = await input.ReadAsync(buffer, 0, buffer.Length, timeout.Token);
+								}
+								catch (IOException ex)
+								{
+									throw new HttpRequestException($"Downloading {fileName} was interrupted after {written} bytes.", ex);
+								}
+								if (read == 0)
+									break;
+								await output.WriteAsync(buffer, 0, read, timeout.Token);
+								written += read;
+
+								// Log download progress roughly every 10%.
+								var progress = total > 0 ? (double)written / total.Value : 0;
+								if (progress - previousProgress > .10)
+								{
+									reportStatus($"Downloaded {progress:P0} of {fileName} ...");
+									previousProgress = progress;
+								}
 							}
 						}
-						fileStream.Flush();
+
+						if (total.HasValue && written != total)
+						{
+							if (written > total)
+								File.Delete(path);
+							throw new HttpRequestException($"Downloaded {written} of {total} bytes of {fileName}.");
+						}
 					}
-				}
-				ReportStatus($"Wrote '{archive.Url}' to '{path}'.", null);
-				archive.DownloadedFilePath = path;
-			}
+					catch (OperationCanceledException ex) when (!token.IsCancellationRequested)
+					{
+						throw new TimeoutException($"Downloading {fileName} stalled.", ex);
+					}
+				}, cancellationToken);
 		}
 	}
 }
