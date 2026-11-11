@@ -7,15 +7,18 @@ on:
       - main
       - release/**
 
+permissions:
+  contents: read
+
 jobs:
   commitsar:
     name: Commitsar
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
 
     - name: Commitsar
-      uses: docker://aevea/commitsar:0.16.0
+      uses: docker://aevea/commitsar@sha256:061b1c1a4993eb949eb6113789f343dc9dba56f3e108fd0fc691827861e3432b # 0.16.0
