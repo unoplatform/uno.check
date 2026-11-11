@@ -61,9 +61,9 @@ namespace DotNetCheck.Checkups
 				{
 					avds.AddRange(avdManager.ListAvds());
 				}
-				catch (Exception ex)
+				catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
 				{
-					// An avdmanager failure falls back to the AVD files, like an empty list does.
+					// Running avdmanager or reading an AVD failed: fall back to the AVD files, like an empty list does.
 					Util.Exception(ex);
 				}
 			}
