@@ -2,7 +2,7 @@
   "check": {
     "toolVersion": "1.14.0",
     "variables": {
-      "OPENJDK_VERSION": "17.0.19",
+      "OPENJDK_VERSION": "21.0.12",
       "DOTNET_SDK_VERSION": "11.0.100",
       "MACCATALYST_SDK_VERSION": "27.2.11039/11.0.100",
       "IOS_SDK_VERSION": "27.2.11039/11.0.100",
@@ -14,7 +14,7 @@
     "variableMappers": [
     ],
     "openjdk": {
-      "version": "17.0.19",
+      "version": "21.0.12",
       "urls": {
         "win64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-x64.msi",
         "winArm64": "https://aka.ms/download-jdk/microsoft-jdk-$(OPENJDK_VERSION)-windows-aarch64.msi",
@@ -26,7 +26,7 @@
       "minimumVersion": "27.2"
     },
     "vswin": {
-      "minimumVersion": "18.0"
+      "minimumVersion": "18.7"
     },
     "android": {
       "packages": [

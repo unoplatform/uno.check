@@ -35,6 +35,7 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
 
         var legacyVersion = GetInstalledVersion(dotnetOutput, _unoLegacyTemplatesOutputRegex);
         var version = GetInstalledVersion(dotnetOutput, _unoTemplatesOutputRegex);
+        var includePrerelease = ToolInfo.IncludePrereleaseUnoPackages(Manifest);
         if (version is null)
         {
             return new(
@@ -42,12 +43,10 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
                 this,
                 new Suggestion(
                     $"The {TemplatesDisplayName} dotnet new command line templates are not installed.",
-                    new DotNetNewTemplatesInstallSolution(legacyVersion is not null, false)));
+                    new DotNetNewTemplatesInstallSolution(legacyVersion is not null, false, includePrerelease: includePrerelease)));
         }
 
-        var latestVersion = await NuGetHelper.GetLatestPackageVersionAsync(
-            PackageName,
-            ToolInfo.CurrentVersion.IsPrerelease);
+        var latestVersion = await NuGetHelper.GetLatestPackageVersionAsync(PackageName, includePrerelease);
 
         if (latestVersion > version)
         {

@@ -28,7 +28,7 @@ namespace DotNetCheck.Checkups
 			{
 				state.TryGetState("unosdk", "unoSdkLatestVersion", out unoSdkVersion);
 
-				unoSdkVersion ??= (await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.CurrentVersion.IsPrerelease)).ToString();	
+				unoSdkVersion ??= (await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.IncludePrereleaseUnoPackages(Manifest))).ToString();
 			}
 
 			var defaultSettings = Settings.LoadDefaultSettings(root: null);

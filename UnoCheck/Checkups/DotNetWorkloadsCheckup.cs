@@ -43,32 +43,62 @@ namespace DotNetCheck.Checkups
 
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
+			_macCatalystTargetWarning = GetMacCatalystTargetWarning(requiredWorkloads, TargetPlatforms);
 		}
+
+		private readonly string _macCatalystTargetWarning;
 
 		private bool FilterPlatform(Manifest.DotNetWorkload w)
 		{
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
-			if (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
-			{
-				switch (w.Id)
-				{
-					case "android" when TargetPlatforms.HasFlag(TargetPlatform.Android):
-					case "maui-android" when !_skipMaui && TargetPlatforms.HasFlag(TargetPlatform.Android):
-					case "maui" when !_skipMaui && (TargetPlatforms.HasFlag(TargetPlatform.Android)
-									|| TargetPlatforms.HasFlag(TargetPlatform.iOS)
-									|| TargetPlatforms.HasFlag(TargetPlatform.macOS)):
-					case "ios" when TargetPlatforms.HasFlag(TargetPlatform.iOS):
-					case "tvos" when TargetPlatforms.HasFlag(TargetPlatform.tvOS):
-					case "maccatalyst" when TargetPlatforms.HasFlag(TargetPlatform.macOS):
-					case "wasm-tools" when TargetPlatforms.HasFlag(TargetPlatform.WebAssembly):
-						return true;
-				}
+			return (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
+				&& IsRequiredFor(w.Id, TargetPlatforms, _skipMaui);
+		}
 
+		/// <summary>
+		/// Whether a manifest workload is needed for the selected targets. A workload id not listed
+		/// here is never installed, whatever the manifest declares.
+		/// </summary>
+		internal static bool IsRequiredFor(string workloadId, TargetPlatform targetPlatforms, bool skipMaui)
+		{
+			switch (workloadId)
+			{
+				case "android" when targetPlatforms.HasFlag(TargetPlatform.Android):
+				case "maui-android" when !skipMaui && targetPlatforms.HasFlag(TargetPlatform.Android):
+				// The Uno 7 channel splits MAUI per platform, because the umbrella "maui" workload
+				// also installs Mac Catalyst, which Uno 7 no longer targets.
+				case "maui-ios" when !skipMaui && targetPlatforms.HasFlag(TargetPlatform.iOS):
+				case "maui" when !skipMaui && (targetPlatforms.HasFlag(TargetPlatform.Android)
+								|| targetPlatforms.HasFlag(TargetPlatform.iOS)
+								|| targetPlatforms.HasFlag(TargetPlatform.macOS)):
+				case "ios" when targetPlatforms.HasFlag(TargetPlatform.iOS):
+				case "tvos" when targetPlatforms.HasFlag(TargetPlatform.tvOS):
+				case "maccatalyst" when targetPlatforms.HasFlag(TargetPlatform.macOS):
+				case "wasm-tools" when targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		/// <summary>
+		/// The warning for an explicit macOS target (<c>--target macos</c> or a <c>-maccatalyst</c> TFM) when the
+		/// manifest has no workload for it, as with pre-major: Uno Platform 7 removed the Mac Catalyst head.
+		/// Null otherwise. Running without a target selects every platform, so it never warns.
+		/// </summary>
+		internal static string GetMacCatalystTargetWarning(IEnumerable<Manifest.DotNetWorkload> manifestWorkloads, TargetPlatform targetPlatforms)
+		{
+			if (targetPlatforms == TargetPlatform.All
+				|| !targetPlatforms.HasFlag(TargetPlatform.macOS)
+				|| manifestWorkloads.Any(w => IsRequiredFor(w.Id, TargetPlatform.macOS, skipMaui: false)))
+			{
+				return null;
 			}
 
-			return false;
+			return "This manifest installs no Mac Catalyst workload. "
+				+ "Uno Platform 7 macOS apps use the desktop head: use --target desktop instead of --target macos.";
 		}
 
 		public readonly string SdkRoot;
@@ -236,7 +266,14 @@ namespace DotNetCheck.Checkups
 			}
 
 			if (!missingWorkloads.Any() && !force)
-				return DiagnosticResult.Ok(this);
+			{
+				return _macCatalystTargetWarning is { } warning
+					? new DiagnosticResult(CheckStatus.Warning, this, warning)
+					: DiagnosticResult.Ok(this);
+			}
+
+			if (_macCatalystTargetWarning is { } catalystWarning)
+				ReportStatus(catalystWarning, CheckStatus.Warning);
 
 			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
 

@@ -28,6 +28,9 @@ namespace DotNetCheck.Manifest
 		[JsonProperty("vswin")]
 		public MinExactVersion VSWin { get; set; }
 
+		[JsonProperty("unoPackages")]
+		public UnoPackages UnoPackages { get; set; }
+
 		[JsonProperty("android")]
 		public Android Android { get; set; }
 
