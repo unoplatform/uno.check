@@ -8,7 +8,7 @@ namespace UnoCheck.Tests;
 /// </summary>
 public sealed class AvdManagerTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "unocheck-avd-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = Path.Join(Path.GetTempPath(), "unocheck-avd-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {
@@ -34,7 +34,7 @@ public sealed class AvdManagerTests : IDisposable
     [Fact]
     public void ParseAvdList_SkipsAFolderWithoutConfigIni()
     {
-        var avdPath = Path.Combine(_root, "empty.avd");
+        var avdPath = Path.Join(_root, "empty.avd");
         Directory.CreateDirectory(avdPath);
 
         Assert.Empty(AvdManager.ParseAvdList(ListOutput("empty", avdPath)));
@@ -44,7 +44,7 @@ public sealed class AvdManagerTests : IDisposable
     public void From_ReadsTheTargetFromTheIniNextToTheFolder()
     {
         var avdPath = CreateAvdFolder("avd", "Pixel_9_API_35.avd", avdId: "Pixel_9_API_35");
-        File.WriteAllLines(Path.Combine(_root, "avd", "Pixel_9_API_35.ini"), ["path=" + avdPath, "target=android-35"]);
+        File.WriteAllLines(Path.Join(_root, "avd", "Pixel_9_API_35.ini"), ["path=" + avdPath, "target=android-35"]);
 
         var avd = AvdManager.Avd.From(avdPath);
 
@@ -68,11 +68,31 @@ public sealed class AvdManagerTests : IDisposable
         Assert.Null(avd.Target);
     }
 
+    [Fact]
+    public void From_SkipsIniLinesWithoutAValue()
+    {
+        var avdPath = CreateAvdFolder("avd", "Pixel_9_API_35.avd", avdId: "Pixel_9_API_35");
+        File.AppendAllLines(Path.Join(avdPath, "config.ini"), ["", "not a setting"]);
+
+        var avd = AvdManager.Avd.From(avdPath);
+
+        Assert.NotNull(avd);
+        Assert.Equal("Pixel_9_API_35", avd.Name);
+    }
+
+    [Fact]
+    public void ListAvds_ReturnsNothingWhenTheSdkHasNoAvdManager()
+    {
+        var sdkPath = Directory.CreateDirectory(Path.Join(_root, "sdk")).FullName;
+
+        Assert.Empty(new AvdManager(Path.Join(_root, "java"), sdkPath).ListAvds());
+    }
+
     private string CreateAvdFolder(string parent, string folder, string avdId)
     {
-        var avdPath = Path.Combine(_root, parent, folder);
+        var avdPath = Path.Join(_root, parent, folder);
         Directory.CreateDirectory(avdPath);
-        File.WriteAllLines(Path.Combine(avdPath, "config.ini"),
+        File.WriteAllLines(Path.Join(avdPath, "config.ini"),
         [
             "AvdId=" + avdId,
             "hw.device.name=pixel",

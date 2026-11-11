@@ -305,6 +305,9 @@ namespace DotNetCheck.AndroidSdk
 		(bool success, string[] output) AvdManagerRun(string forcedInput = null, params string[] args)
 		{
 			var adbManager = FindToolPath(AndroidSdkHome);
+			if (adbManager == null)
+				return (false, new[] { $"avdmanager was not found in the Android SDK at '{AndroidSdkHome?.FullName}'." });
+
 			var java = Java;
 
 			var libPath = Path.GetFullPath(Path.Combine(adbManager.DirectoryName, "..", "lib"));

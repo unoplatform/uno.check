@@ -36,7 +36,7 @@ namespace DotNetCheck.AndroidSdk
 			/// </summary>
 			public static Avd From(string avdPath)
 			{
-				var configIniFile = System.IO.Path.Combine(avdPath, "config.ini");
+				var configIniFile = System.IO.Path.Join(avdPath, "config.ini");
 
 				if (!File.Exists(configIniFile))
 					return null;
@@ -49,12 +49,12 @@ namespace DotNetCheck.AndroidSdk
 				if (configIni.TryGetValue("AvdId", out var avdName))
 				{
 					avd.Name = avdName;
-					avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
+					avdIniFile = System.IO.Path.Join(avdPath, "..", avdName + ".ini");
 				}
 				else
 				{
 					var configIniFolder = System.IO.Path.GetDirectoryName(configIniFile);
-					avdIniFile = System.IO.Path.Combine(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini");
+					avdIniFile = System.IO.Path.Join(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini");
 				}
 
 				if (configIni.TryGetValue("hw.device.name", out var avdDevice))
@@ -78,9 +78,10 @@ namespace DotNetCheck.AndroidSdk
 				{
 					foreach (var line in File.ReadAllLines(filename))
 					{
-						var parts = line?.Split(new char[] { '=' }, 2);
+						var parts = line.Split(new char[] { '=' }, 2);
 
-						if (parts?.Any() ?? false)
+						// Blank lines and lines without a value are skipped.
+						if (parts.Length == 2)
 							d[parts[0].Trim()] = parts[1].Trim();
 					}
 				}
