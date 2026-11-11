@@ -171,49 +171,52 @@ namespace DotNetCheck.AndroidSdk
 		static Regex rxListAvds = new Regex(@"\s+Name:\s+(?<name>[^\n]+)(\s+Device:\s+(?<device>[^\n]+))?\s+Path:\s+(?<path>[^\n]+)\s+Target:\s+(?<target>[^\n]+)\s+Based on:\s+(?<basedon>[^\n]+)", RegexOptions.Compiled | RegexOptions.Multiline);
 		public IEnumerable<Avd> ListAvds()
 		{
-			var r = new List<Avd>();
-
 			var result = AvdManagerRun(null, "list", "avd");
 
 			if (result.success)
+				return ParseAvdList(string.Join("\n", result.output));
+
+			Util.Log($"Failed to list avds: {string.Join("\n", result.output)}");
+
+			return new List<Avd>();
+		}
+
+		/// <summary>
+		/// Reads the AVDs in the output of <c>avdmanager list avd</c>.
+		/// </summary>
+		internal static List<Avd> ParseAvdList(string output)
+		{
+			var r = new List<Avd>();
+
+			foreach (Match m in rxListAvds.Matches(output))
 			{
-				var str = string.Join("\n", result.output);
+				var path = m.Groups?["path"]?.Value;
 
-				var matches = rxListAvds.Matches(str);
-				if (matches != null && matches.Count > 0)
-				{
-					foreach (Match m in matches)
-					{
-						var path = m.Groups?["path"]?.Value;
+				if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+					continue;
 
-						if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-						{
-							var avd = Avd.From(path);
+				// Null when the folder has no config.ini.
+				var avd = Avd.From(path);
+				if (avd == null)
+					continue;
 
-							var parsedName = m.Groups?["name"]?.Value;
-							if (string.IsNullOrEmpty(avd.Name) && !string.IsNullOrEmpty(parsedName))
-								avd.Name = parsedName;
+				var parsedName = m.Groups?["name"]?.Value;
+				if (string.IsNullOrEmpty(avd.Name) && !string.IsNullOrEmpty(parsedName))
+					avd.Name = parsedName;
 
-							var parsedDevice = m.Groups?["device"]?.Value;
-							if (string.IsNullOrEmpty(avd.Device) && !string.IsNullOrEmpty(parsedDevice))
-								avd.Device = parsedDevice;
+				var parsedDevice = m.Groups?["device"]?.Value;
+				if (string.IsNullOrEmpty(avd.Device) && !string.IsNullOrEmpty(parsedDevice))
+					avd.Device = parsedDevice;
 
-							var parsedTarget = m.Groups?["target"]?.Value;
-							if (string.IsNullOrEmpty(avd.Target) && !string.IsNullOrEmpty(parsedTarget))
-								avd.Target = parsedTarget;
+				var parsedTarget = m.Groups?["target"]?.Value;
+				if (string.IsNullOrEmpty(avd.Target) && !string.IsNullOrEmpty(parsedTarget))
+					avd.Target = parsedTarget;
 
-							var parsedBasedOn = m.Groups?["basedon"]?.Value;
-							if (string.IsNullOrEmpty(avd.BasedOn) && !string.IsNullOrEmpty(parsedBasedOn))
-								avd.BasedOn = parsedBasedOn;
+				var parsedBasedOn = m.Groups?["basedon"]?.Value;
+				if (string.IsNullOrEmpty(avd.BasedOn) && !string.IsNullOrEmpty(parsedBasedOn))
+					avd.BasedOn = parsedBasedOn;
 
-							r.Add(avd);
-						}
-					}
-				}
-			}
-			else
-			{
-				Util.Log($"Failed to list avds: {string.Join("\n", result.output)}");
+				r.Add(avd);
 			}
 
 			return r;

@@ -31,51 +31,43 @@ namespace DotNetCheck.AndroidSdk
 
 			public string SdkId { get; internal set; }
 
+			/// <summary>
+			/// Reads the AVD in <paramref name="avdPath"/>, or returns null when the folder has no config.ini.
+			/// </summary>
 			public static Avd From(string avdPath)
 			{
-				try
+				var configIniFile = System.IO.Path.Combine(avdPath, "config.ini");
+
+				if (!File.Exists(configIniFile))
+					return null;
+
+				var configIni = ParseIni(configIniFile);
+
+				var avd = new Avd();
+				avd.Path = avdPath;
+				string avdIniFile = "";
+				if (configIni.TryGetValue("AvdId", out var avdName))
 				{
-					var configIniFile = System.IO.Path.Combine(avdPath, "config.ini");
-
-					if (File.Exists(configIniFile))
-					{
-						var configIni = ParseIni(configIniFile);
-
-						var avd = new Avd();
-						avd.Path = avdPath;
-						string avdIniFile = "";
-						if (configIni.TryGetValue("AvdId", out var avdName))
-						{
-							avd.Name = avdName;
-							avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
-						}
-						else
-						{
-							var configIniFolder = System.IO.Path.GetDirectoryName(configIniFile);
-							avdIniFile = System.IO.Path.Combine(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini");
-
-						}
-						if (File.Exists(avdIniFile))
-						{
-							var avdIni = ParseIni(avdIniFile);
-
-							if (avdIni.TryGetValue("target", out var avdTarget))
-								avd.Target = avdTarget;
-							if (configIni.TryGetValue("hw.device.name", out var avdDevice))
-								avd.Device = avdDevice;
-							if (configIni.TryGetValue("image.sysdir.1", out var avdBasedOn))
-								avd.SdkId = avdBasedOn?.Trim('\\', '/')?.Replace('\\', ';')?.Replace('/', ';');
-
-							return avd;
-						}
-					}
+					avd.Name = avdName;
+					avdIniFile = System.IO.Path.Combine(avdPath, "..", avdName) + ".ini";
 				}
-				catch (Exception ex)
+				else
 				{
-					throw ex;
+					var configIniFolder = System.IO.Path.GetDirectoryName(configIniFile);
+					avdIniFile = System.IO.Path.Combine(avdPath, "..", System.IO.Path.GetFileNameWithoutExtension(configIniFolder) + ".ini");
 				}
 
-				return null;
+				if (configIni.TryGetValue("hw.device.name", out var avdDevice))
+					avd.Device = avdDevice;
+				if (configIni.TryGetValue("image.sysdir.1", out var avdBasedOn))
+					avd.SdkId = avdBasedOn?.Trim('\\', '/')?.Replace('\\', ';')?.Replace('/', ';');
+
+				// The .ini sits next to the folder only in the AVD home. An AVD created elsewhere
+				// (avdmanager create avd -p) keeps it in the AVD home, so the target is left unset.
+				if (File.Exists(avdIniFile) && ParseIni(avdIniFile).TryGetValue("target", out var avdTarget))
+					avd.Target = avdTarget;
+
+				return avd;
 			}
 
 			internal static Dictionary<string, string> ParseIni(string filename)

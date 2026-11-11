@@ -56,7 +56,16 @@ namespace DotNetCheck.Checkups
 			{
 				avdManager = new AndroidSdk.AvdManager(java,
 					history.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? history.GetEnvironmentVariable("ANDROID_HOME"));
-				avds.AddRange(avdManager.ListAvds());
+
+				try
+				{
+					avds.AddRange(avdManager.ListAvds());
+				}
+				catch (Exception ex)
+				{
+					// An avdmanager failure falls back to the AVD files, like an empty list does.
+					Util.Exception(ex);
+				}
 			}
 
 			// Fallback to manually reading the avd files
