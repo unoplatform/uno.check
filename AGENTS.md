@@ -80,6 +80,7 @@ In order to update the workloads manifest to the latest version, you need to:
   - `manifests/uno.ui.manifest.json` for the current .NET SDK stable release
   - `manifests/uno.ui-preview.manifest.json` for the current .NET SDK major preview release
   - `manifests/uno.ui-preview-major.manifest.json` for the next major .NET SDK preview release
+- Update each manifest's `xcode` section from the Apple SDK packs of the pinned iOS workload. Each pack accepts only the Xcode major.minor in its `_RecommendedXcodeVersion`. `minimumVersion` is the one for the SDK's own target framework. `targetFrameworks` maps each older target framework to its pack's version, for example `"net10.0": "26.0"` for the .NET 11.0.100 workloads (issue #618). See `manifests/README.md`.
 
 ## 5. Testing Requirements
 

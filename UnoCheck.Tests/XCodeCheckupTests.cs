@@ -24,7 +24,7 @@ public class XCodeCheckupTests
             {
                 Check = new Check
                 {
-                    XCode = new MinExactVersion
+                    XCode = new XCodeRequirement
                     {
                         MinimumVersion = minimumVersion,
                         MinimumVersionName = minimumVersionName,
