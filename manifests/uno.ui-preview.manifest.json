@@ -145,6 +145,13 @@
               "packageId": "Microsoft.NET.Workload.Mono.ToolChain.Current.Manifest-11.0.100",
               "version": "$(WASMTOOLS_VERSION)",
               "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
+            },
+            {
+              "workloadId": "wasm-tools-net10",
+              "workloadManifestId": "microsoft.net.workload.mono.toolchain.net10",
+              "packageId": "Microsoft.NET.Workload.Mono.ToolChain.net10.Manifest-11.0.100",
+              "version": "$(WASMTOOLS_VERSION)",
+              "supportedPlatforms": [ "Windows", "OSX", "Linux/x64", "Linux/arm64" ]
             }
           ],
           "packs": []

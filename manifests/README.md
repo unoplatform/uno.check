@@ -42,9 +42,13 @@ To update the manifest, the usual process is:
 1. Use a clean VM and install the latest .NET version.
 2. Run:
    ```bash
-   dotnet workload install ios android maccatalyst tvos maui wasm-tools
+   dotnet workload install ios android maccatalyst tvos maui wasm-tools wasm-tools-net10
    ```
-   For `uno.ui-preview-major.manifest.json` (Uno Platform 7), install `ios android tvos maui-android maui-ios wasm-tools` instead.
+   For `uno.ui-preview-major.manifest.json` (Uno Platform 7), install `ios android tvos maui-android maui-ios wasm-tools wasm-tools-net10` instead.
+
+   On a .NET 11 or later SDK, `wasm-tools` builds only that SDK's TFM. Uno templates default to `net10.0`,
+   which needs `wasm-tools-net10`, or the WebAssembly build fails with UNOWA0001. `ManifestVersionGuardTests`
+   checks that every .NET 11+ manifest installs it, with the same version as `wasm-tools`.
 3. Run:
    ```bash
    dotnet workload list
