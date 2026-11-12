@@ -21,6 +21,12 @@ public class DotNetWorkloadSelectionTests
     [InlineData("tvos", TargetPlatform.iOS, false)]
     [InlineData("wasm-tools", TargetPlatform.WebAssembly, true)]
     [InlineData("wasm-tools", TargetPlatform.SkiaDesktop, false)]
+    [InlineData("wasm-tools-net10", TargetPlatform.WebAssembly, true)]
+    [InlineData("wasm-tools-net9", TargetPlatform.WebAssembly, true)]
+    [InlineData("wasm-tools-net10", TargetPlatform.SkiaDesktop, false)]
+    [InlineData("wasm-tools-net10", TargetPlatform.Android, false)]
+    [InlineData("wasm-tools-net", TargetPlatform.WebAssembly, false)]
+    [InlineData("wasm-tools-net+10", TargetPlatform.WebAssembly, false)]
     [InlineData("unknown-workload", TargetPlatform.All, false)]
     public void IsRequiredFor_SelectsWorkloadsByTarget(string workloadId, TargetPlatform targets, bool expected)
     {
