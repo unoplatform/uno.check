@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DotNetCheck;
 using DotNetCheck.Checkups;
+using DotNetCheck.Cli;
 using DotNetCheck.DotNet;
 using DotNetCheck.Manifest;
 
@@ -33,6 +34,84 @@ public class DotNetWorkloadSelectionTests
         var actual = DotNetWorkloadsCheckup.IsRequiredFor(workloadId, targets, skipMaui: false);
 
         Assert.Equal(expected, actual);
+    }
+
+    // Issue #621: the net10 toolchain adds about 1.4 GB, so with --tfm it's installed only for a net10.0 WebAssembly target.
+    [Theory]
+    [InlineData("wasm-tools-net10", new[] { 11 }, false)]
+    [InlineData("wasm-tools-net10", new[] { 10 }, true)]
+    [InlineData("wasm-tools-net10", new[] { 10, 11 }, true)]
+    [InlineData("wasm-tools-net10", new int[0], false)]
+    [InlineData("wasm-tools-net9", new[] { 10, 11 }, false)]
+    [InlineData("wasm-tools", new[] { 11 }, true)]
+    [InlineData("wasm-tools", new[] { 10 }, true)]
+    public void IsRequiredFor_WithWebAssemblyTfmVersions_SelectsOnlyTheirToolchains(string workloadId, int[] webAssemblyTfmMajors, bool expected)
+    {
+        var actual = DotNetWorkloadsCheckup.IsRequiredFor(workloadId, TargetPlatform.WebAssembly, skipMaui: false, webAssemblyTfmMajors);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData("android", TargetPlatform.Android)]
+    [InlineData("ios", TargetPlatform.iOS)]
+    [InlineData("maui", TargetPlatform.Android)]
+    public void IsRequiredFor_WithWebAssemblyTfmVersions_LeavesOtherWorkloadsAlone(string workloadId, TargetPlatform targets)
+    {
+        var actual = DotNetWorkloadsCheckup.IsRequiredFor(workloadId, targets, skipMaui: false, [11]);
+
+        Assert.True(actual);
+    }
+
+    [Theory]
+    [InlineData(new[] { "net11.0-browserwasm" }, new[] { 11 })]
+    [InlineData(new[] { "net10.0-browserwasm", "net11.0-browserwasm" }, new[] { 10, 11 })]
+    [InlineData(new[] { "net10.0-android", "net11.0-browserwasm" }, new[] { 11 })]
+    [InlineData(new[] { " NET10.0-BROWSERWASM " }, new[] { 10 })]
+    [InlineData(new[] { "net10.0" }, new[] { 10 })]
+    [InlineData(new[] { "net11.0-android", "net11.0-ios" }, new int[0])]
+    [InlineData(new[] { "netstandard2.0", "not-a-tfm" }, new int[0])]
+    public void GetWebAssemblyTfmMajors_ReadsTheBrowserWasmAndPlatformlessVersions(string[] targetFrameworks, int[] expected)
+    {
+        var actual = DotNetWorkloadsCheckup.GetWebAssemblyTfmMajors(targetFrameworks);
+
+        Assert.NotNull(actual);
+        Assert.Equal(expected.OrderBy(m => m), actual!.OrderBy(m => m));
+    }
+
+    [Fact]
+    public void GetWebAssemblyTfmMajors_WithoutTargetFrameworks_IsUnknown()
+    {
+        Assert.Null(DotNetWorkloadsCheckup.GetWebAssemblyTfmMajors(null!));
+        Assert.Null(DotNetWorkloadsCheckup.GetWebAssemblyTfmMajors([]));
+        Assert.Null(DotNetWorkloadsCheckup.GetWebAssemblyTfmMajors([" ", ""]));
+    }
+
+    /// <summary>The table in issue #621, from the command-line options to the WebAssembly workloads of the default manifest.</summary>
+    [Theory]
+    [InlineData(null, null, "wasm-tools,wasm-tools-net10")]
+    [InlineData(new[] { "web" }, null, "wasm-tools,wasm-tools-net10")]
+    [InlineData(null, new[] { "net11.0-browserwasm" }, "wasm-tools")]
+    [InlineData(null, new[] { "net10.0-browserwasm" }, "wasm-tools,wasm-tools-net10")]
+    [InlineData(null, new[] { "net10.0-browserwasm", "net11.0-browserwasm" }, "wasm-tools,wasm-tools-net10")]
+    [InlineData(null, new[] { "net11.0-android", "net11.0-browserwasm", "net11.0-desktop" }, "wasm-tools")]
+    [InlineData(null, new[] { "net11.0-android" }, "")]
+    public async Task DefaultManifest_SelectsTheWebAssemblyToolchainsTheOptionsNeed(string[]? targets, string[]? targetFrameworks, string expected)
+    {
+        var manifest = await Manifest.FromEmbeddedResource(Manifest.DefaultManifestResourceName);
+        var settings = new CheckSettings { TargetPlatforms = targets, Frameworks = targetFrameworks };
+        if (settings.Frameworks is { Length: > 0 })
+            settings.TargetPlatforms = CheckCommand.ParseTfmsToTargetPlatforms(settings);
+        var targetPlatforms = TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms);
+        var webAssemblyTfmMajors = DotNetWorkloadsCheckup.GetWebAssemblyTfmMajors(targetFrameworks!);
+
+        var selected = manifest.Check.DotNet.Sdks
+            .SelectMany(sdk => sdk.Workloads ?? [])
+            .Select(w => w.Id)
+            .Where(id => id.StartsWith("wasm-tools", StringComparison.Ordinal))
+            .Where(id => DotNetWorkloadsCheckup.IsRequiredFor(id, targetPlatforms, skipMaui: false, webAssemblyTfmMajors));
+
+        Assert.Equal(expected, string.Join(",", selected));
     }
 
     [Theory]
