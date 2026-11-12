@@ -122,7 +122,7 @@ uno-check --pre
 
 This generally uses the preview builds of the next major version of .NET available.
 
-It currently installs the same .NET 11 SDK and workload versions as the default channel, without Mac Catalyst. Only Uno Platform 7 and later support the next .NET major, and Uno Platform 7 removed the Mac Catalyst head, so this channel installs no Mac Catalyst workload and uses `maui-android` and `maui-ios` instead of `maui`, which also installs Mac Catalyst. uno-check doesn't uninstall workloads, so a machine set up by an earlier version of this channel keeps `maui` and `maccatalyst`. For Uno Platform 7 projects, use the default channel.
+It currently installs the same .NET 11 SDK and workload versions as the default channel, without Mac Catalyst. Only Uno Platform 7 and later support the next .NET major, and Uno Platform 7 removed the Mac Catalyst head, so this channel installs no Mac Catalyst workload and uses `maui-android` and `maui-ios` instead of `maui`, which also installs Mac Catalyst. uno-check doesn't uninstall workloads, so a machine set up by an earlier version of this channel keeps `maui` and `maccatalyst`. Since `maui` includes `maui-android` and `maui-ios`, a machine that has `maui`, such as one set up by the default channel, passes this channel's checks for them. For Uno Platform 7 projects, use the default channel.
 
 The manifest is hosted by default here: [uno.ui-preview-major.manifest.json](https://raw.githubusercontent.com/unoplatform/uno.check/main/manifests/uno.ui-preview-major.manifest.json)
 

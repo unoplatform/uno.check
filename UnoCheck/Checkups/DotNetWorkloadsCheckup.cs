@@ -101,6 +101,16 @@ namespace DotNetCheck.Checkups
 				+ "Uno Platform 7 macOS apps use the desktop head: use --target desktop instead of --target macos.";
 		}
 
+		/// <summary>
+		/// The status line for an installed workload. It names the workload, not its workload manifest,
+		/// which <c>maui-android</c> and <c>maui-ios</c> share, and the installed workload that
+		/// provides it when that is another one, such as <c>maui</c> for <c>maui-android</c>.
+		/// </summary>
+		internal static string FormatInstalledStatus(string workloadId, string providerId, string version, string sdkVersion)
+			=> string.Equals(workloadId, providerId, StringComparison.OrdinalIgnoreCase)
+				? $"{workloadId} ({version}/{sdkVersion}) is installed."
+				: $"{workloadId} ({version}/{sdkVersion}) is installed as part of the {providerId} workload.";
+
 		public readonly string SdkRoot;
 		public readonly string SdkVersion;
 		public readonly string[] NuGetPackageSources;
@@ -253,10 +263,10 @@ namespace DotNetCheck.Checkups
 
 				if (
 					availablePackageWorkloads.FirstOrDefault(ip => ip.id.Equals(rp.WorkloadManifestId, StringComparison.OrdinalIgnoreCase) && NuGetVersion.TryParse(ip.version, out var ipVersion) && ipVersion >= rpVersion) is { id: not null } available
-					&& installedWorkloads.Contains(rp.Id)
+					&& IncludedWorkloads.FindInstalledProvider(rp.Id, installedWorkloads) is { } provider
 				)
 				{
-					ReportStatus($"{available.id} ({available.version}/{available.sdkVersion}) is installed.", CheckStatus.Ok);
+					ReportStatus(FormatInstalledStatus(rp.Id, provider, available.version, available.sdkVersion), CheckStatus.Ok);
 				}
 				else
 				{
