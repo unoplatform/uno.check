@@ -176,11 +176,18 @@ namespace DotNetCheck.Checkups
 			return string.IsNullOrEmpty(x.BuildVersion) ? version : $"{version} ({x.BuildVersion})";
 		}
 
-		// Appends why older target frameworks need this Xcode, when they are what's checked.
-		string WithOlderTargetsReason(string message)
-			=> Targets.OlderOnlyXcodeVersion is null
-				? message
-				: $"{message} {FormatOlderTargetsReason(Targets.Older, CurrentDotNetVersion, FormatRequiredVersion(Version, null))}";
+		// Appends why older target frameworks need this Xcode, when they are what's checked, ending the message first.
+		internal string WithOlderTargetsReason(string message)
+		{
+			if (Targets.OlderOnlyXcodeVersion is null)
+				return message;
+
+			var sentence = message.TrimEnd();
+			if (!sentence.EndsWith(".", StringComparison.Ordinal))
+				sentence += ".";
+
+			return $"{sentence} {FormatOlderTargetsReason(Targets.Older, CurrentDotNetVersion, FormatRequiredVersion(Version, null))}";
+		}
 
 		public override bool ShouldExamine(SharedState history)
 		{
