@@ -194,6 +194,59 @@ public class ManifestVersionGuardTests
     }
 
     /// <summary>
+    /// The .NET 11 Apple workloads build net10.0 targets with their net10.0_26.0 packs, whose _RecommendedXcodeVersion
+    /// is 26.0, while xcode.minimumVersion is for net11.0 (issue #618). Uno templates default to net10.0, so without
+    /// this entry a net10.0-ios app passes uno-check with an Xcode its build rejects.
+    /// </summary>
+    [Fact]
+    public async Task EmbeddedManifests_OnDotNet11OrLater_SetTheXcodeForNet10AppleTargets()
+    {
+        var manifests = await LoadDotNet11OrLaterManifestsAsync();
+
+        Assert.NotEmpty(manifests);
+        foreach (var (name, manifest) in manifests)
+        {
+            var xcode = manifest.Check.XCode;
+            string? net10Xcode = null;
+
+            Assert.True(
+                xcode?.TargetFrameworks?.TryGetValue("net10.0", out net10Xcode) == true,
+                $"{name} doesn't set xcode.targetFrameworks for net10.0, so net10.0-ios apps pass with an Xcode their packs reject.");
+            Assert.True(NuGetVersion.TryParse(net10Xcode, out var older), $"{name} sets an unparsable Xcode for net10.0: '{net10Xcode}'.");
+            Assert.True(NuGetVersion.TryParse(xcode!.ExactVersion ?? xcode.MinimumVersion, out var current), $"{name} sets no parsable Xcode version.");
+            Assert.True(older < current, $"{name} sets Xcode {older} for net10.0, which should be older than the net11.0 Xcode {current}.");
+        }
+    }
+
+    /// <summary>
+    /// xcode.targetFrameworks lists older target frameworks only, as a .NET version without a platform (net10.0), with
+    /// the Xcode major.minor their Apple SDK packs require. Anything else would never match a --tfm, or would apply
+    /// the older rule to the manifest's own target framework.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(EmbeddedManifestResourceNames))]
+    public async Task EmbeddedManifest_XcodeTargetFrameworksAreOlderDotNetVersions(string manifestResourceName)
+    {
+        var manifest = await Manifest.FromEmbeddedResource(manifestResourceName);
+        var sdkVersion = NuGetVersion.Parse(manifest.Check.DotNet.Sdks[0].Version);
+
+        foreach (var (targetFramework, xcodeVersion) in manifest.Check.XCode?.TargetFrameworks ?? new Dictionary<string, string>())
+        {
+            var framework = NuGet.Frameworks.NuGetFramework.ParseFolder(targetFramework);
+
+            Assert.True(
+                framework.Framework == ".NETCoreApp" && !framework.HasPlatform && targetFramework == $"net{framework.Version.Major}.{framework.Version.Minor}",
+                $"{manifestResourceName}: '{targetFramework}' should be a .NET version without a platform, like net10.0.");
+            Assert.True(
+                framework.Version.Major < sdkVersion.Major,
+                $"{manifestResourceName}: '{targetFramework}' isn't older than the manifest's .NET {sdkVersion.Major} SDK.");
+            Assert.True(
+                NuGetVersion.TryParse(xcodeVersion, out var xcode) && xcode.Patch == 0,
+                $"{manifestResourceName}: the Xcode for '{targetFramework}' should be a major.minor version, not '{xcodeVersion}'.");
+        }
+    }
+
+    /// <summary>
     /// Uno Platform 7.0 is stable, so every manifest, pre-major included, installs stable Uno templates and Uno.Sdk.
     /// Set <c>unoPackages.includePrerelease</c> only while a manifest's .NET SDK needs an unreleased Uno major.
     /// </summary>
