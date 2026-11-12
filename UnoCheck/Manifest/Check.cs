@@ -23,7 +23,7 @@ namespace DotNetCheck.Manifest
 		public OpenJdk OpenJdk { get; set; }
 
 		[JsonProperty("xcode")]
-		public MinExactVersion XCode { get; set; }
+		public XCodeRequirement XCode { get; set; }
 
 		[JsonProperty("vswin")]
 		public MinExactVersion VSWin { get; set; }

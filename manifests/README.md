@@ -55,6 +55,14 @@ To update the manifest, the usual process is:
    dotnet workload list
    ```
 4. Use the output to update the manifest with the correct versions.
+5. Update the `xcode` section from the pinned Apple workloads. Each Apple SDK pack accepts one Xcode major.minor, its
+   `_RecommendedXcodeVersion` (in the pack's `targets/Microsoft.iOS.Sdk.Versions.props`, or `Versions.plist`).
+   The iOS workload's `WorkloadManifest.json` lists a pack per target framework, for example
+   `Microsoft.iOS.Sdk.net11.0_27.2` and `Microsoft.iOS.Sdk.net10.0_26.0`.
+   - `minimumVersion` is the Xcode for the SDK's own target framework (`27.2` for iOS 27.2.11039).
+   - `targetFrameworks` maps each older target framework to the Xcode its pack requires: `"net10.0": "26.0"` for the
+     .NET 11.0.100 workloads, whose net10.0 packs are 26.0.11017. A `--tfm net10.0-ios` run checks that Xcode
+     instead (issue #618). `ManifestVersionGuardTests` checks that every .NET 11+ manifest sets the `net10.0` entry.
 
 Transcribe the **Manifest Version** column verbatim, including the `version/band` form
 (for example `36.1.43/10.0.100`). Values live in the `check.variables` block; the workload
