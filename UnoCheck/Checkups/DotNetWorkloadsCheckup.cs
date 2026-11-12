@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,11 +78,23 @@ namespace DotNetCheck.Checkups
 				case "tvos" when targetPlatforms.HasFlag(TargetPlatform.tvOS):
 				case "maccatalyst" when targetPlatforms.HasFlag(TargetPlatform.macOS):
 				case "wasm-tools" when targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
+				case { } when IsEarlierTfmWasmTools(workloadId) && targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
 					return true;
 				default:
 					return false;
 			}
 		}
+
+		private const string EarlierTfmWasmToolsPrefix = "wasm-tools-net";
+
+		/// <summary>
+		/// Whether the workload is the WebAssembly toolchain for an earlier .NET, such as <c>wasm-tools-net10</c>.
+		/// <c>wasm-tools</c> builds only the SDK's own TFM, so a <c>net10.0-browserwasm</c> app built with the
+		/// .NET 11 SDK fails with UNOWA0001 without <c>wasm-tools-net10</c> (issue #615).
+		/// </summary>
+		private static bool IsEarlierTfmWasmTools(string workloadId)
+			=> workloadId.StartsWith(EarlierTfmWasmToolsPrefix, StringComparison.Ordinal)
+				&& int.TryParse(workloadId.Substring(EarlierTfmWasmToolsPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out _);
 
 		/// <summary>
 		/// The warning for an explicit macOS target (<c>--target macos</c> or a <c>-maccatalyst</c> TFM) when the
