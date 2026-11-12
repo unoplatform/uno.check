@@ -102,7 +102,7 @@ uno-check --fix
 
 ### `-n`, `--non-interactive` Non-Interactive
 
-If you're running on CI, you may want to run without any required input with the `--non-interactive` argument.  You can combine this with `--fix` to automatically fix without prompting.
+If you're running on CI, you may want to run without any required input with the `--non-interactive` argument.  You can combine this with `--fix` to automatically fix without prompting. If a newer uno-check is available, it's reported and the run continues, without the update prompt.
 
 ```bash
 uno-check --non-interactive

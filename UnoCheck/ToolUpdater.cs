@@ -60,7 +60,7 @@ internal static class ToolUpdater
             AnsiConsole.WriteLine();
             AnsiConsole.Write(new Rule());
             
-            if (!settings.CI)
+            if (CanPrompt(settings))
             {
                 var action = AnsiConsole.Prompt(
                     new SelectionPrompt<UserAction>()
@@ -87,6 +87,10 @@ internal static class ToolUpdater
 
         return false;
     }
+
+    // A non-interactive run can't answer the prompt, and without a terminal it throws instead of continuing.
+    internal static bool CanPrompt(CheckSettings settings)
+        => !settings.CI && !settings.NonInteractive;
 
     private static void RelaunchWithUpdate(string version)
     {
