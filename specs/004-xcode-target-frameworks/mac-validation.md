@@ -12,6 +12,8 @@ Each .NET for iOS, tvOS, Mac Catalyst or macOS SDK pack accepts only one Xcode m
 - `net11.0` Apple target frameworks keep the Xcode 27.2+ check.
 - `net10.0` and `net11.0` Apple target frameworks together: Xcode 27.2+ is checked, plus a warning that the `net10.0` ones need Xcode 26.0.
 - Without `--tfm`: Xcode 27.2+ is checked, plus an informational line about `net10.0` targets.
+- Apps that aren't Xcode but match `/Applications/Xcode*.app`, like the Xcodes version manager (`Xcodes.app`), are no longer taken for an Xcode install.
+- `--non-interactive` no longer shows the update prompt, which failed without a terminal.
 
 ## 1. Record the machine
 
@@ -24,7 +26,7 @@ dotnet --list-sdks
 dotnet workload list
 ```
 
-Expected setup: Xcode 27.2 selected and the .NET SDK 11.0.100 installed. Note whether an Xcode 26.0 is installed side by side, and its path. Scenarios S2 and S9 need it, and S1 changes when it's there.
+Expected setup: Xcode 27.2 selected and the .NET SDK 11.0.100 installed. Note whether an Xcode 26.0 is installed side by side, and its path. Scenarios S2 and S9 need it, and S1 changes when it's there. Also note whether `/Applications/Xcodes.app` is installed, for S10.
 
 Keep the output of `xcode-select -p`. If the selection changes later, restore it at the end.
 
@@ -55,9 +57,11 @@ If `RUN_ID` is empty, the CI run for the branch head hasn't started yet, or its 
 ```bash
 WORK=$(mktemp -d)
 git clone --branch dev/ap/xcode-previous-tfm-618 https://github.com/unoplatform/uno.check.git "$WORK/src"
-dotnet build "$WORK/src/UnoCheck/UnoCheck.csproj" -c Release -f net6.0
+dotnet build "$WORK/src/UnoCheck/UnoCheck.csproj" -c Release -f net6.0 -p:Version=1.36.0
 UNOCHECK="dotnet $WORK/src/UnoCheck/bin/Release/net6.0/UnoCheck.dll"
 ```
+
+Only CI computes the version, so a local build is otherwise `1.0.0.0`, and uno-check reports itself as out of date.
 
 Every scenario runs this base command (`$UNOCHECK` is unquoted on purpose, so option B's two words work), followed by its options:
 
@@ -76,14 +80,15 @@ Unless a scenario says otherwise, Xcode 27.2 is selected. `<build>` is the Xcode
 | # | Options | Needs | Expected |
 | --- | --- | --- | --- |
 | S1 | `--tfm net10.0-ios` | No Xcode 26.0 installed | Checkup line: `Required Xcode 26.0 for net10.0-ios Checkup...`. Error: `Xcode 27.2 (<build>) is installed, but Xcode 26.0 is required. net10.0-ios builds with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use Xcode 27.2, move to net11.0-ios.` Any other installed Xcode is listed too. Recommendation: `Download Xcode 26.0 from https://developer.apple.com/download/all/`. |
-| S2 | `--tfm net10.0-ios` | Xcode 26.0 installed, not selected | Error: `No Xcode.app or an incompatible Xcode.app version is selected, but one was found at (<path of Xcode 26.0>). net10.0-ios builds with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use Xcode 27.2, move to net11.0-ios.` Recommendation: `Run xcode-select -s <Path>`. Don't apply it. |
+| S2 | `--tfm net10.0-ios` | Xcode 26.0 installed, not selected | Error: `No Xcode.app or an incompatible Xcode.app version is selected, but one was found at (<path of Xcode 26.0>). net10.0-ios builds with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use Xcode 27.2, move to net11.0-ios.` Recommendation: `Run xcode-select -s <Path>`. Don't apply it. The summary line `xcode: ...` repeats the error. |
 | S3 | `--tfm net11.0-ios` | | Checkup line: `Required Xcode 27.2 (newer version might not be supported) Checkup...`. OK: `Xcode.app (27.2 <build>)`. No other line. |
 | S4 | no `--tfm` | | As S3, plus an information line: `With this .NET SDK, net10.0 Apple targets (iOS, tvOS, Mac Catalyst) need Xcode 26.0, and the selected Xcode 27.2 builds net11.0 ones. Pass your app's target frameworks with --tfm to check them.` The checkup still passes. |
 | S5 | `--tfm net10.0-ios --tfm net11.0-ios` | | Checkup line for 27.2, as S3. OK: `Xcode.app (27.2 <build>)`. Warning: `With this .NET SDK, net10.0-ios needs Xcode 26.0, so the selected Xcode 27.2 can't build it. Move to net11.0-ios, or select the Xcode it needs when you build it.` The run reports a warning, not an error. |
 | S6 | `--tfm net10.0-tvos --tfm net10.0-maccatalyst` | No Xcode 26.0 installed (otherwise expect S2's text) | Checkup line: `Required Xcode 26.0 for net10.0-tvos, net10.0-maccatalyst Checkup...`. The error's reason reads `net10.0-tvos, net10.0-maccatalyst build with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use Xcode 27.2, move to net11.0-tvos, net11.0-maccatalyst.` |
 | S7 | `--tfm net10.0-android` | | As S3: Xcode 27.2+ is checked and passes. No information line, because `--tfm` was given. |
-| S8 | `--tfm net10.0-ios --json > "$WORK/s8.jsonl"` | No Xcode 26.0 installed | The JSON lines (one event per line) include the `xcode` check with an error status, and its message contains S1's text, including the `net10.0-ios builds with this .NET SDK's ...` reason. If Xcode 26.0 is installed (S2's case), note what the message says instead: that path doesn't put its reason on the result, and that's older than this change. |
+| S8 | `--tfm net10.0-ios --json > "$WORK/s8.jsonl"` | No Xcode 26.0 installed | The JSON lines (one event per line) include the `xcode` check with an error status, and its message contains S1's text, including the `net10.0-ios builds with this .NET SDK's ...` reason. If Xcode 26.0 is installed (S2's case), the message contains S2's text instead. |
 | S9 | `--tfm net10.0-ios`, then `--tfm net11.0-ios`, with Xcode 26.0 selected | Xcode 26.0 installed | `net10.0-ios`: checkup line `Required Xcode 26.0 for net10.0-ios Checkup...`, and OK: `Xcode.app (26.0 <build>)`. `net11.0-ios`: an error for Xcode 27.2. The text depends on what's installed: either `Xcode 26.0 ... is installed, but Xcode 27.2 is required.` or a recommendation to `xcode-select -s` to the 27.2 install. |
+| S10 | Any of S1 to S9 | `/Applications/Xcodes.app` installed | No message lists `Xcodes.app` or its version (4.x) as an installed Xcode, and no recommendation points at it. Before this change, its `CFBundleVersion` read as Xcode 41.0, so the 27.2+ check suggested `xcode-select -s /Applications/Xcodes.app`. |
 
 To select Xcode 26.0 for S9 without changing the machine, first check whether `DEVELOPER_DIR` works:
 
@@ -123,6 +128,7 @@ Fill in this table. For every row that doesn't match, paste the full uno-check o
 | S7 | | | |
 | S8 | | | |
 | S9 | | | |
+| S10 | | | |
 | Premise | | | |
 
 Include the machine details from step 1, the uno-check version, and the install option used (A or B). If the person asks you to post the report, add it as a comment on the branch's draft PR: `gh pr comment <number> -R unoplatform/uno.check --body-file <report file>`.
