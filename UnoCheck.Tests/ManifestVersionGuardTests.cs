@@ -242,4 +242,29 @@ public class ManifestVersionGuardTests
             && workload.WorkloadManifestId == "microsoft.net.workload.mono.toolchain.current"
             && workload.Version == expectedWasmToolsVersion?.ToString());
     }
+
+    /// <summary>
+    /// From the .NET 11 SDK on, <c>wasm-tools</c> builds only <c>net11.0-browserwasm</c>. Uno templates default to
+    /// <c>net10.0</c>, which needs <c>wasm-tools-net10</c>, or the build fails with UNOWA0001 (issue #615). Both toolchain
+    /// manifests ship from dotnet/runtime with the same versions, so the entry reuses WASMTOOLS_VERSION.
+    /// </summary>
+    [Fact]
+    public async Task EmbeddedManifests_OnDotNet11OrLater_InstallTheNet10WasmToolchain()
+    {
+        var manifests = await LoadDotNet11OrLaterManifestsAsync();
+
+        Assert.NotEmpty(manifests);
+        foreach (var (name, manifest) in manifests)
+        {
+            var workloads = manifest.Check.DotNet.Sdks.SelectMany(sdk => sdk.Workloads ?? []).ToArray();
+            var wasmTools = Assert.Single(workloads, workload => workload.Id == "wasm-tools");
+
+            var net10 = workloads.SingleOrDefault(workload => workload.Id == "wasm-tools-net10");
+
+            Assert.True(net10 is not null, $"{name} does not install wasm-tools-net10, so net10.0-browserwasm apps fail with UNOWA0001.");
+            Assert.Equal("microsoft.net.workload.mono.toolchain.net10", net10!.WorkloadManifestId);
+            Assert.Equal(wasmTools.Version, net10.Version);
+            Assert.Equal(wasmTools.SupportedPlatforms, net10.SupportedPlatforms);
+        }
+    }
 }
