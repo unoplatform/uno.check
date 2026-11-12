@@ -381,13 +381,31 @@ namespace DotNetCheck.Checkups
 		};
 
 		IEnumerable<XCodeInfo> FindXCodeInstalls()
+			=> ReadXcodeInstalls(OrderXcodePaths(FindXcodeApps()));
+
+		// Xcode*.app also matches other apps, like the Xcodes version manager (Xcodes.app), whose CFBundleVersion
+		// would pass for an Xcode version.
+		internal static IEnumerable<XCodeInfo> ReadXcodeInstalls(IEnumerable<string> paths)
 		{
-			foreach (var p in OrderXcodePaths(FindXcodeApps()))
+			foreach (var p in paths)
 			{
+				if (!IsXcodeBundle(p))
+					continue;
+
 				var i = GetXcodeInfo(p, false);
 				if (i != null)
 					yield return i;
 			}
+		}
+
+		internal const string XcodeBundleIdentifier = "com.apple.dt.Xcode";
+
+		internal static bool IsXcodeBundle(string path)
+		{
+			var infoPlist = Path.Combine(path, "Contents", "Info.plist");
+
+			return File.Exists(infoPlist)
+				&& string.Equals(TryReadPlist(infoPlist)?.ObjectForKey("CFBundleIdentifier")?.ToString(), XcodeBundleIdentifier, StringComparison.Ordinal);
 		}
 
 		// Side-by-side installs are usually renamed (Xcode_26.5.app, or Xcode-26.5.0.app from Xcodes.app).
@@ -425,7 +443,7 @@ namespace DotNetCheck.Checkups
 			}
 		}
 
-		XCodeInfo GetXcodeInfo(string path, bool selected)
+		static XCodeInfo GetXcodeInfo(string path, bool selected)
 		{
 			var versionPlist = Path.Combine(path, "Contents", "version.plist");
 
