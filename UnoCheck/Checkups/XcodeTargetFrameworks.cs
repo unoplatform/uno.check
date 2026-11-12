@@ -26,11 +26,12 @@ namespace DotNetCheck.Checkups
 			var current = new List<string>();
 			var older = new List<OlderTarget>();
 
-			foreach (var targetFramework in targetFrameworks ?? [])
-			{
-				if (!TryParseApple(targetFramework, out var name, out var dotNetVersion))
-					continue;
+			var appleTargets = (targetFrameworks ?? [])
+				.Select(t => (IsApple: TryParseApple(t, out var name, out var dotNetVersion), Name: name, DotNetVersion: dotNetVersion))
+				.Where(t => t.IsApple);
 
+			foreach (var (_, name, dotNetVersion) in appleTargets)
+			{
 				if (olderXcodeVersions is not null
 					&& olderXcodeVersions.TryGetValue(dotNetVersion, out var xcode)
 					&& TryGetMajorMinor(xcode, out var majorMinor))

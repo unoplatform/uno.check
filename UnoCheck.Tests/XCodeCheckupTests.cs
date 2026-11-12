@@ -182,7 +182,7 @@ public class XCodeCheckupTests
                     { "CFBundleShortVersionString", "26.0" },
                     { "ProductBuildVersion", "17A324" },
                 });
-            var missing = Path.Combine(root, "Xcode.app");
+            var missing = Path.Join(root, "Xcode.app");
 
             var installs = XCodeCheckup.ReadXcodeInstalls([missing, xcodes, xcode]).ToList();
 
@@ -198,12 +198,12 @@ public class XCodeCheckupTests
 
     static string WriteApp(string root, string name, NSDictionary info, NSDictionary? version = null)
     {
-        var app = Path.Combine(root, name);
-        var contents = Directory.CreateDirectory(Path.Combine(app, "Contents")).FullName;
+        var app = Path.Join(root, name);
+        var contents = Directory.CreateDirectory(Path.Join(app, "Contents")).FullName;
 
-        File.WriteAllText(Path.Combine(contents, "Info.plist"), info.ToXmlPropertyList());
+        File.WriteAllText(Path.Join(contents, "Info.plist"), info.ToXmlPropertyList());
         if (version is not null)
-            File.WriteAllText(Path.Combine(contents, "version.plist"), version.ToXmlPropertyList());
+            File.WriteAllText(Path.Join(contents, "version.plist"), version.ToXmlPropertyList());
 
         return app;
     }

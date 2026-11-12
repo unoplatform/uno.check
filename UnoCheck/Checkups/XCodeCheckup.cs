@@ -395,11 +395,8 @@ namespace DotNetCheck.Checkups
 		// would pass for an Xcode version.
 		internal static IEnumerable<XCodeInfo> ReadXcodeInstalls(IEnumerable<string> paths)
 		{
-			foreach (var p in paths)
+			foreach (var p in paths.Where(IsXcodeBundle))
 			{
-				if (!IsXcodeBundle(p))
-					continue;
-
 				var i = GetXcodeInfo(p, false);
 				if (i != null)
 					yield return i;
@@ -410,7 +407,7 @@ namespace DotNetCheck.Checkups
 
 		internal static bool IsXcodeBundle(string path)
 		{
-			var infoPlist = Path.Combine(path, "Contents", "Info.plist");
+			var infoPlist = Path.Join(path, "Contents", "Info.plist");
 
 			return File.Exists(infoPlist)
 				&& string.Equals(TryReadPlist(infoPlist)?.ObjectForKey("CFBundleIdentifier")?.ToString(), XcodeBundleIdentifier, StringComparison.Ordinal);
