@@ -64,10 +64,12 @@ In order to update the workloads manifest to the latest version, you need to:
 - Install the following workloads:
 
     ```bash
-    dotnet workload install ios android maui catalyst tvos wasm-tools
+    dotnet workload install ios android maui maccatalyst tvos wasm-tools wasm-tools-net10
     ```
 
-    For `manifests/uno.ui-preview-major.manifest.json` (the next .NET major, which only Uno Platform 7 and later support), install `ios android tvos maui-android maui-ios wasm-tools` instead: Uno 7 has no Mac Catalyst head, and `maui` would install Mac Catalyst.
+    For `manifests/uno.ui-preview-major.manifest.json` (the next .NET major, which only Uno Platform 7 and later support), install `ios android tvos maui-android maui-ios wasm-tools wasm-tools-net10` instead: Uno 7 has no Mac Catalyst head, and `maui` would install Mac Catalyst.
+
+    `wasm-tools-net10` is for .NET 11 and later SDKs. `wasm-tools` builds only the SDK's own TFM, and Uno templates default to `net10.0`, which needs `wasm-tools-net10` (issue #615). It ships with the same versions as `wasm-tools`, so its manifest entry reuses `WASMTOOLS_VERSION`.
 - Get the installed workloads list:
 
     ```bash
