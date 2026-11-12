@@ -206,7 +206,8 @@ namespace DotNetCheck.Cli
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
-			// The target platforms drop the .NET version, which the workload selection needs (net10.0 vs net11.0 WebAssembly).
+			// The target platforms drop the .NET version, which the workload selection and the Xcode check need
+			// (net10.0 vs net11.0 WebAssembly, net10.0-ios vs net11.0-ios).
 			if (settings.Frameworks is { Length: > 0 })
 				sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetFrameworks, settings.Frameworks);
 

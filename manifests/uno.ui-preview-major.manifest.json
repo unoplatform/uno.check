@@ -22,7 +22,10 @@
       }
     },
     "xcode": {
-      "minimumVersion": "27.2"
+      "minimumVersion": "27.2",
+      "targetFrameworks": {
+        "net10.0": "26.0"
+      }
     },
     "vswin": {
       "minimumVersion": "18.7"
