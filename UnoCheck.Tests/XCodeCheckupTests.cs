@@ -112,6 +112,20 @@ public class XCodeCheckupTests
     }
 
     [Fact]
+    public void TheJsonReportCarriesTheReasonWhenAnotherXcodeMustBeSelected()
+    {
+        var checkup = CheckupFor(minimumVersion: "26.5");
+        var result = checkup.UnselectedXcodeResult(Xcode("26.5", "17F42", "/Applications/Xcode-26.5.0.app"));
+
+        var check = CheckCommand.BuildHealthCheck(checkup, result);
+
+        Assert.Equal(
+            "No Xcode.app or an incompatible Xcode.app version is selected, but one was found at (/Applications/Xcode-26.5.0.app)",
+            check.Message);
+        Assert.Equal("Run xcode-select -s <Path>", result.Suggestion.Name);
+    }
+
+    [Fact]
     public void NoXcodeIsReportedAsNotInstalled()
     {
         var result = CheckupFor(minimumVersion: "26.5").MissingXcodeResult(Array.Empty<XCodeInfo>());
