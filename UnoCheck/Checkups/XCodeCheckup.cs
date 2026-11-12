@@ -165,6 +165,32 @@ namespace DotNetCheck.Checkups
 			return new DiagnosticResult(Status.Error, this, message, new Suggestion(DownloadSuggestion));
 		}
 
+		// The message also goes on the result, so --json reports it, as for a missing Xcode.
+		internal DiagnosticResult UnselectedXcodeResult(XCodeInfo eligibleXcode)
+		{
+			var message = WithOlderTargetsReason(
+				$"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})");
+
+			ReportStatus(message, Status.Error);
+
+			return new DiagnosticResult(
+				Status.Error,
+				this,
+				message,
+				new Suggestion("Run xcode-select -s <Path>",
+					new Solutions.ActionSolution(async (sln, cancelToken) =>
+					{
+						var result = await Util.WrapShellCommandWithSudo(
+							"/usr/bin/xcode-select",
+							workingDir: null,
+							verbose: Util.Verbose,
+							cancellationToken: cancelToken,
+							args: new[] { "-s", eligibleXcode.Path });
+						if (!result.Success)
+							throw new InvalidOperationException(result.GetOutput());
+					})));
+		}
+
 		internal static string FormatInstalledVersion(XCodeInfo x)
 		{
 			// The Info.plist fallback can leave the short version empty; the parsed version or the path still names it.
@@ -303,25 +329,7 @@ namespace DotNetCheck.Checkups
 				if (eligibleXcode != null)
 				{
 					// If this is the case, they need to run xcode-select -s
-					ReportStatus(
-						WithOlderTargetsReason($"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})"),
-						Status.Error);
-
-					return Task.FromResult(new DiagnosticResult(
-						Status.Error,
-						this,
-						new Suggestion("Run xcode-select -s <Path>",
-							new Solutions.ActionSolution(async (sln, cancelToken) =>
-							{
-								var result = await Util.WrapShellCommandWithSudo(
-									"/usr/bin/xcode-select",
-									workingDir: null,
-									verbose: Util.Verbose,
-									cancellationToken: cancelToken,
-									args: new[] { "-s", eligibleXcode.Path });
-								if (!result.Success)
-									throw new InvalidOperationException(result.GetOutput());
-							}))));
+					return Task.FromResult(UnselectedXcodeResult(eligibleXcode));
 				}
 
 

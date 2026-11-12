@@ -185,6 +185,17 @@ public class XcodeTargetFrameworksTests
     }
 
     [Fact]
+    public void Checkup_Net10Target_PutsTheReasonOnTheSelectionResult()
+    {
+        var result = ExaminedFor("net10.0-ios").UnselectedXcodeResult(Xcode("26.0", "17A324", "/Applications/Xcode_26.0.app"));
+
+        Assert.Equal(
+            "No Xcode.app or an incompatible Xcode.app version is selected, but one was found at (/Applications/Xcode_26.0.app). "
+            + "net10.0-ios builds with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use Xcode 27.2, move to net11.0-ios.",
+            result.Message);
+    }
+
+    [Fact]
     public void Checkup_CurrentTarget_LeavesTheMessageAsIs()
     {
         var message = ExaminedFor("net11.0-ios").WithOlderTargetsReason("No Xcode.app or an incompatible Xcode.app version is selected");
