@@ -140,6 +140,60 @@ public class XCodeCheckupTests
             XCodeCheckup.OrderXcodePaths(found));
     }
 
+    [Fact]
+    public void TheXcodesVersionManagerIsNotTakenForAnXcode()
+    {
+        var root = Directory.CreateTempSubdirectory("uno-check-xcode-").FullName;
+
+        try
+        {
+            // Xcodes.app matches Xcode*.app and has no version.plist, so its CFBundleVersion (41) read as Xcode 41.0.
+            var xcodes = WriteApp(root, "Xcodes.app", new NSDictionary
+            {
+                { "CFBundleIdentifier", "com.xcodesorg.xcodesapp" },
+                { "CFBundleShortVersionString", "4.1.1" },
+                { "CFBundleVersion", "41" },
+            });
+            var xcode = WriteApp(
+                root,
+                "Xcode-26.0.0.app",
+                new NSDictionary
+                {
+                    { "CFBundleIdentifier", XCodeCheckup.XcodeBundleIdentifier },
+                    { "CFBundleShortVersionString", "26.0" },
+                    { "CFBundleVersion", "24109" },
+                },
+                version: new NSDictionary
+                {
+                    { "CFBundleShortVersionString", "26.0" },
+                    { "ProductBuildVersion", "17A324" },
+                });
+            var missing = Path.Combine(root, "Xcode.app");
+
+            var installs = XCodeCheckup.ReadXcodeInstalls([missing, xcodes, xcode]).ToList();
+
+            var install = Assert.Single(installs);
+            Assert.Equal(xcode, install.Path);
+            Assert.Equal("26.0 (17A324)", XCodeCheckup.FormatInstalledVersion(install));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    static string WriteApp(string root, string name, NSDictionary info, NSDictionary? version = null)
+    {
+        var app = Path.Combine(root, name);
+        var contents = Directory.CreateDirectory(Path.Combine(app, "Contents")).FullName;
+
+        File.WriteAllText(Path.Combine(contents, "Info.plist"), info.ToXmlPropertyList());
+        if (version is not null)
+            File.WriteAllText(Path.Combine(contents, "version.plist"), version.ToXmlPropertyList());
+
+        return app;
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
