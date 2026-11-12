@@ -538,14 +538,37 @@ jobs:
         run: |
           dotnet nuget push artifacts\*.nupkg -s https://api.nuget.org/v3/index.json -k "${{ secrets.NUGET_ORG_API_KEY }}" --skip-duplicate
 
+  # A release build goes to the internal feed first, so QA can test the exact package that
+  # Publish Production later pushes to nuget.org. Each step needs its own approval.
+  publish_internal:
+    name: Publish Internal Feed
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') }}
+    runs-on: windows-latest
+    environment: Production
+    needs:
+      - sign
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: NuGet-Signed
+          path: artifacts
+
+      - name: Uno Feed Push
+        shell: pwsh
+        run: |
+          dotnet nuget add source https://pkgs.dev.azure.com/uno-platform/1dd81cbd-cb35-41de-a570-b0df3571a196/_packaging/unoplatformdev/nuget/v3/index.json -n "dev" --username az --password "${{ secrets.UNO_NUGET_FEED_API_KEY }}" --store-password-in-clear-text
+          dotnet nuget push artifacts\*.nupkg --api-key AZ -s dev --skip-duplicate
+
   publish_prod:
     name: Publish Production
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: windows-latest
     environment: Production
     needs:
-      - sign
-  
+      - publish_internal
+
     permissions:
       contents: write  # allow pushing tags
   
