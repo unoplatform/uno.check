@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
+using NuGet.Frameworks;
 using NuGet.Versioning;
 using Spectre.Console;
 using CheckStatus = DotNetCheck.Models.Status;
@@ -42,6 +43,11 @@ namespace DotNetCheck.Checkups
 				_skipMaui = skips.Any(s => s.CheckupId == "maui");
 			}
 
+			if (sharedState.TryGetState<string[]>(StateKey.EntryPoint, StateKey.TargetFrameworks, out var targetFrameworks))
+			{
+				_webAssemblyTfmMajors = GetWebAssemblyTfmMajors(targetFrameworks);
+			}
+
 			RequiredWorkloads = requiredWorkloads.Where(FilterPlatform).ToArray();
 			NuGetPackageSources = nugetPackageSources;
 			_macCatalystTargetWarning = GetMacCatalystTargetWarning(requiredWorkloads, TargetPlatforms);
@@ -49,20 +55,27 @@ namespace DotNetCheck.Checkups
 
 		private readonly string _macCatalystTargetWarning;
 
+		/// <summary>The .NET major versions of the <c>--tfm</c> WebAssembly targets; null without <c>--tfm</c>.</summary>
+		private readonly IReadOnlyCollection<int> _webAssemblyTfmMajors;
+
 		private bool FilterPlatform(Manifest.DotNetWorkload w)
 		{
 			var arch = Util.IsArm64 ? "arm64" : "x64";
 			var targetPlatform = Util.Platform + "/" + arch;
 
 			return (w.SupportedPlatforms?.Any(sp => sp == (sp.Contains("/") ? targetPlatform : Util.Platform.ToString())) ?? false)
-				&& IsRequiredFor(w.Id, TargetPlatforms, _skipMaui);
+				&& IsRequiredFor(w.Id, TargetPlatforms, _skipMaui, _webAssemblyTfmMajors);
 		}
 
 		/// <summary>
 		/// Whether a manifest workload is needed for the selected targets. A workload id not listed
 		/// here is never installed, whatever the manifest declares.
 		/// </summary>
-		internal static bool IsRequiredFor(string workloadId, TargetPlatform targetPlatforms, bool skipMaui)
+		/// <param name="webAssemblyTfmMajors">
+		/// The .NET major versions of the <c>--tfm</c> WebAssembly targets (<see cref="GetWebAssemblyTfmMajors"/>).
+		/// Null when they are unknown, which selects the toolchain for every earlier .NET.
+		/// </param>
+		internal static bool IsRequiredFor(string workloadId, TargetPlatform targetPlatforms, bool skipMaui, IReadOnlyCollection<int> webAssemblyTfmMajors = null)
 		{
 			switch (workloadId)
 			{
@@ -78,8 +91,12 @@ namespace DotNetCheck.Checkups
 				case "tvos" when targetPlatforms.HasFlag(TargetPlatform.tvOS):
 				case "maccatalyst" when targetPlatforms.HasFlag(TargetPlatform.macOS):
 				case "wasm-tools" when targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
-				case { } when IsEarlierTfmWasmTools(workloadId) && targetPlatforms.HasFlag(TargetPlatform.WebAssembly):
 					return true;
+				// The toolchain for an earlier .NET is large (a second Emscripten, about 1.4 GB), so with --tfm it's
+				// installed only when a WebAssembly target uses that .NET version (issue #621).
+				case { } when TryGetEarlierTfmWasmToolsMajor(workloadId, out var major):
+					return targetPlatforms.HasFlag(TargetPlatform.WebAssembly)
+						&& (webAssemblyTfmMajors is null || webAssemblyTfmMajors.Contains(major));
 				default:
 					return false;
 			}
@@ -88,13 +105,46 @@ namespace DotNetCheck.Checkups
 		private const string EarlierTfmWasmToolsPrefix = "wasm-tools-net";
 
 		/// <summary>
-		/// Whether the workload is the WebAssembly toolchain for an earlier .NET, such as <c>wasm-tools-net10</c>.
-		/// <c>wasm-tools</c> builds only the SDK's own TFM, so a <c>net10.0-browserwasm</c> app built with the
-		/// .NET 11 SDK fails with UNOWA0001 without <c>wasm-tools-net10</c> (issue #615).
+		/// Whether the workload is the WebAssembly toolchain for an earlier .NET, such as <c>wasm-tools-net10</c>,
+		/// and that .NET's major version. <c>wasm-tools</c> builds only the SDK's own TFM, so a
+		/// <c>net10.0-browserwasm</c> app built with the .NET 11 SDK fails with UNOWA0001 without
+		/// <c>wasm-tools-net10</c> (issue #615).
 		/// </summary>
-		private static bool IsEarlierTfmWasmTools(string workloadId)
-			=> workloadId.StartsWith(EarlierTfmWasmToolsPrefix, StringComparison.Ordinal)
-				&& int.TryParse(workloadId.Substring(EarlierTfmWasmToolsPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out _);
+		private static bool TryGetEarlierTfmWasmToolsMajor(string workloadId, out int major)
+		{
+			major = 0;
+
+			return workloadId.StartsWith(EarlierTfmWasmToolsPrefix, StringComparison.Ordinal)
+				&& int.TryParse(workloadId.Substring(EarlierTfmWasmToolsPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out major);
+		}
+
+		/// <summary>
+		/// The .NET major versions the <c>--tfm</c> values use for WebAssembly: those of <c>browserwasm</c> target
+		/// frameworks, and of target frameworks without a platform, which select every platform as in
+		/// <see cref="Cli.CheckCommand.ParseTfmsToTargetPlatforms"/>. Null without <c>--tfm</c>, when they are unknown.
+		/// </summary>
+		internal static IReadOnlyCollection<int> GetWebAssemblyTfmMajors(IEnumerable<string> targetFrameworks)
+		{
+			var given = (targetFrameworks ?? []).Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+
+			if (given.Count == 0)
+				return null;
+
+			var majors = new HashSet<int>();
+
+			foreach (var targetFramework in given)
+			{
+				var framework = NuGetFramework.ParseFolder(targetFramework.Trim());
+
+				if (framework.Framework != FrameworkConstants.FrameworkIdentifiers.NetCoreApp || framework.Version.Major < 5)
+					continue;
+
+				if (!framework.HasPlatform || string.Equals(framework.Platform, "browserwasm", StringComparison.OrdinalIgnoreCase))
+					majors.Add(framework.Version.Major);
+			}
+
+			return majors;
+		}
 
 		/// <summary>
 		/// The warning for an explicit macOS target (<c>--target macos</c> or a <c>-maccatalyst</c> TFM) when the

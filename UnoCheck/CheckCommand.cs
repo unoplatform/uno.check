@@ -206,6 +206,10 @@ namespace DotNetCheck.Cli
             
 			sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetPlatforms, TargetPlatformHelper.GetTargetPlatformsFromFlags(settings.TargetPlatforms));
 
+			// The target platforms drop the .NET version, which the workload selection needs (net10.0 vs net11.0 WebAssembly).
+			if (settings.Frameworks is { Length: > 0 })
+				sharedState.ContributeState(StateKey.EntryPoint, StateKey.TargetFrameworks, settings.Frameworks);
+
 			var checkups = ApplyOnlyFilter(
 				CheckupManager.BuildCheckupGraph(manifest, sharedState, settings.TargetPlatforms).ToList(),
 				settings.Only,

@@ -48,7 +48,8 @@ To update the manifest, the usual process is:
 
    On a .NET 11 or later SDK, `wasm-tools` builds only that SDK's TFM. Uno templates default to `net10.0`,
    which needs `wasm-tools-net10`, or the WebAssembly build fails with UNOWA0001. `ManifestVersionGuardTests`
-   checks that every .NET 11+ manifest installs it, with the same version as `wasm-tools`.
+   checks that every .NET 11+ manifest installs it, with the same version as `wasm-tools`. With `--tfm`, uno-check
+   installs a `wasm-tools-net<N>` workload only when a WebAssembly target framework uses .NET `<N>` (issue #621).
 3. Run:
    ```bash
    dotnet workload list
