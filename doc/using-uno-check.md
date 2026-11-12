@@ -140,6 +140,8 @@ Uno Platform 7 removed the Mac Catalyst head: macOS apps use the desktop head, s
 
 `--tfm` also limits the WebAssembly toolchains uno-check installs. The .NET 11 SDK builds `net10.0-browserwasm`, the Uno template default, only with the `wasm-tools-net10` workload, a second Emscripten of about 1.4 GB. uno-check installs it without `--tfm` and with `--tfm net10.0-browserwasm`, but not when every WebAssembly target framework is `net11.0-browserwasm`.
 
+On macOS, `--tfm` also tells the Xcode check which .NET version your iOS, tvOS and Mac Catalyst targets use. Each .NET for iOS release accepts a single Xcode version. The .NET 11 SDK builds `net11.0-ios` with Xcode 27.2, but it builds `net10.0-ios`, the Uno template default, with its .NET 10 packs, which require Xcode 26.0. With `--tfm net10.0-ios`, uno-check checks for Xcode 26.0. Without `--tfm`, it checks the Xcode for `net11.0` and notes what `net10.0` targets need. To build with Xcode 27.2, move the app to `net11.0-ios`.
+
 See [Command line arguments](xref:UnoCheck.Configuration#command-line-arguments) for more details
 
 ### Run uno-check in readonly mode on Windows

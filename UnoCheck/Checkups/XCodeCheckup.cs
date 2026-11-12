@@ -33,14 +33,96 @@ namespace DotNetCheck.Checkups
 
 		// The manifest's version name is the Xcode build (e.g. "15F31d"), taken from the same entry as the version.
 		internal string RequiredVersion
-			=> ExactVersion is not null
-				? FormatRequiredVersion(ExactVersion, ExactVersionName)
-				: FormatRequiredVersion(MinimumVersion, MinimumVersionName);
+			=> Targets.OlderOnlyXcodeVersion
+				?? (ExactVersion is not null
+					? FormatRequiredVersion(ExactVersion, ExactVersionName)
+					: FormatRequiredVersion(MinimumVersion, MinimumVersionName));
+
+		/// <summary>
+		/// The <c>--tfm</c> Apple target frameworks, split by the Xcode they need. Resolved in <see cref="ShouldExamine"/>,
+		/// which runs before the title is shown. Without Apple target frameworks, the manifest's Xcode is checked.
+		/// </summary>
+		internal XcodeTargets Targets { get; set; } = XcodeTargets.None;
+
+		/// <summary>Whether <c>--tfm</c> was given at all. Without it, the project's .NET version is unknown.</summary>
+		internal bool TargetFrameworksGiven { get; set; }
+
+		/// <summary>The .NET version the manifest's SDK builds with its current packs: <c>net11.0</c> for SDK 11.0.100.</summary>
+		internal string CurrentDotNetVersion
+			=> (Manifest?.Check?.DotNet?.Sdks ?? [])
+				.Select(sdk => NuGetVersion.TryParse(sdk?.Version, out var v) ? $"net{v.Major}.0" : null)
+				.FirstOrDefault(v => v is not null);
+
+		/// <summary>Whether an Xcode is the one to check: the older target frameworks' major.minor, or the manifest's.</summary>
+		internal bool IsRequiredXcode(NuGetVersion version)
+			=> Targets.OlderOnlyXcodeVersion is { } older
+				? XcodeTargetFrameworks.MatchesMajorMinor(version, older)
+				: version.IsCompatible(MinimumVersion, ExactVersion);
 
 		public override string Id => "xcode";
 
 		// The title keeps the plain version, so a build name never nests inside the caveat's parentheses.
-		public override string Title => $"Required Xcode {Version} (newer version might not be supported)";
+		public override string Title
+			=> Targets.OlderOnlyXcodeVersion is { } older
+				? $"Required Xcode {older} for {string.Join(", ", Targets.Older.Select(o => o.TargetFramework))}"
+				: $"Required Xcode {Version} (newer version might not be supported)";
+
+		/// <summary>
+		/// Why older Apple target frameworks need another Xcode, and how to use the manifest's Xcode instead:
+		/// "net10.0-ios builds with this .NET SDK's net10.0 Apple SDK packs, which require Xcode 26.0. To use
+		/// Xcode 27.2, move to net11.0-ios."
+		/// </summary>
+		internal static string FormatOlderTargetsReason(IReadOnlyList<OlderTarget> older, string currentDotNetVersion, string currentXcode)
+		{
+			var targetFrameworks = older.Select(o => o.TargetFramework).ToList();
+			var message = $"{string.Join(", ", targetFrameworks)} {(targetFrameworks.Count == 1 ? "builds" : "build")} with this .NET SDK's "
+				+ $"{older[0].DotNetVersion} Apple SDK packs, which require Xcode {older[0].XcodeVersion}.";
+
+			if (currentDotNetVersion is null)
+				return message;
+
+			var retargeted = targetFrameworks.Select(t => XcodeTargetFrameworks.Retarget(t, currentDotNetVersion)).Distinct();
+
+			return $"{message} To use Xcode {currentXcode}, move to {string.Join(", ", retargeted)}.";
+		}
+
+		/// <summary>
+		/// The warning when the given target frameworks need different Xcode versions, so the checked Xcode can't
+		/// build the older ones.
+		/// </summary>
+		internal static string FormatUncoveredTargetsWarning(IReadOnlyList<OlderTarget> uncovered, string selectedXcode, string currentDotNetVersion)
+		{
+			var needs = string.Join(", ", uncovered.Select(o => $"{o.TargetFramework} needs Xcode {o.XcodeVersion}"));
+			var retargeted = currentDotNetVersion is null
+				? null
+				: string.Join(", ", uncovered.Select(o => XcodeTargetFrameworks.Retarget(o.TargetFramework, currentDotNetVersion)).Distinct());
+
+			var (it, needsIt) = uncovered.Count == 1 ? ("it", "it needs") : ("them", "each needs");
+			var select = $"select the Xcode {needsIt} when you build {it}.";
+
+			return $"With this .NET SDK, {needs}, so the selected Xcode {selectedXcode} can't build {it}. "
+				+ (retargeted is null ? char.ToUpperInvariant(select[0]) + select.Substring(1) : $"Move to {retargeted}, or {select}");
+		}
+
+		/// <summary>
+		/// The hint shown without <c>--tfm</c> when the selected Xcode can't build an older target framework, because
+		/// Uno templates still default to one (net10.0).
+		/// </summary>
+		internal static string FormatOlderTargetsHint(IReadOnlyDictionary<string, string> olderXcodeVersions, NuGetVersion selected, string selectedXcode, string currentDotNetVersion)
+		{
+			var unmatched = (olderXcodeVersions ?? new Dictionary<string, string>())
+				.Where(e => XcodeTargetFrameworks.TryGetMajorMinor(e.Value, out var xcode) && !XcodeTargetFrameworks.MatchesMajorMinor(selected, xcode))
+				.OrderBy(e => e.Key, StringComparer.Ordinal)
+				.Select(e => $"{e.Key} Apple targets (iOS, tvOS, Mac Catalyst) need Xcode {e.Value}")
+				.ToList();
+
+			if (unmatched.Count == 0)
+				return null;
+
+			var builds = currentDotNetVersion is null ? string.Empty : $", and the selected Xcode {selectedXcode} builds {currentDotNetVersion} ones";
+
+			return $"With this .NET SDK, {string.Join("; ", unmatched)}{builds}. Pass your app's target frameworks with --tfm to check them.";
+		}
 
 		internal const string DownloadUrl = "https://developer.apple.com/download/all/";
 
@@ -75,7 +157,8 @@ namespace DotNetCheck.Checkups
 		// The message also goes on the result, so --json reports it instead of falling back to the suggestion.
 		internal DiagnosticResult MissingXcodeResult(IEnumerable<XCodeInfo> installs)
 		{
-			var message = FormatMissingMessage(RequiredVersion, (installs ?? Enumerable.Empty<XCodeInfo>()).Select(FormatInstalledVersion));
+			var message = WithOlderTargetsReason(
+				FormatMissingMessage(RequiredVersion, (installs ?? Enumerable.Empty<XCodeInfo>()).Select(FormatInstalledVersion)));
 
 			ReportStatus(message, Status.Error);
 
@@ -93,8 +176,22 @@ namespace DotNetCheck.Checkups
 			return string.IsNullOrEmpty(x.BuildVersion) ? version : $"{version} ({x.BuildVersion})";
 		}
 
+		// Appends why older target frameworks need this Xcode, when they are what's checked.
+		string WithOlderTargetsReason(string message)
+			=> Targets.OlderOnlyXcodeVersion is null
+				? message
+				: $"{message} {FormatOlderTargetsReason(Targets.Older, CurrentDotNetVersion, FormatRequiredVersion(Version, null))}";
+
 		public override bool ShouldExamine(SharedState history)
-			=> Manifest?.Check?.XCode != null;
+		{
+			string[] targetFrameworks = null;
+			history?.TryGetState(StateKey.EntryPoint, StateKey.TargetFrameworks, out targetFrameworks);
+
+			TargetFrameworksGiven = targetFrameworks is { Length: > 0 };
+			Targets = XcodeTargetFrameworks.Classify(targetFrameworks, Manifest?.Check?.XCode?.TargetFrameworks);
+
+			return Manifest?.Check?.XCode != null;
+		}
 
 		private int install_tries;
 
@@ -104,7 +201,7 @@ namespace DotNetCheck.Checkups
 			{
 				var selected = GetSelectedXCode();
 
-				if (selected is not null && selected.Version.IsCompatible(MinimumVersion, ExactVersion))
+				if (selected is not null && IsRequiredXcode(selected.Version))
 				{
 					// customize runner options so the license can be displayed
 					var options = new ShellProcessRunnerOptions("xcodebuild", "");
@@ -127,6 +224,20 @@ namespace DotNetCheck.Checkups
 					{
 						// Selected version is good
 						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
+
+						if (Targets.Uncovered.Count > 0)
+						{
+							var warning = FormatUncoveredTargetsWarning(Targets.Uncovered, selected.VersionString, CurrentDotNetVersion);
+							ReportStatus(warning, Status.Warning);
+
+							return Task.FromResult(new DiagnosticResult(Status.Warning, this, warning));
+						}
+
+						if (!TargetFrameworksGiven
+							&& FormatOlderTargetsHint(Manifest?.Check?.XCode?.TargetFrameworks, selected.Version, selected.VersionString, CurrentDotNetVersion) is { } hint)
+						{
+							ReportStatus(hint, null);
+						}
 
 						return Task.FromResult(DiagnosticResult.Ok(this));
 					}
@@ -175,7 +286,7 @@ namespace DotNetCheck.Checkups
 
 				foreach (var x in xcodes)
 				{
-					if (x.Version.IsCompatible(MinimumVersion, ExactVersion))
+					if (IsRequiredXcode(x.Version))
 					{
 						eligibleXcode = x;
 						break;
@@ -185,7 +296,9 @@ namespace DotNetCheck.Checkups
 				if (eligibleXcode != null)
 				{
 					// If this is the case, they need to run xcode-select -s
-					ReportStatus($"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})", Status.Error);
+					ReportStatus(
+						WithOlderTargetsReason($"No Xcode.app or an incompatible Xcode.app version is selected, but one was found at ({eligibleXcode.Path})"),
+						Status.Error);
 
 					return Task.FromResult(new DiagnosticResult(
 						Status.Error,
