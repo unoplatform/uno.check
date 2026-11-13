@@ -405,9 +405,13 @@ namespace DotNetCheck.Checkups
 						await EnsureSudoHandshakeOrAbort();
 					}
 
+					var workloadsToInstall = WithoutDowngrades(RequiredWorkloads, availablePackageWorkloads);
+					foreach (var (pinned, kept) in RequiredWorkloads.Zip(workloadsToInstall, (pinned, kept) => (pinned, kept)).Where(p => p.pinned.Version != p.kept.Version))
+						sln.ReportStatus($"Keeping {kept.Id} at the installed {kept.Version}, which is newer than {pinned.Version}.");
+
 					try
 					{
-						await RunWithHeartbeat(sln, "Installing workloads", cancel, token => genericWorkloadManager.Install(RequiredWorkloads, token));
+						await RunWithHeartbeat(sln, "Installing workloads", cancel, token => genericWorkloadManager.Install(workloadsToInstall, token));
 						sln.ReportStatus("Workload installation completed.");
 					}
 					catch (OperationCanceledException)
@@ -422,6 +426,49 @@ namespace DotNetCheck.Checkups
 				// a user-local one (DOTNET_ROOT, ~/.dotnet) does not, and neither does one
 				// that installs workloads per user (Ubuntu's apt SDK).
 				requiresElevation: genericWorkloadManager.RequiresElevation)));
+		}
+
+		/// <summary>
+		/// The workloads the fix installs, with the versions its rollback file pins. The SDK pins every
+		/// manifest in that file to the version given, so a required workload whose manifest is already
+		/// installed at a newer version keeps that version: fixing one missing workload must not roll
+		/// back another that works (#601). The others keep the manifest's version.
+		/// </summary>
+		internal static Manifest.DotNetWorkload[] WithoutDowngrades(
+			IEnumerable<Manifest.DotNetWorkload> requiredWorkloads,
+			IEnumerable<(string id, string version, string sdkVersion)> installedManifests)
+		{
+			var installed = installedManifests
+				.Where(m => m.id is not null)
+				.GroupBy(m => m.id, StringComparer.OrdinalIgnoreCase)
+				.ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+			return requiredWorkloads
+				.Select(workload =>
+				{
+					var pinnedVersion = workload.Version?.Split('/')[0];
+
+					if (installed.TryGetValue(workload.WorkloadManifestId ?? string.Empty, out var manifest)
+						&& NuGetVersion.TryParse(manifest.version, out var installedVersion)
+						&& NuGetVersion.TryParse(pinnedVersion, out var pinned)
+						&& installedVersion > pinned)
+					{
+						return new Manifest.DotNetWorkload
+						{
+							Id = workload.Id,
+							PackageId = workload.PackageId,
+							Version = string.IsNullOrEmpty(manifest.sdkVersion) ? manifest.version : $"{manifest.version}/{manifest.sdkVersion}",
+							WorkloadVersion = workload.WorkloadVersion,
+							WorkloadManifestId = workload.WorkloadManifestId,
+							Abstract = workload.Abstract,
+							IgnoredPackIds = workload.IgnoredPackIds,
+							SupportedPlatforms = workload.SupportedPlatforms,
+						};
+					}
+
+					return workload;
+				})
+				.ToArray();
 		}
 	}
 }
