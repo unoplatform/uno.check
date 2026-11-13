@@ -191,6 +191,25 @@ namespace DotNetCheck.Checkups
 					})));
 		}
 
+		// The selected Xcode is the required one, with its iOS SDK. CheckCommand prints the message of a result without
+		// a suggestion, so the warning only goes on the result; reporting it too would print it twice. An Ok result's
+		// message isn't printed, so the hint is reported under the checkup.
+		internal DiagnosticResult SelectedXcodeResult(XCodeInfo selected)
+		{
+			ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
+
+			if (Targets.Uncovered.Count > 0)
+				return new DiagnosticResult(Status.Warning, this, FormatUncoveredTargetsWarning(Targets.Uncovered, selected.VersionString, CurrentDotNetVersion));
+
+			if (!TargetFrameworksGiven
+				&& FormatOlderTargetsHint(Manifest?.Check?.XCode?.TargetFrameworks, selected.Version, selected.VersionString, CurrentDotNetVersion) is { } hint)
+			{
+				ReportStatus(hint, null);
+			}
+
+			return DiagnosticResult.Ok(this);
+		}
+
 		internal static string FormatInstalledVersion(XCodeInfo x)
 		{
 			// The Info.plist fallback can leave the short version empty; the parsed version or the path still names it.
@@ -254,26 +273,7 @@ namespace DotNetCheck.Checkups
 					var (isValid, sdkVersion) = ValidateForiOSSDK();
 
 					if (isValid)
-					{
-						// Selected version is good
-						ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion})", Status.Ok);
-
-						if (Targets.Uncovered.Count > 0)
-						{
-							var warning = FormatUncoveredTargetsWarning(Targets.Uncovered, selected.VersionString, CurrentDotNetVersion);
-							ReportStatus(warning, Status.Warning);
-
-							return Task.FromResult(new DiagnosticResult(Status.Warning, this, warning));
-						}
-
-						if (!TargetFrameworksGiven
-							&& FormatOlderTargetsHint(Manifest?.Check?.XCode?.TargetFrameworks, selected.Version, selected.VersionString, CurrentDotNetVersion) is { } hint)
-						{
-							ReportStatus(hint, null);
-						}
-
-						return Task.FromResult(DiagnosticResult.Ok(this));
-					}
+						return Task.FromResult(SelectedXcodeResult(selected));
 
 					ReportStatus($"Xcode.app ({selected.VersionString} {selected.BuildVersion}) is installed, but missing the iOS SDK ({sdkVersion}). Usually, this occurs after a recent Xcode install or update.", Status.Error);
 
