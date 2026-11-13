@@ -8,9 +8,12 @@ runs:
     uses: actions/checkout@v2
 
   - name: Setup .NET SDK
-    uses: actions/setup-dotnet@v1
+    uses: actions/setup-dotnet@v5
     with:
-      dotnet-version: '9.0.300'
+      # The runner image already has nbgv 3.10.94, a .NET 10 tool, and `dotnet tool update` won't
+      # downgrade it to toolVersion below. With only .NET 9 here, `nbgv get-version` failed and
+      # 1.35.25 shipped without its tag (2026-11-13). The build job in ci.yml also uses .NET 10.
+      dotnet-version: '10.0.x'
 
   - uses: dotnet/nbgv@f088059084cb5d872e9d1a994433ca6440c2bf72 # v0.4.2
     name: NBGV
