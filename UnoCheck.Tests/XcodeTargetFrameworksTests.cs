@@ -1,4 +1,5 @@
 using DotNetCheck.Checkups;
+using DotNetCheck.Cli;
 using DotNetCheck.Manifest;
 using DotNetCheck.Models;
 using NuGet.Versioning;
@@ -231,6 +232,44 @@ public class XcodeTargetFrameworksTests
 
         Assert.Equal("27.2", checkup.RequiredVersion);
         Assert.Equal([new OlderTarget("net10.0-ios", "net10.0", "26.0")], checkup.Targets.Uncovered);
+    }
+
+    // CheckCommand prints the message of a result without a suggestion, so reporting the warning too printed it twice.
+    [Fact]
+    public void Checkup_CurrentAndNet10Targets_PutsTheWarningOnlyOnTheResult()
+    {
+        const string Warning = "With this .NET SDK, net10.0-ios needs Xcode 26.0, so the selected Xcode 27.2 can't build it. "
+            + "Move to net11.0-ios, or select the Xcode it needs when you build it.";
+        var checkup = ExaminedFor("net10.0-ios", "net11.0-ios");
+        var statuses = new List<string>();
+        checkup.OnStatusUpdated += (_, e) => statuses.Add(e.Message);
+
+        var result = checkup.SelectedXcodeResult(Xcode("27.2", "27B52", "/Applications/Xcode.app", selected: true));
+
+        Assert.Equal(["Xcode.app (27.2 27B52)"], statuses);
+        Assert.Equal(Status.Warning, result.Status);
+        Assert.Equal(Warning, result.Message);
+        Assert.Equal(Warning, CheckCommand.BuildHealthCheck(checkup, result).Message);
+    }
+
+    // An Ok result's message isn't printed, so the hint has to be reported under the checkup.
+    [Fact]
+    public void Checkup_WithoutTargetFrameworks_ReportsTheHintUnderTheCheckup()
+    {
+        var checkup = ExaminedFor();
+        var statuses = new List<string>();
+        checkup.OnStatusUpdated += (_, e) => statuses.Add(e.Message);
+
+        var result = checkup.SelectedXcodeResult(Xcode("27.2", "27B52", "/Applications/Xcode.app", selected: true));
+
+        Assert.Equal(
+            [
+                "Xcode.app (27.2 27B52)",
+                "With this .NET SDK, net10.0 Apple targets (iOS, tvOS, Mac Catalyst) need Xcode 26.0, and the selected Xcode 27.2 "
+                    + "builds net11.0 ones. Pass your app's target frameworks with --tfm to check them.",
+            ],
+            statuses);
+        Assert.Equal(Status.Ok, result.Status);
     }
 
     [Fact]
