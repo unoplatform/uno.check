@@ -13,8 +13,20 @@ namespace DotNetCheck.Solutions
 {
 	public class DotNetSdkScriptInstallSolution : Solution
 	{
-		const string installScriptBash = "https://dot.net/v1/dotnet-install.sh";
-		const string installScriptPwsh = "https://dot.net/v1/dotnet-install.ps1";
+		// dot.net only redirects to builds.dotnet.microsoft.com, so the script is downloaded from there first, and
+		// dot.net is the fallback in case the script moves. On 2026-11-12, dot.net stalled or dropped connections
+		// from GitHub's runners for hours, while builds.dotnet.microsoft.com kept working (issue #627).
+		static readonly Uri[] InstallScriptBashUrls =
+		{
+			new Uri("https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh"),
+			new Uri("https://dot.net/v1/dotnet-install.sh"),
+		};
+
+		static readonly Uri[] InstallScriptPwshUrls =
+		{
+			new Uri("https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.ps1"),
+			new Uri("https://dot.net/v1/dotnet-install.ps1"),
+		};
 
 		const int ScriptDownloadRetries = 3;
 
@@ -115,12 +127,12 @@ namespace DotNetCheck.Solutions
 
 			var sdkRoot = InstallRoot;
 
-			var scriptUrl = Util.IsWindows ? installScriptPwsh : installScriptBash;
+			var scriptUrls = Util.IsWindows ? InstallScriptPwshUrls : InstallScriptBashUrls;
 			var scriptPath = Path.Combine(Path.GetTempPath(), Util.IsWindows ? "dotnet-install.ps1" : "dotnet-install.sh");
 
-			Util.Log($"Downloading dotnet-install script: {scriptUrl}");
+			Util.Log($"Downloading dotnet-install script: {scriptUrls[0]}");
 
-			var data = await DownloadScriptAsync(ScriptClient, new Uri(scriptUrl), ScriptDownloadRetries, ScriptDownloadAttemptTimeout,
+			var data = await DownloadScriptAsync(ScriptClient, scriptUrls, ScriptDownloadRetries, ScriptDownloadAttemptTimeout,
 				ReportStatus, Task.Delay, cancellationToken);
 			File.WriteAllText(scriptPath, data);
 
@@ -149,31 +161,33 @@ namespace DotNetCheck.Solutions
 		}
 
 		/// <summary>
-		/// Downloads the dotnet-install script. A failed, stalled or transient-status attempt is retried, as in
+		/// Downloads the dotnet-install script, trying <paramref name="urls"/> in turn. A failed, stalled or
+		/// unsuccessful attempt is retried from the next URL, with backoff as in
 		/// <see cref="Checkups.AndroidSdkPackagesCheckup.DownloadArchiveAsync"/>. When the retries are used up, a stalled
 		/// download fails with a <see cref="TimeoutException"/>, so it isn't taken for the user cancelling the run.
 		/// </summary>
-		internal static async Task<string> DownloadScriptAsync(HttpClient client, Uri url, int retries, TimeSpan attemptTimeout,
+		internal static async Task<string> DownloadScriptAsync(HttpClient client, IReadOnlyList<Uri> urls, int retries, TimeSpan attemptTimeout,
 			Action<string> reportStatus, Func<TimeSpan, CancellationToken, Task> delay, CancellationToken cancellationToken)
 		{
+			var tries = 0;
+
 			return await Policy.Handle<HttpRequestException>().Or<TimeoutException>()
 				.RetryAsync(retries, async (exception, attempt) =>
 				{
-					reportStatus($"Downloading the dotnet-install script failed ({exception.Message}); retrying ({attempt}/{retries}) ...");
+					reportStatus($"Downloading the dotnet-install script failed ({exception.Message}); retrying from {urls[attempt % urls.Count].Host} ({attempt}/{retries}) ...");
 					await delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), cancellationToken);
 				})
 				.ExecuteAsync(async token =>
 				{
+					var url = urls[tries++ % urls.Count];
 					using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
 					timeout.CancelAfter(attemptTimeout);
 					try
 					{
 						using var response = await client.GetAsync(url, timeout.Token);
-						var status = (int)response.StatusCode;
-						if (status == 408 || status == 429 || status >= 500)
-							throw new HttpRequestException($"Downloading {url} returned HTTP {status}.");
+						// Any status is retried: a missing script on one host can still be on the other.
 						if (!response.IsSuccessStatusCode)
-							throw new InvalidOperationException($"Downloading {url} returned HTTP {status} ({response.ReasonPhrase}).");
+							throw new HttpRequestException($"Downloading {url} returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
 
 						// GetAsync has already read the whole body within the attempt's timeout. (netcoreapp3.1 has no
 						// ReadAsStringAsync overload that takes a token.)

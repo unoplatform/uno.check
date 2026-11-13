@@ -44,8 +44,8 @@ public class DotNetSdkScriptInstallSolutionTests
         Assert.Equal(Script, await Download(client, statuses: statuses));
 
         Assert.Equal(3, attempts);
-        Assert.Contains(statuses, status => status.Contains("retrying (1/3)"));
-        Assert.Contains(statuses, status => status.Contains("retrying (2/3)"));
+        Assert.Contains(statuses, status => status.Contains($"retrying from {Fallback.Host} (1/3)"));
+        Assert.Contains(statuses, status => status.Contains($"retrying from {Primary.Host} (2/3)"));
     }
 
     [Fact]
@@ -103,17 +103,38 @@ public class DotNetSdkScriptInstallSolutionTests
         Assert.Equal(4, attempts);
     }
 
+    [Fact]
+    public async Task DownloadScript_Uses_The_First_Host_When_It_Answers()
+    {
+        var hosts = new List<string>();
+        using var client = Client((request, _) => { hosts.Add(request.RequestUri!.Host); return Task.FromResult(Ok()); });
+
+        Assert.Equal(Script, await Download(client));
+        Assert.Equal([Primary.Host], hosts);
+    }
+
+    [Fact]
+    public async Task DownloadScript_Tries_The_Hosts_In_Turn()
+    {
+        // dot.net stalled from GitHub's runners on 2026-11-12, while builds.dotnet.microsoft.com kept working.
+        var hosts = new List<string>();
+        using var client = Client((request, _) => { hosts.Add(request.RequestUri!.Host); throw new HttpRequestException("Connection refused"); });
+        var statuses = new List<string>();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => Download(client, statuses: statuses));
+
+        Assert.Equal([Primary.Host, Fallback.Host, Primary.Host, Fallback.Host], hosts);
+        Assert.Contains(statuses, status => status.Contains($"retrying from {Fallback.Host} (1/3)"));
+    }
+
     [Theory]
     [InlineData(403)]
     [InlineData(404)]
-    public async Task DownloadScript_Does_Not_Retry_Permanent_Http_Failures(int status)
+    public async Task DownloadScript_Gets_A_Script_Missing_From_One_Host_From_The_Other(int status)
     {
-        var attempts = 0;
-        using var client = Client((_, _) => { attempts++; return Task.FromResult(new HttpResponseMessage((HttpStatusCode)status)); });
+        using var client = Client((request, _) => Task.FromResult(request.RequestUri == Primary ? new HttpResponseMessage((HttpStatusCode)status) : Ok()));
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Download(client));
-        Assert.Contains(status.ToString(), ex.Message);
-        Assert.Equal(1, attempts);
+        Assert.Equal(Script, await Download(client));
     }
 
     [Fact]
@@ -133,9 +154,12 @@ public class DotNetSdkScriptInstallSolutionTests
         Assert.Equal(1, attempts);
     }
 
+    static readonly Uri Primary = new("https://builds.example.test/dotnet/scripts/v1/dotnet-install.sh");
+    static readonly Uri Fallback = new("https://dot.example.test/v1/dotnet-install.sh");
+
     static Task<string> Download(HttpClient client, List<string>? statuses = null, List<TimeSpan>? delays = null,
         int retries = 3, TimeSpan? attemptTimeout = null, CancellationToken token = default)
-        => DotNetSdkScriptInstallSolution.DownloadScriptAsync(client, new Uri("https://dot.example.test/v1/dotnet-install.sh"),
+        => DotNetSdkScriptInstallSolution.DownloadScriptAsync(client, [Primary, Fallback],
             retries, attemptTimeout ?? TimeSpan.FromSeconds(30), status => statuses?.Add(status),
             (time, _) => { delays?.Add(time); return Task.CompletedTask; }, token);
 
