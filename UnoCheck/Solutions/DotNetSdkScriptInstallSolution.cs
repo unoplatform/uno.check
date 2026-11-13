@@ -1,5 +1,6 @@
 ﻿using DotNetCheck;
 using DotNetCheck.Models;
+using Polly;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +15,15 @@ namespace DotNetCheck.Solutions
 	{
 		const string installScriptBash = "https://dot.net/v1/dotnet-install.sh";
 		const string installScriptPwsh = "https://dot.net/v1/dotnet-install.ps1";
+
+		const int ScriptDownloadRetries = 3;
+
+		// The script is about 60 KB and usually arrives in a second. A slower attempt is abandoned and
+		// retried rather than waiting for HttpClient's 100-second default, which then failed the whole run.
+		static readonly TimeSpan ScriptDownloadAttemptTimeout = TimeSpan.FromSeconds(30);
+
+		// Each attempt is bounded by ScriptDownloadAttemptTimeout instead.
+		static readonly HttpClient ScriptClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
 
 		public DotNetSdkScriptInstallSolution(string version)
 			: this(version, null)
@@ -110,8 +120,8 @@ namespace DotNetCheck.Solutions
 
 			Util.Log($"Downloading dotnet-install script: {scriptUrl}");
 
-			var http = new HttpClient();
-			var data = await http.GetStringAsync(scriptUrl);
+			var data = await DownloadScriptAsync(ScriptClient, new Uri(scriptUrl), ScriptDownloadRetries, ScriptDownloadAttemptTimeout,
+				ReportStatus, Task.Delay, cancellationToken);
 			File.WriteAllText(scriptPath, data);
 
 			var exe = Util.Platform switch
@@ -136,6 +146,42 @@ namespace DotNetCheck.Solutions
 				: await Util.WrapShellCommandWithSudo(exe, workingDir: null, verbose: Util.Verbose, cancellationToken: cancellationToken, args: args);
 			if (!result.Success)
 				throw new InvalidOperationException(result.GetOutput());
+		}
+
+		/// <summary>
+		/// Downloads the dotnet-install script. A failed, stalled or transient-status attempt is retried, as in
+		/// <see cref="Checkups.AndroidSdkPackagesCheckup.DownloadArchiveAsync"/>. When the retries are used up, a stalled
+		/// download fails with a <see cref="TimeoutException"/>, so it isn't taken for the user cancelling the run.
+		/// </summary>
+		internal static async Task<string> DownloadScriptAsync(HttpClient client, Uri url, int retries, TimeSpan attemptTimeout,
+			Action<string> reportStatus, Func<TimeSpan, CancellationToken, Task> delay, CancellationToken cancellationToken)
+		{
+			return await Policy.Handle<HttpRequestException>().Or<TimeoutException>()
+				.RetryAsync(retries, async (exception, attempt) =>
+				{
+					reportStatus($"Downloading the dotnet-install script failed ({exception.Message}); retrying ({attempt}/{retries}) ...");
+					await delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), cancellationToken);
+				})
+				.ExecuteAsync(async token =>
+				{
+					using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+					timeout.CancelAfter(attemptTimeout);
+					try
+					{
+						using var response = await client.GetAsync(url, timeout.Token);
+						var status = (int)response.StatusCode;
+						if (status == 408 || status == 429 || status >= 500)
+							throw new HttpRequestException($"Downloading {url} returned HTTP {status}.");
+						if (!response.IsSuccessStatusCode)
+							throw new InvalidOperationException($"Downloading {url} returned HTTP {status} ({response.ReasonPhrase}).");
+
+						return await response.Content.ReadAsStringAsync(timeout.Token);
+					}
+					catch (OperationCanceledException ex) when (!token.IsCancellationRequested)
+					{
+						throw new TimeoutException($"Downloading {url} took longer than {attemptTimeout.TotalSeconds:0} seconds.", ex);
+					}
+				}, cancellationToken);
 		}
 
 		/// <summary>
