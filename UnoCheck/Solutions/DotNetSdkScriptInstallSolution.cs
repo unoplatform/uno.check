@@ -175,7 +175,9 @@ namespace DotNetCheck.Solutions
 						if (!response.IsSuccessStatusCode)
 							throw new InvalidOperationException($"Downloading {url} returned HTTP {status} ({response.ReasonPhrase}).");
 
-						return await response.Content.ReadAsStringAsync(timeout.Token);
+						// GetAsync has already read the whole body within the attempt's timeout. (netcoreapp3.1 has no
+						// ReadAsStringAsync overload that takes a token.)
+						return await response.Content.ReadAsStringAsync();
 					}
 					catch (OperationCanceledException ex) when (!token.IsCancellationRequested)
 					{
