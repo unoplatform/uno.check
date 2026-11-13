@@ -138,6 +138,8 @@ uno-check --target desktop --target web --target android --target ios
 
 Uno Platform 7 removed the Mac Catalyst head: macOS apps use the desktop head, so use `--target desktop` instead of `--target macos`. You can also pass your project's target frameworks with `--tfm` (for example `--tfm net11.0-android --tfm net11.0-desktop`), and uno-check derives the targets from them.
 
+`--tfm` also limits the WebAssembly toolchains uno-check installs. The .NET 11 SDK builds `net10.0-browserwasm`, the Uno template default, only with the `wasm-tools-net10` workload, a second Emscripten of about 1.4 GB. uno-check installs it without `--tfm` and with `--tfm net10.0-browserwasm`, but not when every WebAssembly target framework is `net11.0-browserwasm`.
+
 See [Command line arguments](xref:UnoCheck.Configuration#command-line-arguments) for more details
 
 ### Run uno-check in readonly mode on Windows
