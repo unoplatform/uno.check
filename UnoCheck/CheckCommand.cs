@@ -447,7 +447,9 @@ namespace DotNetCheck.Cli
 
 								Json.JsonlOutput.Emit(new Json.FixResultEvent { Id = checkup.Id, Success = false, Error = $"Elevation required: {x.Message}" });
 							}
-							catch (OperationCanceledException)
+							// Only Ctrl+C cancels the run. A timed-out request (HttpClient throws a TaskCanceledException)
+							// is a failed fix, reported like any other below.
+							catch (OperationCanceledException) when (cts.IsCancellationRequested)
 							{
 								AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Operation canceled by user.[/]");
 
@@ -565,6 +567,10 @@ namespace DotNetCheck.Cli
 				// Hosts tailing --json-file cannot see stderr: carry the failure into the
 				// terminal report before Spectre's handler renders and rethrows it.
 				abnormalReason ??= $"unhandled exception: {ex.Message}";
+
+				// Spectre's handler prints only the message ("Error: Index was outside the bounds of the array."),
+				// so --verbose logs where it came from. Plain text, in case the rich renderer is what failed.
+				Util.Log(ex.ToString());
 				throw;
 			}
 			finally
