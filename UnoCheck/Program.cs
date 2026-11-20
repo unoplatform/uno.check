@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -84,6 +84,7 @@ namespace DotNetCheck
 				new DotNetNewUnoTemplatesCheckup(),
 				new UnoSdkCheckup(),
 				new EdgeWebView2Checkup(),
+				new WinAppCliCheckup(),
 				new DotNetRootsCheckup(),
 				new DotNetTargetingPackAlignmentCheckup()
 			);
