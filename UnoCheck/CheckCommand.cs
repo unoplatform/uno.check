@@ -821,13 +821,14 @@ namespace DotNetCheck.Cli
 		/// The SDK version a fix has to be given explicitly, so that it cannot pick another SDK from a different working
 		/// directory: the SDK that was selected, whatever chose it. The <c>dotnet</c> checkup's own fix installs the SDK
 		/// the manifest needs and so can change the selection, so it gets one only when the SDK was requested or pinned by
-		/// a <c>global.json</c>. Null before the <c>dotnet</c> checkup ran, and for a fallback to the newest SDK, which
-		/// could not be requested again.
+		/// a <c>global.json</c> <c>sdk.version</c>; a <c>global.json</c> without a version, which Uno projects commonly have,
+		/// selects the newest SDK that fits and so is no pin. Null before an SDK was selected, and for a fallback to the newest
+		/// SDK, which could not be requested again.
 		/// </summary>
 		internal static string GetPinnedSdkVersion(SharedState sharedState, string checkupId)
 		{
-			if (!sharedState.TryGetState<DotNetSdkSelection>("dotnet", StateKey.DotNetSdkSelection, out var selection)
-				|| selection.Sdk is not { } sdk)
+			if (!sharedState.TryGetStateFromAll<DotNetSdkSelection>(StateKey.DotNetSdkSelection, out var selections)
+				|| selections.FirstOrDefault(s => s.Sdk is not null) is not { Sdk: { } sdk } selection)
 			{
 				return null;
 			}

@@ -127,7 +127,7 @@ namespace DotNetCheck.Checkups
 			var origin = selection.Source switch
 			{
 				DotNetSdkSelectionSource.Requested => " as requested with --dotnet-sdk-version",
-				DotNetSdkSelectionSource.GlobalJson => $" as selected by {selection.GlobalJsonPath}",
+				DotNetSdkSelectionSource.GlobalJson or DotNetSdkSelectionSource.GlobalJsonSettings => $" as selected by {selection.GlobalJsonPath}",
 				_ => string.Empty,
 			};
 

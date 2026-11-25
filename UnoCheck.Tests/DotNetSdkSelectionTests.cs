@@ -96,6 +96,15 @@ public class DotNetSdkSelectionTests
     }
 
     [Fact]
+    public void A_Global_Json_Without_A_Version_Selects_The_Sdk_The_Host_Resolved_But_Is_No_Pin()
+    {
+        var selection = DotNetSdkSelector.Select(RunnerSdks, Manifest("10.0.101"), null, new GlobalJsonSdkResolution("global.json", NuGetVersion.Parse("10.0.404"), null, HasVersion: false));
+
+        Assert.Equal("10.0.404", Version(selection));
+        Assert.Equal(DotNetSdkSelectionSource.GlobalJsonSettings, selection.Source);
+    }
+
+    [Fact]
     public void A_Global_Json_That_Did_Not_Resolve_Warns_And_Is_Ignored()
     {
         var selection = DotNetSdkSelector.Select(
@@ -173,6 +182,9 @@ public sealed class GlobalJsonDiscoveryTests : IDisposable
 
     public void Dispose() => Directory.Delete(root, recursive: true);
 
+    static ManifestSdk[] Manifest(string version)
+        => [new ManifestSdk { Version = version }];
+
     string Write(string relativeDirectory, string content)
     {
         var path = Path.Combine(root, relativeDirectory, "global.json");
@@ -185,7 +197,7 @@ public sealed class GlobalJsonDiscoveryTests : IDisposable
     {
         var path = Write("", """{ "sdk": { "version": "10.0.402", "rollForward": "latestFeature" } }""");
 
-        Assert.Equal(path, DotNetSdkSelector.FindGlobalJsonPin(Path.Combine(root, "src", "app")));
+        Assert.Equal(path, DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app"))?.Path);
     }
 
     [Fact]
@@ -194,7 +206,7 @@ public sealed class GlobalJsonDiscoveryTests : IDisposable
         Write("", """{ "sdk": { "version": "10.0.402" } }""");
         Write("src", """{ "msbuild-sdks": { "Uno.Sdk": "6.0.0" } }""");
 
-        Assert.Null(DotNetSdkSelector.FindGlobalJsonPin(Path.Combine(root, "src", "app")));
+        Assert.Null(DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app")));
     }
 
     [Fact]
@@ -207,7 +219,7 @@ public sealed class GlobalJsonDiscoveryTests : IDisposable
             }
             """);
 
-        Assert.Equal(path, DotNetSdkSelector.FindGlobalJsonPin(Path.Combine(root, "src", "app")));
+        Assert.Equal(path, DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app"))?.Path);
     }
 
     [Fact]
@@ -215,7 +227,96 @@ public sealed class GlobalJsonDiscoveryTests : IDisposable
     {
         Write("src", "not json");
 
-        Assert.Null(DotNetSdkSelector.FindGlobalJsonPin(Path.Combine(root, "src", "app")));
+        Assert.Null(DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app")));
+    }
+
+    [Theory]
+    [InlineData("""{ "sdk": { "allowPrerelease": false } }""")]
+    [InlineData("""{ "sdk": { "paths": [ ".dotnet", "$host$" ] } }""")]
+    public void A_Global_Json_Without_A_Version_Still_Selects_An_Sdk(string content)
+    {
+        var path = Write("src", content);
+
+        var found = DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app"));
+
+        Assert.Equal(path, found?.Path);
+        Assert.False(found!.HasVersion);
+    }
+
+    [Fact]
+    public void A_Global_Json_Version_Is_Reported_As_A_Pin()
+    {
+        Write("src", """{ "sdk": { "version": "10.0.402", "rollForward": "latestFeature" } }""");
+
+        Assert.True(DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app"))!.HasVersion);
+    }
+
+    [Theory]
+    [InlineData("""{ "msbuild-sdks": { "Uno.Sdk": "6.0.0" } }""")]
+    [InlineData("""{ "sdk": { } }""")]
+    [InlineData("""{ "sdk": { "rollForward": "latestMajor" } }""")]
+    public void A_Global_Json_Without_Sdk_Settings_Selects_Nothing(string content)
+    {
+        Write("src", content);
+
+        Assert.Null(DotNetSdkSelector.FindSdkGlobalJson(Path.Combine(root, "src", "app")));
+    }
+
+    [Fact]
+    public void Only_Sdks_Under_The_Sdk_Root_Are_Considered_For_The_Workload_Commands()
+    {
+        var local = new DotNetSdkInfo("10.0.404", Path.Combine(root, "local", "sdk", "10.0.404"));
+        var system = new DotNetSdkInfo("10.0.404", Path.Combine(root, "system", "sdk", "10.0.404"));
+        var newer = new DotNetSdkInfo("11.0.100", Path.Combine(root, "local", "sdk", "11.0.100"));
+
+        var scoped = DotNetSdkSelector.InstalledUnder([local, system, newer], Path.Combine(root, "system"));
+
+        Assert.Same(system, Assert.Single(scoped));
+    }
+
+    [Fact]
+    public void An_Sdk_Resolved_Only_Outside_The_Sdk_Root_Is_Ignored_With_A_Pointer_To_Dotnet_Option()
+    {
+        var local = new DotNetSdkInfo("10.0.404", Path.Combine(root, "local", "sdk", "10.0.404"));
+        var system = new DotNetSdkInfo("10.0.115", Path.Combine(root, "system", "sdk", "10.0.115"));
+
+        var selection = DotNetSdkSelector.SelectInRoot([local, system], Path.Combine(root, "system"), Manifest("10.0.101"), null, new GlobalJsonSdkResolution("global.json", local.Version, null));
+
+        Assert.Equal("10.0.115", selection.Sdk!.Version.ToString());
+        Assert.Equal(DotNetSdkSelectionSource.Manifest, selection.Source);
+        Assert.Contains("--dotnet", Assert.Single(selection.Warnings));
+    }
+
+    [Fact]
+    public void The_Same_Sdk_In_Another_Installation_Warns_When_Global_Json_Selected_It()
+    {
+        var local = new DotNetSdkInfo("10.0.404", Path.Combine(root, "local", "sdk", "10.0.404"));
+        var system = new DotNetSdkInfo("10.0.404", Path.Combine(root, "system", "sdk", "10.0.404"));
+
+        var selection = DotNetSdkSelector.SelectInRoot([local, system], Path.Combine(root, "system"), Manifest("10.0.101"), null, new GlobalJsonSdkResolution("global.json", system.Version, null));
+
+        Assert.Same(system, selection.Sdk);
+        Assert.Equal(DotNetSdkSelectionSource.GlobalJson, selection.Source);
+        Assert.Contains("also installed", Assert.Single(selection.Warnings));
+    }
+
+    [Fact]
+    public void The_Same_Sdk_In_Another_Installation_Is_Not_Mentioned_When_Global_Json_Did_Not_Choose()
+    {
+        var local = new DotNetSdkInfo("10.0.404", Path.Combine(root, "local", "sdk", "10.0.404"));
+        var system = new DotNetSdkInfo("10.0.404", Path.Combine(root, "system", "sdk", "10.0.404"));
+
+        var selection = DotNetSdkSelector.SelectInRoot([local, system], Path.Combine(root, "system"), Manifest("10.0.101"), null, null);
+
+        Assert.Empty(selection.Warnings);
+    }
+
+    [Fact]
+    public void An_Unmatched_Sdk_Root_Keeps_Every_Sdk()
+    {
+        var sdks = new[] { new DotNetSdkInfo("10.0.404", Path.Combine(root, "a", "sdk", "10.0.404")) };
+
+        Assert.Same(sdks, DotNetSdkSelector.InstalledUnder(sdks, Path.Combine(root, "elsewhere")));
     }
 
     [Fact]
@@ -241,11 +342,23 @@ public class PinnedSdkVersionTests
     [Theory]
     [InlineData("Requested", "dotnet", "10.0.404")]
     [InlineData("GlobalJson", "dotnet", "10.0.404")]
+    [InlineData("GlobalJsonSettings", "dotnet", null)]
+    [InlineData("GlobalJsonSettings", "dotnetworkloads-10.0.101", "10.0.404")]
     [InlineData("Manifest", "dotnet", null)]
     [InlineData("Manifest", "dotnetworkloads-10.0.101", "10.0.404")]
     [InlineData("Newest", "dotnetworkloads-10.0.101", null)]
     public void A_Fix_Is_Given_The_Selected_Sdk_Unless_It_Could_Change_Or_Not_Be_Requested(string source, string checkupId, string? expected)
         => Assert.Equal(expected, CheckCommand.GetPinnedSdkVersion(StateWith(Enum.Parse<DotNetSdkSelectionSource>(source)), checkupId));
+
+    [Fact]
+    public void A_Selection_Recorded_By_The_Workloads_Checkup_Counts_When_Dotnet_Was_Skipped()
+    {
+        var state = new SharedState();
+        var sdk = new DotNetSdkInfo("10.0.404", Path.Combine(Path.GetTempPath(), "dotnet", "sdk", "10.0.404"));
+        state.ContributeState("dotnetworkloads-10.0.101", StateKey.DotNetSdkSelection, new DotNetSdkSelection(sdk, DotNetSdkSelectionSource.GlobalJson, []));
+
+        Assert.Equal("10.0.404", CheckCommand.GetPinnedSdkVersion(state, "dotnetworkloads-10.0.101"));
+    }
 
     [Fact]
     public void Nothing_Is_Pinned_Before_The_Dotnet_Checkup_Ran()

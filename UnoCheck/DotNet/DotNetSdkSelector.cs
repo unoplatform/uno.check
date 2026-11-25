@@ -17,6 +17,9 @@ namespace DotNetCheck.DotNet
 		/// <summary>Resolved by the dotnet host from the <c>global.json</c> that applies to the working directory.</summary>
 		GlobalJson,
 
+		/// <summary>Resolved by the dotnet host from a <c>global.json</c> with SDK settings but no <c>sdk.version</c>, such as <c>allowPrerelease</c>.</summary>
+		GlobalJsonSettings,
+
 		/// <summary>The newest installed SDK that fits an SDK the manifest requires.</summary>
 		Manifest,
 
@@ -27,7 +30,10 @@ namespace DotNetCheck.DotNet
 	/// <summary>
 	/// What the dotnet host resolved for a <c>global.json</c> that pins an SDK: the version, or why it could not.
 	/// </summary>
-	internal sealed record GlobalJsonSdkResolution(string Path, NuGetVersion Version, string Failure);
+	internal sealed record GlobalJsonSdkResolution(string Path, NuGetVersion Version, string Failure, bool HasVersion = true);
+
+	/// <summary>A <c>global.json</c> whose <c>sdk</c> section influences the SDK the host picks.</summary>
+	internal sealed record SdkGlobalJson(string Path, bool HasVersion);
 
 	/// <summary>
 	/// The SDK that checks and installs workloads. <see cref="Sdk"/> is null when no SDK is installed
@@ -65,7 +71,51 @@ namespace DotNetCheck.DotNet
 				? await dotnet.ResolveGlobalJsonSdk(Directory.GetCurrentDirectory())
 				: null;
 
-			return Select(installed, required, requestedVersion, globalJson);
+			return SelectInRoot(installed, dotnet.DotNetSdkLocation.FullName, required, requestedVersion, globalJson);
+		}
+
+		/// <summary>
+		/// <see cref="Select"/> among the SDKs of the root whose <c>dotnet</c> runs the workload commands. An SDK the
+		/// host resolved from <c>sdk.paths</c> in another installation is not usable there, as installations keep their
+		/// own workload metadata.
+		/// </summary>
+		internal static DotNetSdkSelection SelectInRoot(
+			IReadOnlyCollection<DotNetSdkInfo> installed,
+			string sdkRoot,
+			IReadOnlyCollection<Manifest.DotNetSdk> required,
+			string requestedVersion,
+			GlobalJsonSdkResolution globalJson)
+		{
+			var scoped = InstalledUnder(installed, sdkRoot);
+			var elsewhere = new List<string>();
+
+			if (globalJson?.Version is { } pinned && installed.Any(s => s.Version == pinned))
+			{
+				var other = installed.Where(s => s.Version == pinned && !scoped.Contains(s)).ToList();
+
+				if (other.Count > 0 && !scoped.Any(s => s.Version == pinned))
+				{
+					// The host resolved an SDK of another installation, whose workload metadata the SDK root's
+					// dotnet cannot see; checking or installing here would miss the SDK the project builds with.
+					globalJson = new GlobalJsonSdkResolution(
+						globalJson.Path,
+						null,
+						$"it resolves to .NET SDK {pinned} in {other[0].Directory.Parent?.Parent?.FullName}, outside the SDK root {sdkRoot} whose workloads uno-check manages; run uno-check with --dotnet pointing at that installation",
+						globalJson.HasVersion);
+				}
+				else if (other.Count > 0)
+				{
+					elsewhere.Add($".NET SDK {pinned} is also installed in {other[0].Directory.Parent?.Parent?.FullName}. "
+						+ $"If global.json selects that installation (sdk.paths), workloads are still checked and installed in the SDK root {sdkRoot}.");
+				}
+			}
+
+			var selection = Select(scoped, required, requestedVersion, globalJson);
+
+			// Only meaningful when global.json is what chose the SDK
+			return elsewhere.Count == 0 || selection.Source is not (DotNetSdkSelectionSource.GlobalJson or DotNetSdkSelectionSource.GlobalJsonSettings)
+				? selection
+				: selection with { Warnings = [.. selection.Warnings, .. elsewhere] };
 		}
 
 		internal static DotNetSdkSelection Select(
@@ -102,7 +152,7 @@ namespace DotNetCheck.DotNet
 
 				if (globalJson.Failure is not null)
 				{
-					warnings.Add($"global.json '{globalJson.Path}' did not resolve to an installed .NET SDK ({globalJson.Failure}). It is ignored.");
+					warnings.Add($"global.json '{globalJson.Path}' could not be used ({globalJson.Failure}). It is ignored.");
 				}
 				else if (pinned is null)
 				{
@@ -114,11 +164,17 @@ namespace DotNetCheck.DotNet
 					// SDK would not provide the workloads either, so the manifest's SDK stays in charge.
 					warnings.Add($"global.json '{globalJson.Path}' selects .NET SDK {pinned.Version}, but this manifest targets {DescribeRequired(required)}. "
 						+ $"Workloads are installed for the SDK the manifest requires, so builds with .NET SDK {pinned.Version} will report missing workloads (NETSDK1147). "
-						+ "Update global.json to the .NET version of the manifest, or use a manifest that targets the .NET version of global.json (--manifest).");
+						+ (globalJson.HasVersion
+							? "Update global.json to the .NET version of the manifest, or use a manifest that targets the .NET version of global.json (--manifest)."
+							: "Its settings let the host pick the newest SDK it allows; pin the .NET version with sdk.version in global.json, or use a manifest that targets that .NET version (--manifest)."));
 				}
 				else
 				{
-					return new DotNetSdkSelection(pinned, DotNetSdkSelectionSource.GlobalJson, warnings, GlobalJsonPath: globalJson.Path);
+					return new DotNetSdkSelection(
+						pinned,
+						globalJson.HasVersion ? DotNetSdkSelectionSource.GlobalJson : DotNetSdkSelectionSource.GlobalJsonSettings,
+						warnings,
+						GlobalJsonPath: globalJson.Path);
 				}
 			}
 
@@ -173,9 +229,9 @@ namespace DotNetCheck.DotNet
 
 		/// <summary>
 		/// The first <c>global.json</c> from <paramref name="startDirectory"/> up, the one the dotnet host uses,
-		/// when it pins an SDK with <c>sdk.version</c>; otherwise null.
+		/// when it has settings that select an SDK; otherwise null.
 		/// </summary>
-		internal static string FindGlobalJsonPin(string startDirectory)
+		internal static SdkGlobalJson FindSdkGlobalJson(string startDirectory)
 		{
 			for (var directory = string.IsNullOrEmpty(startDirectory) ? null : new DirectoryInfo(startDirectory); directory is not null; directory = directory.Parent)
 			{
@@ -184,13 +240,19 @@ namespace DotNetCheck.DotNet
 				if (!File.Exists(path))
 					continue;
 
-				return HasSdkVersion(path) ? path : null;
+				return ReadSdkSettings(path);
 			}
 
 			return null;
 		}
 
-		private static bool HasSdkVersion(string path)
+		/// <summary>
+		/// Whether the <c>sdk</c> section of a <c>global.json</c> influences which SDK the host picks. A version is
+		/// not required: <c>allowPrerelease</c> and <c>paths</c> select an SDK on their own, such as the newest stable
+		/// one with <c>allowPrerelease: false</c> while a newer preview is installed. <c>rollForward</c> only counts
+		/// with a version, as the host ignores it otherwise.
+		/// </summary>
+		private static SdkGlobalJson ReadSdkSettings(string path)
 		{
 			try
 			{
@@ -198,18 +260,52 @@ namespace DotNetCheck.DotNet
 					File.ReadAllText(path),
 					new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
 
-				return document.RootElement.ValueKind == JsonValueKind.Object
-					&& document.RootElement.TryGetProperty("sdk", out var sdk)
-					&& sdk.ValueKind == JsonValueKind.Object
-					&& sdk.TryGetProperty("version", out var version)
-					&& version.ValueKind == JsonValueKind.String
-					&& !string.IsNullOrWhiteSpace(version.GetString());
+				if (document.RootElement.ValueKind != JsonValueKind.Object
+					|| !document.RootElement.TryGetProperty("sdk", out var sdk)
+					|| sdk.ValueKind != JsonValueKind.Object)
+				{
+					return null;
+				}
+
+				var hasVersion = HasNonEmptyString(sdk, "version");
+
+				return hasVersion || SdkSelectionSettings.Any(setting => sdk.TryGetProperty(setting, out var value) && value.ValueKind != JsonValueKind.Null)
+					? new SdkGlobalJson(path, hasVersion)
+					: null;
 			}
 			catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
 			{
 				Util.Log($"Ignoring unreadable global.json '{path}': {ex.Message}");
-				return false;
+				return null;
 			}
+		}
+
+		private static readonly string[] SdkSelectionSettings = ["allowPrerelease", "paths"];
+		private static bool HasNonEmptyString(JsonElement element, string name)
+			=> element.TryGetProperty(name, out var value)
+				&& value.ValueKind == JsonValueKind.String
+				&& !string.IsNullOrWhiteSpace(value.GetString());
+
+		/// <summary>
+		/// The SDKs that live under <paramref name="sdkRoot"/>, the installation whose <c>dotnet</c> runs the workload
+		/// commands. With <c>sdk.paths</c> the host can list, and resolve to, SDKs of other installations, which keep
+		/// their own workload metadata. When none is found under the root (a symlinked root, an unusual layout) the
+		/// list is returned as is.
+		/// </summary>
+		internal static IReadOnlyCollection<DotNetSdkInfo> InstalledUnder(IReadOnlyCollection<DotNetSdkInfo> installed, string sdkRoot)
+		{
+			if (string.IsNullOrEmpty(sdkRoot))
+				return installed;
+
+			var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(sdkRoot));
+			var comparison = Util.IsWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+			var underRoot = installed
+				.Where(s => s.Directory.Parent?.Parent is { } parent
+					&& string.Equals(Path.TrimEndingDirectorySeparator(parent.FullName), root, comparison))
+				.ToList();
+
+			return underRoot.Count > 0 ? underRoot : installed;
 		}
 
 		/// <summary>The first line of <c>dotnet --version</c> output that is a version.</summary>
