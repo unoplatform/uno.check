@@ -1,4 +1,6 @@
+using DotNetCheck;
 using DotNetCheck.DotNet;
+using System.Xml.Linq;
 using NuGet.Configuration;
 using NuGet.Versioning;
 
@@ -221,17 +223,140 @@ public sealed class NuGetSourceConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void WorkloadsKeepTheManifestSourcesWhenNoSourceIsConfigured()
+    public void WorkloadsKeepTheManifestSourcesWhenTheConfigurationIsUnreadable()
     {
         string[] manifestSources = ["https://pkgs.example/dotnet/index.json", "https://api.nuget.org/v3/index.json"];
-        var noConfiguration = LoadConfiguration("<configuration><packageSources><clear /></packageSources></configuration>");
 
         Assert.False(DotNetWorkloadManager.WriteScratchNuGetConfig(_directory, null!, manifestSources));
-        Assert.False(DotNetWorkloadManager.WriteScratchNuGetConfig(_directory, noConfiguration, manifestSources));
+        Assert.False(File.Exists(Path.Combine(_directory, ScratchNuGetConfig.FileName)));
 
         var args = DotNetWorkloadManager.BuildInstallArgs("10.0.100", "workload.json", ["wasm-tools"], manifestSources, verbose: false);
         Assert.Equal(2, args.Count(a => a == "--source"));
         Assert.DoesNotContain("--ignore-failed-sources", args);
+    }
+
+    [Fact]
+    public void ClearedConfigurationDoesNotBringBackThePublicFeedForWorkloads()
+    {
+        var configuration = LoadConfiguration("<configuration><packageSources><clear /></packageSources></configuration>");
+        var scratch = Directory.CreateDirectory(Path.Combine(_directory, "cleared")).FullName;
+
+        var written = DotNetWorkloadManager.WriteScratchNuGetConfig(
+            scratch, configuration, ["https://pkgs.example/dotnet/index.json", "https://api.nuget.org/v3/index.json"]);
+
+        Assert.True(written);
+        var scratchSettings = Settings.LoadSpecificSettings(scratch, ScratchNuGetConfig.FileName);
+        Assert.Equal(["https://pkgs.example/dotnet/index.json"], NuGetSourceResolver.Load(scratchSettings).Sources.Select(s => s.Source));
+    }
+
+    [Fact]
+    public void ManifestSourcesDisabledByTheConfigurationStayDisabled()
+    {
+        var configuration = LoadConfiguration(
+            """
+            <configuration>
+              <packageSources>
+                <clear />
+                <add key="internal" value="https://feed.example/v3/index.json" />
+                <add key="preview" value="https://pkgs.example/dotnet/index.json" />
+              </packageSources>
+              <disabledPackageSources>
+                <add key="preview" value="true" />
+              </disabledPackageSources>
+            </configuration>
+            """);
+
+        var merged = NuGetSourceResolver.MergeManifestSources(
+            configuration.Sources, ["https://pkgs.example/dotnet/index.json"], configuration.DisabledSources);
+
+        Assert.Equal(["https://feed.example/v3/index.json"], merged.Select(s => s.Source));
+    }
+
+    [Fact]
+    public void FeedsThatDifferOnlyByPathCaseAreDistinct()
+    {
+        PackageSource[] configured = [new("https://feed.example/feeds/Release/index.json", "internal")];
+
+        var merged = NuGetSourceResolver.MergeManifestSources(
+            configured, ["https://feed.example/feeds/release/index.json", "https://FEED.example:443/feeds/Release/index.json/"]);
+
+        Assert.Equal(
+            ["https://feed.example/feeds/Release/index.json", "https://feed.example/feeds/release/index.json"],
+            merged.Select(s => s.Source));
+    }
+
+    [Fact]
+    public void LocalSourcesCompareCaseInsensitivelyOnlyOnWindows()
+    {
+        PackageSource[] configured = [new(Path.Combine(_directory, "Feed"), "local")];
+
+        var merged = NuGetSourceResolver.MergeManifestSources(configured, [Path.Combine(_directory, "feed")]);
+
+        Assert.Equal(Util.IsWindows ? 1 : 2, merged.Count);
+    }
+
+    [Fact]
+    public void ConnectionSettingsFollowTheClosestConfigurationThatDefinesTheSource()
+    {
+        var child = Directory.CreateDirectory(Path.Combine(_directory, "parent", "child")).FullName;
+        File.WriteAllText(
+            Path.Combine(_directory, "parent", "nuget.config"),
+            """
+            <configuration><packageSources>
+              <add key="uno-check-test-overridden" value="https://old.example/v3/index.json" disableTLSCertificateValidation="true" />
+              <add key="uno-check-test-inherited" value="https://inherited.example/v3/index.json" disableTLSCertificateValidation="true" />
+            </packageSources></configuration>
+            """);
+        File.WriteAllText(
+            Path.Combine(child, "nuget.config"),
+            """
+            <configuration><packageSources>
+              <add key="uno-check-test-overridden" value="https://new.example/v3/index.json" />
+            </packageSources></configuration>
+            """);
+
+        var configuration = NuGetSourceResolver.Load(Settings.LoadDefaultSettings(child));
+
+        Assert.False(configuration.ConnectionAttributes.ContainsKey("uno-check-test-overridden"));
+        Assert.Equal("true", configuration.ConnectionAttributes["uno-check-test-inherited"]["disableTLSCertificateValidation"]);
+    }
+
+    [Fact]
+    public void ScratchConfigurationIsPrivateToTheCurrentUserOnUnix()
+    {
+        if (Util.IsWindows)
+            return;
+
+        var scratch = Directory.CreateDirectory(Path.Combine(_directory, "private")).FullName;
+
+        var path = ScratchNuGetConfig.Write(scratch, [new PackageSource("https://feed.example/v3/index.json", "internal")]);
+
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute, File.GetUnixFileMode(scratch));
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+    }
+
+    [Fact]
+    public void ConnectionSettingsOfConfiguredSourcesAreCarriedToTheScratchConfiguration()
+    {
+        var configuration = LoadConfiguration(
+            """
+            <configuration>
+              <packageSources>
+                <clear />
+                <add key="internal" value="https://feed.example/v3/index.json" disableTLSCertificateValidation="true" />
+                <add key="mirror" value="http://mirror.example/v3/index.json" allowInsecureConnections="true" />
+                <add key="plain" value="https://plain.example/v3/index.json" />
+              </packageSources>
+            </configuration>
+            """);
+        var scratch = Directory.CreateDirectory(Path.Combine(_directory, "connection")).FullName;
+
+        var path = ScratchNuGetConfig.Write(scratch, configuration.Sources, connectionAttributes: configuration.ConnectionAttributes);
+
+        var entries = XDocument.Load(path).Root!.Element("packageSources")!.Elements("add").ToDictionary(e => (string)e.Attribute("key")!);
+        Assert.Equal("true", (string?)entries["internal"].Attribute("disableTLSCertificateValidation"));
+        Assert.Equal("true", (string?)entries["mirror"].Attribute("allowInsecureConnections"));
+        Assert.Equal(["key", "value"], entries["plain"].Attributes().Select(a => a.Name.LocalName));
     }
 
     [Fact]

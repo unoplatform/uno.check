@@ -49,18 +49,23 @@ namespace DotNetCheck.DotNet
 
 		/// <summary>
 		/// The workload commands run from a scratch directory, where the nuget.config files of the directory uno-check
-		/// runs from are not found, and <c>--source</c> would replace the configured sources altogether. When the
-		/// configuration has sources, they are written to a nuget.config in the scratch directory instead, extended
-		/// with the manifest's sources, and no <c>--source</c> is passed.
+		/// runs from are not found, and <c>--source</c> would replace the configured sources altogether. Whenever the
+		/// configuration could be read, its sources (possibly none, for a configuration that clears them) are written
+		/// to a nuget.config in the scratch directory instead, extended with the manifest's sources that the
+		/// configuration doesn't exclude, and no <c>--source</c> is passed.
 		/// </summary>
 		/// <returns>Whether the scratch nuget.config was written.</returns>
 		internal static bool WriteScratchNuGetConfig(string workingDirectory, NuGetConfiguration configuration, string[] manifestSources)
 		{
-			// Without configured sources the manifest's own list is all there is to install from.
-			if (configuration is not { Sources.Count: > 0 })
+			// Only an unreadable configuration falls back to the manifest's own list.
+			if (configuration is null)
 				return false;
 
-			ScratchNuGetConfig.Write(workingDirectory, NuGetSourceResolver.MergeManifestSources(configuration.Sources, manifestSources));
+			var sources = NuGetSourceResolver.MergeManifestSources(configuration.Sources, manifestSources, configuration.DisabledSources);
+			if (sources.Count == 0)
+				Util.Log("The NuGet configuration enables no sources, so workload commands have none to use.");
+
+			ScratchNuGetConfig.Write(workingDirectory, sources, connectionAttributes: configuration.ConnectionAttributes);
 			return true;
 		}
 

@@ -61,7 +61,7 @@ namespace DotNetCheck.Solutions
 			// directory uno-check runs from. The packages folder is carried over too, so the package lands where
 			// the Uno.Sdk check looks for it.
 			if (configuration is { Sources.Count: > 0 })
-				ScratchNuGetConfig.Write(tempPath, configuration.Sources, configuration.GlobalPackagesFolder);
+				ScratchNuGetConfig.Write(tempPath, configuration.Sources, configuration.GlobalPackagesFolder, configuration.ConnectionAttributes);
 
 			// A failed restore leaves the SDK unresolved; reporting the fix as applied would
 			// hide that behind a check that still fails.
