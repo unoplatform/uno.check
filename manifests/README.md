@@ -70,6 +70,9 @@ entries reference them as `$(ANDROID_SDK_VERSION)` and friends.
 
 See `AGENTS.md` section 5 for the full procedure.
 
+`dotnet.sdks[].packageSources` supplements the NuGet configuration of the directory uno-check runs from; it doesn't replace it.
+The public nuget.org entry is used only when that configuration also lists nuget.org.
+
 ## After updating: cut a release
 
 Merging a manifest change to `main` publishes a `-dev` prerelease only. Users keep getting the versions

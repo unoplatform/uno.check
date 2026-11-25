@@ -42,12 +42,36 @@ namespace DotNetCheck.DotNet
 			globalJson.Sdk.RollForward = "latestFeature";
 			globalJson.Sdk.AllowPrerelease = true;
 			File.WriteAllText(Path.Combine(DotNetCliWorkingDir, "global.json"), globalJson.ToJson());
+
+			UsesScratchNuGetConfig = WriteScratchNuGetConfig(DotNetCliWorkingDir, NuGetSourceResolver.Current, nugetPackageSources);
+			EffectivePackageSources = UsesScratchNuGetConfig ? Array.Empty<string>() : nugetPackageSources;
+		}
+
+		/// <summary>
+		/// The workload commands run from a scratch directory, where the nuget.config files of the directory uno-check
+		/// runs from are not found, and <c>--source</c> would replace the configured sources altogether. When the
+		/// configuration has sources, they are written to a nuget.config in the scratch directory instead, extended
+		/// with the manifest's sources, and no <c>--source</c> is passed.
+		/// </summary>
+		/// <returns>Whether the scratch nuget.config was written.</returns>
+		internal static bool WriteScratchNuGetConfig(string workingDirectory, NuGetConfiguration configuration, string[] manifestSources)
+		{
+			// Without configured sources the manifest's own list is all there is to install from.
+			if (configuration is not { Sources.Count: > 0 })
+				return false;
+
+			ScratchNuGetConfig.Write(workingDirectory, NuGetSourceResolver.MergeManifestSources(configuration.Sources, manifestSources));
+			return true;
 		}
 
 		public readonly string SdkRoot;
 		public readonly string SdkVersion;
 
 		public readonly string[] NuGetPackageSources;
+
+		// A configured source that can't be reached must not fail an install that the others can serve.
+		readonly bool UsesScratchNuGetConfig;
+		readonly string[] EffectivePackageSources;
 
 		/// <summary>
 		/// Whether this SDK installs workloads per user instead of into <see cref="SdkRoot"/>.
@@ -212,7 +236,7 @@ namespace DotNetCheck.DotNet
 			return Util.EnsureSudoCredentialsCachedAsync(cancellationToken);
 		}
 
-		internal static string[] BuildInstallArgs(string sdkVersion, string rollbackFile, IEnumerable<string> workloadIds, IEnumerable<string> packageSources, bool verbose)
+		internal static string[] BuildInstallArgs(string sdkVersion, string rollbackFile, IEnumerable<string> workloadIds, IEnumerable<string> packageSources, bool verbose, bool ignoreFailedSources = false)
 		{
 			var addSourceArg = "--source";
 			if (NuGetVersion.Parse(sdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
@@ -232,6 +256,9 @@ namespace DotNetCheck.DotNet
 				args.Add(packageSource);
 			}
 
+			if (ignoreFailedSources)
+				args.Add("--ignore-failed-sources");
+
 			if (verbose)
 			{
 				args.Add("--verbosity");
@@ -241,7 +268,7 @@ namespace DotNetCheck.DotNet
 			return args.ToArray();
 		}
 
-		internal static string[] BuildRepairArgs(string sdkVersion, IEnumerable<string> packageSources, bool verbose)
+		internal static string[] BuildRepairArgs(string sdkVersion, IEnumerable<string> packageSources, bool verbose, bool ignoreFailedSources = false)
 		{
 			var addSourceArg = "--source";
 			if (NuGetVersion.Parse(sdkVersion) <= DotNetCheck.Manifest.DotNetSdk.Version6Preview6)
@@ -257,6 +284,9 @@ namespace DotNetCheck.DotNet
 				args.Add(addSourceArg);
 				args.Add(packageSource);
 			}
+
+			if (ignoreFailedSources)
+				args.Add("--ignore-failed-sources");
 
 			if (verbose)
 			{
@@ -464,7 +494,7 @@ namespace DotNetCheck.DotNet
 			// dotnet workload install id --skip-manifest-update --add-source x
 			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, NuGetPackageSources, Util.Verbose);
+			var args = BuildInstallArgs(SdkVersion, rollbackFile, workloadIds, EffectivePackageSources, Util.Verbose, UsesScratchNuGetConfig);
 
 			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 
@@ -481,7 +511,7 @@ namespace DotNetCheck.DotNet
 			// dotnet workload install id --skip-manifest-update --add-source x
 			var dotnetExe = Path.Combine(SdkRoot, DotNetSdk.DotNetExeName);
 
-			var args = BuildRepairArgs(SdkVersion, NuGetPackageSources, Util.Verbose);
+			var args = BuildRepairArgs(SdkVersion, EffectivePackageSources, Util.Verbose, UsesScratchNuGetConfig);
 
 			var r = await RunWorkloadCommand(dotnetExe, args, cancellationToken);
 

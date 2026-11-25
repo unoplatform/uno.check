@@ -3,6 +3,7 @@
 using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using NuGet.Versioning;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,7 +43,9 @@ internal class DotNetNewTemplatesInstallSolution : Solution
     public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
     {
         var version = _requestedVersion ??
-            await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, _includePrerelease);
+            await NuGetHelper.GetLatestPackageVersionAsync(UnoTemplatesPackageName, _includePrerelease, cancellationToken) ??
+            throw new InvalidOperationException(
+                $"Could not determine the latest {UnoTemplatesPackageName} version from the configured NuGet sources.");
         var dotnet = DotNetSdk.ResolveExecutable(sharedState);
 
         // The uninstalls are best-effort housekeeping: 'dotnet new uninstall' exits non-zero

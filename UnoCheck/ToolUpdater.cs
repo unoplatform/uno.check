@@ -35,21 +35,18 @@ internal static class ToolUpdater
         try
         {
             latestVersion = await ToolInfo.GetLatestVersion(currentVersion.IsPrerelease);
-            if (string.IsNullOrEmpty(latestVersion?.ToString()))
-            {
-                return false;
-            }
         }
         catch (Exception ex)
         {
-            if (Util.Verbose)
-            {
-                AnsiConsole.WriteException(ex);   
-            }
-            
-            AnsiConsole.MarkupLine($"[bold yellow]{Icon.Warning} Could not check for latest version on NuGet.org. The currently installed version may be out of date.[/]");
-            AnsiConsole.WriteLine();
-            AnsiConsole.Write(new Rule());
+            // The update check is optional, so an unreachable source only shows up in verbose output.
+            Util.Log("Could not check for the latest uno-check version.");
+            Util.Exception(ex);
+        }
+
+        if (latestVersion is null)
+        {
+            Util.Log("Skipping the uno-check update check: no configured NuGet source reported a version.");
+            return false;
         }
 
         if (currentVersion < latestVersion)

@@ -37,3 +37,12 @@ If you run into problems with uno-check, you should generally try the following:
 
 1. If you encounter the message `There were one or more problems detected. Please review the errors and correct them and run uno-check again.`, but if you have done all the previously mentioned steps, try running it with `--verbose` flag to see where it is failing.
 1. Finally, if you have other problems, run also with `--verbose` flag and capture the output and add it to a new issue.
+
+## NuGet sources
+
+uno-check follows the NuGet configuration that applies to the directory it runs from, like the rest of the .NET tooling: the `nuget.config` files in that directory and its parents, then the user and machine level settings. Disabled sources are skipped, and `<clear />` removes the default nuget.org source. This applies to the latest-version lookups (uno-check, the Uno templates, Uno.Sdk), to the Uno.Sdk package download and restore, and to `dotnet workload` commands.
+
+- If nothing customizes the sources, nuget.org is used as before.
+- A source that can't be reached doesn't fail a lookup that another configured source can answer. The optional update and latest-version checks are skipped quietly, and the reason is shown with `--verbose`.
+- The sources listed in the manifest (for example the .NET preview feed) are added to the configured ones for `dotnet workload` commands. The public nuget.org feed in the manifest is only used when your configuration includes it.
+- Workload commands run from a temporary directory, so uno-check gives them the configured sources through a temporary `nuget.config`. Credentials that are only stored in a repository's `nuget.config` are not copied there; credentials in your user level settings or from a credential provider still apply.

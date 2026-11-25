@@ -48,6 +48,13 @@ internal class DotNetNewUnoTemplatesCheckup : Checkup
 
         var latestVersion = await NuGetHelper.GetLatestPackageVersionAsync(PackageName, includePrerelease);
 
+        if (latestVersion is null)
+        {
+            // The installed templates work, so a failed lookup of the latest version is not a reason to fail the check.
+            Util.Log($"Could not determine the latest {PackageName} version from the configured NuGet sources.");
+            return DiagnosticResult.Ok(this);
+        }
+
         if (latestVersion > version)
         {
             return new(
