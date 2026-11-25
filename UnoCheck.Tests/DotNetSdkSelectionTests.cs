@@ -380,17 +380,13 @@ public class PinnedSdkVersionTests
     }
 
     [Fact]
-    public void A_Manifest_Fallback_Is_Not_Pinned_When_The_Dotnet_Checkup_Ran_Because_Its_Fix_Installs_The_Required_Sdk()
-        => Assert.Null(CheckCommand.GetPinnedSdkVersion(StateWith(DotNetSdkSelectionSource.ManifestFallback), "dotnetworkloads-10.0.303"));
-
-    [Fact]
-    public void A_Manifest_Fallback_Is_Pinned_When_The_Dotnet_Checkup_Was_Skipped()
+    public void A_Manifest_Fallback_Is_Pinned_For_Checkups_Other_Than_Dotnet()
     {
-        var state = new SharedState();
-        var sdk = new DotNetSdkInfo("10.0.204", Path.Combine(Path.GetTempPath(), "dotnet", "sdk", "10.0.204"));
-        state.ContributeState("dotnetworkloads-10.0.303", StateKey.DotNetSdkSelection, new DotNetSdkSelection(sdk, DotNetSdkSelectionSource.ManifestFallback, []));
+        // e.g. a 10.0.303 manifest with 10.0.204 and 11.0.100 installed: `dotnet` accepts 11.0.100 as new enough
+        var state = StateWith(DotNetSdkSelectionSource.ManifestFallback);
 
-        Assert.Equal("10.0.204", CheckCommand.GetPinnedSdkVersion(state, "dotnetworkloads-10.0.303"));
+        Assert.Equal("10.0.404", CheckCommand.GetPinnedSdkVersion(state, "dotnetworkloads-10.0.303"));
+        Assert.Null(CheckCommand.GetPinnedSdkVersion(state, "dotnet"));
     }
 
     [Fact]
