@@ -822,8 +822,9 @@ namespace DotNetCheck.Cli
 		/// directory: the SDK that was selected, whatever chose it. The <c>dotnet</c> checkup's own fix installs the SDK
 		/// the manifest needs and so can change the selection, so it gets one only when the SDK was requested or pinned by
 		/// a <c>global.json</c> <c>sdk.version</c>; a <c>global.json</c> without a version, which Uno projects commonly have,
-		/// selects the newest SDK that fits and so is no pin. Null before an SDK was selected, and for a fallback to the newest
-		/// SDK, which could not be requested again.
+		/// selects the newest SDK that fits and so is no pin. A fallback to an older SDK of the manifest's .NET version is replayed
+		/// only when the <c>dotnet</c> checkup did not run, as its fix would otherwise install the SDK the manifest requires.
+		/// Null before an SDK was selected, and for a fallback to the newest SDK, which could not be requested again.
 		/// </summary>
 		internal static string GetPinnedSdkVersion(SharedState sharedState, string checkupId)
 		{
@@ -834,9 +835,15 @@ namespace DotNetCheck.Cli
 			}
 
 			var pinned = selection.Source is DotNetSdkSelectionSource.Requested or DotNetSdkSelectionSource.GlobalJson;
-			var replayable = selection.Source != DotNetSdkSelectionSource.Newest && checkupId != "dotnet";
+			var replayable = selection.Source is not (DotNetSdkSelectionSource.Newest or DotNetSdkSelectionSource.ManifestFallback)
+				&& checkupId != "dotnet";
 
-			return pinned || replayable ? sdk.Directory.Name : null;
+			// A fallback stands in for the SDK the manifest requires, which the dotnet checkup's fix installs; pinning
+			// it would send the workloads of that run to the older SDK. Only without that checkup is it the final choice.
+			var dotnetCheckupRan = sharedState.TryGetState<DotNetSdkSelection>("dotnet", StateKey.DotNetSdkSelection, out _);
+			var replayableFallback = selection.Source == DotNetSdkSelectionSource.ManifestFallback && checkupId != "dotnet" && !dotnetCheckupRan;
+
+			return pinned || replayable || replayableFallback ? sdk.Directory.Name : null;
 		}
 
 		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null, string pinnedSdkVersion = null)

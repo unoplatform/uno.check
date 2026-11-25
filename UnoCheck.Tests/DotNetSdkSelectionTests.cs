@@ -55,6 +55,25 @@ public class DotNetSdkSelectionTests
     }
 
     [Fact]
+    public void An_Older_Sdk_Of_The_Manifests_Dotnet_Is_Preferred_To_A_Later_Major_And_Can_Be_Replayed()
+    {
+        var selection = DotNetSdkSelector.Select(Sdks("10.0.115", "10.0.204", "11.0.100"), Manifest("10.0.303"), null, null);
+
+        Assert.Equal("10.0.204", Version(selection));
+        Assert.Equal(DotNetSdkSelectionSource.ManifestFallback, selection.Source);
+        Assert.Contains("10.0.303", Assert.Single(selection.Warnings));
+    }
+
+    [Fact]
+    public void A_Newer_Sdk_Than_An_Exact_Manifest_Requires_Is_Not_Described_As_Older()
+    {
+        var selection = DotNetSdkSelector.Select(Sdks("10.0.204"), Manifest("10.0.101", requireExact: true), null, null);
+
+        Assert.Equal("10.0.204", Version(selection));
+        Assert.DoesNotContain("older", Assert.Single(selection.Warnings));
+    }
+
+    [Fact]
     public void Without_A_Compatible_Sdk_The_Newest_Installed_Is_Used_As_Before()
     {
         var selection = DotNetSdkSelector.Select(Sdks("8.0.428", "9.0.313"), Manifest("10.0.101"), null, null);
@@ -358,6 +377,20 @@ public class PinnedSdkVersionTests
         state.ContributeState("dotnetworkloads-10.0.101", StateKey.DotNetSdkSelection, new DotNetSdkSelection(sdk, DotNetSdkSelectionSource.GlobalJson, []));
 
         Assert.Equal("10.0.404", CheckCommand.GetPinnedSdkVersion(state, "dotnetworkloads-10.0.101"));
+    }
+
+    [Fact]
+    public void A_Manifest_Fallback_Is_Not_Pinned_When_The_Dotnet_Checkup_Ran_Because_Its_Fix_Installs_The_Required_Sdk()
+        => Assert.Null(CheckCommand.GetPinnedSdkVersion(StateWith(DotNetSdkSelectionSource.ManifestFallback), "dotnetworkloads-10.0.303"));
+
+    [Fact]
+    public void A_Manifest_Fallback_Is_Pinned_When_The_Dotnet_Checkup_Was_Skipped()
+    {
+        var state = new SharedState();
+        var sdk = new DotNetSdkInfo("10.0.204", Path.Combine(Path.GetTempPath(), "dotnet", "sdk", "10.0.204"));
+        state.ContributeState("dotnetworkloads-10.0.303", StateKey.DotNetSdkSelection, new DotNetSdkSelection(sdk, DotNetSdkSelectionSource.ManifestFallback, []));
+
+        Assert.Equal("10.0.204", CheckCommand.GetPinnedSdkVersion(state, "dotnetworkloads-10.0.303"));
     }
 
     [Fact]

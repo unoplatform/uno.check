@@ -23,6 +23,9 @@ namespace DotNetCheck.DotNet
 		/// <summary>The newest installed SDK that fits an SDK the manifest requires.</summary>
 		Manifest,
 
+		/// <summary>The newest SDK of the manifest's .NET version when none is the one the manifest requires; the <c>dotnet</c> checkup's fix installs that one.</summary>
+		ManifestFallback,
+
 		/// <summary>No installed SDK fits the manifest, so the newest one.</summary>
 		Newest,
 	}
@@ -189,6 +192,21 @@ namespace DotNetCheck.DotNet
 			if (compatible is not null)
 				return new DotNetSdkSelection(compatible, DotNetSdkSelectionSource.Manifest, warnings);
 
+			// Same .NET but older than the manifest's SDK (e.g. 10.0.204 for 10.0.303): still the .NET version
+			// the manifest targets, which an explicit --dotnet-sdk-version accepts, so it is a replayable choice
+			// and preferred over a later major.
+			var sameDotNet = installed
+				.Where(s => IsSameDotNet(s.Version, required))
+				.OrderByDescending(s => s.Version)
+				.FirstOrDefault();
+
+			if (sameDotNet is not null)
+			{
+				warnings.Add($"The newest installed .NET SDK of the manifest's .NET version is {sameDotNet.Version}, not the {DescribeRequired(required)} this manifest requires. "
+					+ $"Install {DescribeRequired(required)}.");
+
+				return new DotNetSdkSelection(sameDotNet, DotNetSdkSelectionSource.ManifestFallback, warnings);
+			}
 			if (required.Count > 0)
 			{
 				warnings.Add($"No installed .NET SDK is of the .NET version this manifest targets ({DescribeRequired(required)}). "
