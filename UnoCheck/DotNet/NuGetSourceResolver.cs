@@ -140,8 +140,14 @@ internal static class NuGetSourceResolver
 
             try
             {
-                var entries = XDocument.Load(path).Root?.Element("packageSources")?.Elements("add") ?? Enumerable.Empty<XElement>();
-                foreach (var entry in entries)
+                var elements = XDocument.Load(path).Root?.Element("packageSources")?.Elements().ToList() ?? new List<XElement>();
+
+                // Only the entries after the last <clear /> are in effect, and NuGet keeps the first entry of a repeated key.
+                var lastClear = elements.FindLastIndex(e => e.Name.LocalName.Equals("clear", StringComparison.OrdinalIgnoreCase));
+                var effective = elements.Skip(lastClear + 1)
+                    .Where(e => e.Name.LocalName.Equals("add", StringComparison.OrdinalIgnoreCase));
+
+                foreach (var entry in effective)
                 {
                     var key = (string?)entry.Attribute("key");
                     if (key is null || !pending.Remove(key))

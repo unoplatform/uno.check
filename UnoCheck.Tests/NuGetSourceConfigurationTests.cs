@@ -322,6 +322,24 @@ public sealed class NuGetSourceConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void ConnectionSettingsComeFromTheEntryNuGetUsesWhenAKeyIsRepeated()
+    {
+        var configuration = LoadConfiguration(
+            """
+            <configuration>
+              <packageSources>
+                <clear />
+                <add key="internal" value="https://first.example/v3/index.json" />
+                <add key="internal" value="https://second.example/v3/index.json" disableTLSCertificateValidation="true" />
+              </packageSources>
+            </configuration>
+            """);
+
+        Assert.Equal("https://first.example/v3/index.json", Assert.Single(configuration.Sources).Source);
+        Assert.Empty(configuration.ConnectionAttributes);
+    }
+
+    [Fact]
     public void ScratchConfigurationIsPrivateToTheCurrentUserOnUnix()
     {
         if (Util.IsWindows)
