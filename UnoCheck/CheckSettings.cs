@@ -30,6 +30,13 @@ namespace DotNetCheck
 		[CommandOption("--dotnet <SDK_ROOT>")]
 		public string DotNetSdkRoot { get; set; }
 
+		/// <summary>
+		/// The installed .NET SDK to check and install workloads with, instead of the one the <c>global.json</c> of the
+		/// working directory resolves to.
+		/// </summary>
+		[CommandOption("--dotnet-sdk-version <VERSION>")]
+		public string? DotNetSdkVersion { get; set; }
+
 		[CommandOption("--force-dotnet")]
 		public bool ForceDotNet { get; set; }
 

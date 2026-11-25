@@ -283,10 +283,35 @@ namespace DotNetCheck.Checkups
 
 		static bool wasForceRunAlready = false;
 
+		/// <summary>
+		/// The SDK to check and install workloads with, and whether it is an installed SDK to use exactly.
+		/// The <c>dotnet</c> checkup records its selection; when it was skipped, the same selection is made here,
+		/// so that the SDK never depends on which checkups ran. Without any installed SDK to choose from, the
+		/// manifest's version is the minimum to roll forward from.
+		/// </summary>
+		private async Task<(string Version, bool Exact)> ResolveSdkVersion(SharedState history)
+		{
+			if (history.TryGetEnvironmentVariable("DOTNET_SDK_VERSION", out var recorded))
+				return (recorded, true);
+
+			var dotnet = new DotNetSdk(history);
+
+			if (dotnet.Exists)
+			{
+				var installed = (await dotnet.GetSdks()).ToList();
+				var required = Manifest?.Check?.DotNet?.Sdks?.ToList();
+				var selection = await DotNetSdkSelector.ResolveAsync(history, dotnet, installed, required);
+
+				if (selection.Sdk is { } sdk)
+					return (sdk.Directory.Name, true);
+			}
+
+			return (SdkVersion, false);
+		}
+
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
-			if (!history.TryGetEnvironmentVariable("DOTNET_SDK_VERSION", out var sdkVersion))
-				sdkVersion = SdkVersion;
+			var (sdkVersion, exactSdkVersion) = await ResolveSdkVersion(history);
 
 			var force = history.TryGetEnvironmentVariable("DOTNET_FORCE", out var forceDotNet)
 				&& (forceDotNet?.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false)
@@ -300,7 +325,9 @@ namespace DotNetCheck.Checkups
 			var validWorkloads = RequiredWorkloads
 				.ToArray();
 
-			var manager = new DotNetWorkloadManager(SdkRoot, SdkVersion, NuGetPackageSources);
+			// The check and the install must run under the same SDK: the install records land in that SDK's
+			// feature band, which is the only one the check reads back.
+			var manager = new DotNetWorkloadManager(SdkRoot, sdkVersion, exactSdkVersion, NuGetPackageSources);
 
 			var missingWorkloads = new List<Manifest.DotNetWorkload>();
 			var installedWorkloads = await manager.GetInstalledWorkloads();
@@ -348,7 +375,7 @@ namespace DotNetCheck.Checkups
 			if (_macCatalystTargetWarning is { } catalystWarning)
 				ReportStatus(catalystWarning, CheckStatus.Warning);
 
-			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, NuGetPackageSources);
+			var genericWorkloadManager = new DotNetWorkloadManager(SdkRoot, sdkVersion, exactSdkVersion, NuGetPackageSources);
 
 			return new DiagnosticResult(
 				CheckStatus.Error,

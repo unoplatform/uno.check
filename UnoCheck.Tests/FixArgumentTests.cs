@@ -116,6 +116,31 @@ public class BuildFixArgumentsTests
     }
 
     [Fact]
+    public void The_Requested_Sdk_Version_Survives()
+    {
+        var args = Build("dotnet", new CheckSettings { DotNetSdkVersion = "10.0.404" });
+
+        Assert.Equal("10.0.404", args[Array.IndexOf(args, "--dotnet-sdk-version") + 1]);
+    }
+
+    [Fact]
+    public void An_Sdk_A_Global_Json_Selected_Is_Replayed_Because_The_Fix_May_Run_Elsewhere()
+    {
+        var args = CheckCommand.BuildFixArguments("dotnet", new CheckSettings(), pinnedSdkVersion: "10.0.404");
+
+        Assert.Equal("10.0.404", args[Array.IndexOf(args, "--dotnet-sdk-version") + 1]);
+    }
+
+    [Fact]
+    public void An_Explicit_Sdk_Version_Wins_Over_The_One_That_Was_Selected()
+    {
+        var args = CheckCommand.BuildFixArguments("dotnet", new CheckSettings { DotNetSdkVersion = "10.0.103" }, pinnedSdkVersion: "10.0.404");
+
+        Assert.Single(args, "--dotnet-sdk-version");
+        Assert.Equal("10.0.103", args[Array.IndexOf(args, "--dotnet-sdk-version") + 1]);
+    }
+
+    [Fact]
     public void Output_Options_Belong_To_The_Host_And_Are_Never_Replayed()
     {
         var args = Build("dotnet", new CheckSettings

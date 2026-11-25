@@ -1,3 +1,4 @@
+using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using NuGet.Versioning;
 using Spectre.Console;
@@ -177,6 +178,8 @@ namespace DotNetCheck.Cli
 
 			if (settings.ForceDotNet)
 				sharedState.SetEnvironmentVariable("DOTNET_FORCE", "true");
+			if (!string.IsNullOrWhiteSpace(settings.DotNetSdkVersion))
+				sharedState.ContributeState(StateKey.EntryPoint, StateKey.DotNetSdkVersion, settings.DotNetSdkVersion.Trim());
 			if (settings.CI)
 				sharedState.SetEnvironmentVariable("CI", "true");
 			if (!string.IsNullOrEmpty(settings.UnoSdkVersion))
@@ -367,7 +370,7 @@ namespace DotNetCheck.Cli
 				// Cache the status for dependencies
 				checkupStatus[checkup.Id] = diagnosis.Status;
 
-				var healthCheck = BuildHealthCheck(checkup, diagnosis, settings);
+				var healthCheck = BuildHealthCheck(checkup, diagnosis, settings, GetPinnedSdkVersion(sharedState, checkup.Id));
 				reportChecks[checkup.Id] = healthCheck;
 
 				// On a post-fix retry this emits a second checkup_result for the same id
@@ -723,7 +726,11 @@ namespace DotNetCheck.Cli
 		/// Output, logging and correlation options are deliberately absent: those belong to the
 		/// host that launches the fix, not to the diagnosis being reproduced.
 		/// </summary>
-		internal static string[] BuildFixArguments(string checkupId, CheckSettings settings)
+		/// <param name="pinnedSdkVersion">
+		/// The SDK the fix must use (<see cref="GetPinnedSdkVersion"/>): a fix run from another working
+		/// directory would not find the <c>global.json</c> that selected it.
+		/// </param>
+		internal static string[] BuildFixArguments(string checkupId, CheckSettings settings, string pinnedSdkVersion = null)
 		{
 			var args = new List<string> { "--fix", "--only", checkupId, "--non-interactive" };
 
@@ -758,6 +765,13 @@ namespace DotNetCheck.Cli
 
 			if (settings.ForceDotNet)
 				args.Add("--force-dotnet");
+
+			var sdkVersion = string.IsNullOrWhiteSpace(settings.DotNetSdkVersion) ? pinnedSdkVersion : settings.DotNetSdkVersion;
+			if (!string.IsNullOrWhiteSpace(sdkVersion))
+			{
+				args.Add("--dotnet-sdk-version");
+				args.Add(sdkVersion);
+			}
 
 			// Target selection. --tfm derives the target platforms (and trims the skip list), so
 			// replaying the frameworks reproduces that derivation instead of freezing its result.
@@ -803,7 +817,28 @@ namespace DotNetCheck.Cli
 			return args.ToArray();
 		}
 
-		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null)
+		/// <summary>
+		/// The SDK version a fix has to be given explicitly, so that it cannot pick another SDK from a different working
+		/// directory: the SDK that was selected, whatever chose it. The <c>dotnet</c> checkup's own fix installs the SDK
+		/// the manifest needs and so can change the selection, so it gets one only when the SDK was requested or pinned by
+		/// a <c>global.json</c>. Null before the <c>dotnet</c> checkup ran, and for a fallback to the newest SDK, which
+		/// could not be requested again.
+		/// </summary>
+		internal static string GetPinnedSdkVersion(SharedState sharedState, string checkupId)
+		{
+			if (!sharedState.TryGetState<DotNetSdkSelection>("dotnet", StateKey.DotNetSdkSelection, out var selection)
+				|| selection.Sdk is not { } sdk)
+			{
+				return null;
+			}
+
+			var pinned = selection.Source is DotNetSdkSelectionSource.Requested or DotNetSdkSelectionSource.GlobalJson;
+			var replayable = selection.Source != DotNetSdkSelectionSource.Newest && checkupId != "dotnet";
+
+			return pinned || replayable ? sdk.Directory.Name : null;
+		}
+
+		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null, string pinnedSdkVersion = null)
 		{
 			Json.FixInfo fix = null;
 
@@ -824,7 +859,7 @@ namespace DotNetCheck.Cli
 					AutoFixable = fixable,
 					RequiresElevation = RequiresElevation(diagnosis.Suggestion),
 					Args = fixable
-						? BuildFixArguments(checkup.Id, settings)
+						? BuildFixArguments(checkup.Id, settings, pinnedSdkVersion)
 						: null,
 				};
 			}

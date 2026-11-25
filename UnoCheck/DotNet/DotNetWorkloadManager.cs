@@ -28,6 +28,16 @@ namespace DotNetCheck.DotNet
 		private record WorkloadListResult(string[] installed);
 
 		public DotNetWorkloadManager(string sdkRoot, string sdkVersion, params string[] nugetPackageSources)
+			: this(sdkRoot, sdkVersion, exactSdkVersion: false, nugetPackageSources)
+		{
+		}
+
+		/// <param name="exactSdkVersion">
+		/// Whether <paramref name="sdkVersion"/> is an installed SDK to run the workload commands with exactly,
+		/// not a minimum to roll forward from. That keeps the check and the install on the SDK that was selected,
+		/// so a newer feature band or a newer .NET installed beside it can never take over.
+		/// </param>
+		public DotNetWorkloadManager(string sdkRoot, string sdkVersion, bool exactSdkVersion, string[] nugetPackageSources)
 		{
 			SdkRoot = sdkRoot;
 			SdkVersion = sdkVersion;
@@ -37,11 +47,16 @@ namespace DotNetCheck.DotNet
 			DotNetCliWorkingDir = Path.Combine(Path.GetTempPath(), "uno-check-" + Guid.NewGuid().ToString("N").Substring(0, 8));
 			Directory.CreateDirectory(DotNetCliWorkingDir);
 
+			File.WriteAllText(Path.Combine(DotNetCliWorkingDir, "global.json"), BuildGlobalJson(sdkVersion, exactSdkVersion).ToJson());
+		}
+
+		internal static DotNetGlobalJson BuildGlobalJson(string sdkVersion, bool exactSdkVersion)
+		{
 			var globalJson = new DotNetGlobalJson();
 			globalJson.Sdk.Version = sdkVersion;
-			globalJson.Sdk.RollForward = "latestFeature";
+			globalJson.Sdk.RollForward = exactSdkVersion ? "disable" : "latestFeature";
 			globalJson.Sdk.AllowPrerelease = true;
-			File.WriteAllText(Path.Combine(DotNetCliWorkingDir, "global.json"), globalJson.ToJson());
+			return globalJson;
 		}
 
 		public readonly string SdkRoot;

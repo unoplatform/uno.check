@@ -16,5 +16,11 @@ namespace DotNetCheck.Models
 		public const string TargetFrameworks = "target_frameworks";
 
 		public const string ShouldRestartVs = "ShouldRestartVS";
+
+		/// <summary>The SDK version asked for with <c>--dotnet-sdk-version</c>, a <c>string</c>. Not contributed when there is none.</summary>
+		public const string DotNetSdkVersion = "dotnet_sdk_version";
+
+		/// <summary>The <c>DotNetSdkSelection</c> the <c>dotnet</c> checkup made, contributed under that checkup's id.</summary>
+		public const string DotNetSdkSelection = "dotnet_sdk_selection";
 	}
 }

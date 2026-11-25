@@ -35,7 +35,7 @@ namespace DotNetCheck.Checkups
 			if (!dn.Exists)
 				return missingDiagnosis;
 
-			var sdks = await dn.GetSdks();
+			var sdks = (await dn.GetSdks()).ToList();
 
 			var missingSdks = new List<Manifest.DotNetSdk>();
 			var sentinelFiles = new List<string>();
@@ -51,8 +51,6 @@ namespace DotNetCheck.Checkups
 				}
 			}
 
-			DotNetSdkInfo bestSdk = null;
-
 			foreach (var sdk in sdks)
 			{
 				// See if the sdk is one of the required sdk's
@@ -60,9 +58,6 @@ namespace DotNetCheck.Checkups
 
 				if (requiredSdk != null)
 				{
-					if (bestSdk == null || sdk.Version > bestSdk.Version)
-						bestSdk = sdk;
-
 					if (requiredSdk.EnableWorkloadResolver)
 					{
 						var sentinelPath = Path.Combine(sdk.Directory.FullName, "EnableWorkloadResolver.sentinel");
@@ -75,15 +70,20 @@ namespace DotNetCheck.Checkups
 					ReportStatus($"{sdk.Version} - {sdk.Directory}", null);
 			}
 
-			// If we didn't get the exact one before, let's find a new enough one
-			if (bestSdk == null)
-				bestSdk = sdks.OrderByDescending(s => s.Version)?.FirstOrDefault();
+			var selection = await DotNetSdkSelector.ResolveAsync(history, dn, sdks, RequiredSdks.ToList());
 
-			// Find newest compatible sdk
-			if (bestSdk != null)
+			history.ContributeState(this, StateKey.DotNetSdkSelection, selection);
+
+			if (selection.Error is not null)
+				return new DiagnosticResult(Status.Error, this, selection.Error);
+
+			// The one SDK the workloads are checked and installed with
+			if (selection.Sdk is { } bestSdk)
 			{
+				ReportStatus(DescribeSelection(selection), null);
+
 				history.SetEnvironmentVariable("DOTNET_SDK", bestSdk.Directory.FullName);
-				history.SetEnvironmentVariable("DOTNET_SDK_VERSION", bestSdk.Version.ToString());
+				history.SetEnvironmentVariable("DOTNET_SDK_VERSION", bestSdk.Directory.Name);
 			}
 
 			// Add sentinel files that should be considered
@@ -117,7 +117,21 @@ namespace DotNetCheck.Checkups
 							remedies.ToArray()));
 			}
 
-			return new DiagnosticResult(Status.Ok, this);
+			return selection.Warnings.Count > 0
+				? new DiagnosticResult(Status.Warning, this, string.Join(" ", selection.Warnings))
+				: new DiagnosticResult(Status.Ok, this);
+		}
+
+		internal static string DescribeSelection(DotNetSdkSelection selection)
+		{
+			var origin = selection.Source switch
+			{
+				DotNetSdkSelectionSource.Requested => " as requested with --dotnet-sdk-version",
+				DotNetSdkSelectionSource.GlobalJson => $" as selected by {selection.GlobalJsonPath}",
+				_ => string.Empty,
+			};
+
+			return $"Using .NET SDK {selection.Sdk.Directory.Name} to check and install workloads{origin}";
 		}
 	}
 }
