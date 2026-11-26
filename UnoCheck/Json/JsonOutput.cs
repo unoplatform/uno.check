@@ -453,6 +453,10 @@ namespace DotNetCheck.Json
 		[JsonPropertyName("skip_reason")]
 		public string? SkipReason { get; init; }
 
+		/// <summary>True when the check could not look, so its status says nothing about what it checks; absent otherwise.</summary>
+		[JsonPropertyName("could_not_check")]
+		public bool? CouldNotCheck { get; init; }
+
 		[JsonPropertyName("fix")]
 		public FixInfo? Fix { get; init; }
 	}

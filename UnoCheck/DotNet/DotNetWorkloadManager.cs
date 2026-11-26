@@ -349,7 +349,7 @@ namespace DotNetCheck.DotNet
 			string[] sudoInstalled = null;
 			var sudoContextAttempted = CanUseSudo;
 			var sudoContextSucceeded = false;
-			var failedOutput = userContextSucceeded ? [] : r.StandardOutput.Concat(r.StandardError).ToList();
+			var failedOutput = userContextSucceeded ? [] : r.StandardError;
 			if (sudoContextAttempted)
 			{
 				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
@@ -364,7 +364,7 @@ namespace DotNetCheck.DotNet
 			}
 
 			if (!userContextSucceeded && !sudoContextSucceeded)
-				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), failedOutput);
+				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), failedOutput, Util.IsWindows);
 
 			return CombineInstalledWorkloads(
 				userContextSucceeded,
@@ -400,11 +400,12 @@ namespace DotNetCheck.DotNet
 			}
 		}
 
-		// A refused read is reported as such, so the check says it could not look instead of failing (issue #647).
-		internal static void ThrowWorkloadCommandFailed(string command, IEnumerable<string> output)
+		// On Windows a refused read means the check could not look, for example in a sandboxed host. Elsewhere it is
+		// a real fault of the install (an SDK owned by root), and stays an error.
+		internal static void ThrowWorkloadCommandFailed(string command, IEnumerable<string> errorLines, bool windows)
 		{
-			if (AccessRefused.FindInOutput(output) is { } refusal)
-				throw new UnauthorizedAccessException($"`{command}` was refused access: {refusal.Trim()}");
+			if (windows && AccessRefused.FindInOutput(errorLines) is { } refusal)
+				throw new UnauthorizedAccessException($"`{command}` was refused access: {AccessRefused.Summarize(refusal)}");
 
 			throw new Exception($"Workload command failed: `{command}`");
 		}
@@ -454,7 +455,7 @@ namespace DotNetCheck.DotNet
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
-				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), r.StandardError, Util.IsWindows);
 
 			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), RollbackOutputMarker);
 

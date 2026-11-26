@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -40,11 +40,13 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				if (AccessRefused.FindInOutput(result.StandardOutput.Concat(result.StandardError)) is { } refusal)
-					return Task.FromResult(AccessRefused.Result(this, refusal.Trim()));
-
-				return Task.FromResult(new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy."));
+				return Task.FromResult(FailedResult(result.StandardError));
 			}
 		}
+
+		internal DiagnosticResult FailedResult(IEnumerable<string> errorLines)
+			=> AccessRefused.FindInOutput(errorLines) is { } refusal
+				? AccessRefused.Result(this, refusal)
+				: new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy.");
 	}
 }

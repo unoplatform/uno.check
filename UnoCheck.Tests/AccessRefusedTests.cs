@@ -8,10 +8,7 @@ using DotNetCheck.Models;
 
 namespace UnoCheck.Tests;
 
-/// <summary>
-/// A check that was refused access can't tell "not installed" from "couldn't look". It says it could not check,
-/// as a warning with no fix, instead of reporting the tool missing (issue #647).
-/// </summary>
+/// <summary>A check that was refused access says it could not check, instead of reporting the tool missing.</summary>
 public class AccessRefusedTests
 {
     const string DeniedMessage = "Access to the path 'C:\\ProgramData\\dotnet\\workloads' is denied.";
@@ -24,9 +21,18 @@ public class AccessRefusedTests
     public void IsAccessRefused_SecurityException_IsRefused()
         => Assert.True(AccessRefused.IsAccessRefused(new SecurityException("Requested registry access is not allowed.")));
 
+    [Theory]
+    [InlineData(5, true, true)]
+    [InlineData(13, true, false)]
+    [InlineData(13, false, true)]
+    [InlineData(5, false, false)]
+    [InlineData(2, true, false)]
+    public void IsAccessDeniedCode_KnowsEachPlatformsCode(int code, bool windows, bool expected)
+        => Assert.Equal(expected, AccessRefused.IsAccessDeniedCode(code, windows));
+
     [Fact]
     public void IsAccessRefused_ProcessStartDenied_IsRefused()
-        => Assert.True(AccessRefused.IsAccessRefused(new Win32Exception(5)));
+        => Assert.True(AccessRefused.IsAccessRefused(new Win32Exception(OperatingSystem.IsWindows() ? 5 : 13)));
 
     [Fact]
     public void IsAccessRefused_ProcessNotFound_IsNotRefused()
@@ -71,6 +77,31 @@ public class AccessRefusedTests
         string[] output = [DeniedMessage];
 
         Assert.Equal(DeniedMessage, AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void FindInOutput_RefusedRegistryRead_IsFound()
+    {
+        string[] output = ["Get-ExecutionPolicy : Requested registry access is not allowed."];
+
+        Assert.Equal(output[0], AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void Summarize_KeepsTheRefusalAndDropsWhatPrecedesIt()
+        => Assert.Equal(DeniedMessage, AccessRefused.Summarize("Unhandled exception: System.UnauthorizedAccessException: " + DeniedMessage));
+
+    [Fact]
+    public void Summarize_DropsControlCharacters()
+        => Assert.Equal("refused here", AccessRefused.Summarize("refused\u001b here\r\n"));
+
+    [Fact]
+    public void Summarize_BoundsTheLength()
+    {
+        var summary = AccessRefused.Summarize(new string('x', AccessRefused.MaxDetailLength + 50));
+
+        Assert.Equal(AccessRefused.MaxDetailLength + 1, summary.Length);
+        Assert.EndsWith("…", summary);
     }
 
     [Fact]
@@ -156,6 +187,7 @@ public class AccessRefusedTests
         var result = checkup.NothingFoundResult(setupStateReadRefused: false);
 
         Assert.Equal(Status.Warning, result.Status);
+        Assert.False(result.CouldNotCheck);
         Assert.Null(result.Message);
     }
 
@@ -182,25 +214,92 @@ public class AccessRefusedTests
         Assert.True(result.HasSuggestion);
     }
 
+    const string WorkloadList = "dotnet workload list --machine-readable";
+    static readonly string[] RefusedWorkloadOutput = ["Unhandled exception: System.UnauthorizedAccessException: " + DeniedMessage];
+
     [Fact]
-    public void WorkloadListFailure_OutputNamesARefusal_ThrowsAccessRefused()
+    public void WorkloadCommandFailure_OnWindows_OutputNamesARefusal_ThrowsAccessRefused()
     {
-        string[] output = ["Unhandled exception: System.UnauthorizedAccessException: " + DeniedMessage];
-
         var thrown = Assert.Throws<UnauthorizedAccessException>(
-            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed("dotnet workload list --machine-readable", output));
+            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed(WorkloadList, RefusedWorkloadOutput, windows: true));
 
-        Assert.Contains(DeniedMessage, thrown.Message);
+        Assert.Equal($"`{WorkloadList}` was refused access: {DeniedMessage}", thrown.Message);
     }
 
     [Fact]
-    public void WorkloadListFailure_AnotherFailure_KeepsTheCommandFailedError()
+    public void WorkloadCommandFailure_OffWindows_ARefusalStaysAnError()
     {
         var thrown = Assert.ThrowsAny<Exception>(
-            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed("dotnet workload list --machine-readable", ["Exit code 1"]));
+            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed(WorkloadList, RefusedWorkloadOutput, windows: false));
 
         Assert.IsNotType<UnauthorizedAccessException>(thrown);
-        Assert.Equal("Workload command failed: `dotnet workload list --machine-readable`", thrown.Message);
+        Assert.Equal($"Workload command failed: `{WorkloadList}`", thrown.Message);
+    }
+
+    [Fact]
+    public void WorkloadCommandFailure_AnotherFailure_KeepsTheCommandFailedError()
+    {
+        var thrown = Assert.ThrowsAny<Exception>(
+            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed(WorkloadList, ["Exit code 1"], windows: true));
+
+        Assert.IsNotType<UnauthorizedAccessException>(thrown);
+        Assert.Equal($"Workload command failed: `{WorkloadList}`", thrown.Message);
+    }
+
+    [Fact]
+    public void PowerShellPolicy_FailureThatNamesARefusal_CouldNotCheck()
+    {
+        var result = new PSExecutionPolicyCheckup().FailedResult(["Get-ExecutionPolicy : Requested registry access is not allowed."]);
+
+        Assert.True(result.CouldNotCheck);
+        Assert.StartsWith("Could not check:", result.Message);
+    }
+
+    [Fact]
+    public void PowerShellPolicy_AnotherFailure_StaysAnError()
+    {
+        var result = new PSExecutionPolicyCheckup().FailedResult(["The term 'Get-ExecutionPolicy' is not recognized."]);
+
+        Assert.Equal(Status.Error, result.Status);
+        Assert.False(result.CouldNotCheck);
+    }
+
+    [Fact]
+    public void HealthCheck_ForACheckThatCouldNotLook_IsAFlaggedWarningWithNoFix()
+    {
+        var checkup = new GitCheckup();
+
+        var check = CheckCommand.BuildHealthCheck(checkup, AccessRefused.Result(checkup, DeniedMessage));
+
+        Assert.Equal("warning", check.Status);
+        Assert.True(check.CouldNotCheck);
+        Assert.Null(check.Fix);
+        Assert.Equal("Could not check: " + DeniedMessage, check.Message);
+    }
+
+    [Fact]
+    public void HealthCheck_ForAnOrdinaryWarning_CarriesNoFlag()
+    {
+        var checkup = new GitCheckup();
+
+        var check = CheckCommand.BuildHealthCheck(checkup, new DiagnosticResult(Status.Warning, checkup, "Something to look at."));
+
+        Assert.Null(check.CouldNotCheck);
+    }
+
+    [Theory]
+    [InlineData(false, false, 0)]
+    [InlineData(true, false, 1)]
+    [InlineData(false, true, 1)]
+    [InlineData(true, true, 1)]
+    public void ExitCode_IsNotSuccessWhenAnythingFailedOrCouldNotBeChecked(bool hasErrors, bool hasUnchecked, int expected)
+        => Assert.Equal(expected, CheckCommand.ExitCodeFor(hasErrors, hasUnchecked));
+
+    [Fact]
+    public void DependencySkipReason_SaysWhenTheDependencyCouldNotBeChecked()
+    {
+        Assert.Equal("The dependent check openjdk could not be checked", CheckCommand.DependencySkipReason("openjdk", dependencyCouldNotCheck: true));
+        Assert.Equal("The dependent check openjdk is required first", CheckCommand.DependencySkipReason("openjdk", dependencyCouldNotCheck: false));
     }
 
     [Fact]
