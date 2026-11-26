@@ -21,9 +21,9 @@ namespace DotNetCheck.Checkups
 					var workloads = sdk?.Workloads?.ToArray() ?? Array.Empty<DotNetWorkload>();
 					var pkgSrcs = sdk?.PackageSources?.ToArray() ?? Array.Empty<string>();
 
-					string sdkVersion;
-					if (!sharedState.TryGetEnvironmentVariable("DOTNET_SDK_VERSION", out sdkVersion))
-						sdkVersion = sdk.Version;
+					// The checkup is identified by the manifest's SDK; the SDK that runs the workload commands
+					// is selected when it examines (DotNetWorkloadsCheckup).
+					var sdkVersion = sdk.Version;
 
 					if (sdk.Workloads?.Any() ?? false)
 					{

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -123,6 +123,30 @@ namespace DotNetCheck.DotNet
 			}
 
 			return default;
+		}
+
+		/// <summary>
+		/// The SDK the dotnet host resolves for <paramref name="workingDirectory"/> when a <c>global.json</c>
+		/// there selects one (version, rollForward, allowPrerelease and paths), as <c>dotnet --version</c> reports it.
+		/// Null when no <c>global.json</c> selects an SDK, in which case the host would just pick the newest.
+		/// </summary>
+		internal async Task<GlobalJsonSdkResolution> ResolveGlobalJsonSdk(string workingDirectory)
+		{
+			var globalJson = DotNetSdkSelector.FindSdkGlobalJson(workingDirectory);
+
+			if (globalJson is null)
+				return null;
+
+			var r = await Util.ShellCommand(DotNetExeLocation.FullName, workingDirectory, false, ["--version"]);
+			var version = r.ExitCode == 0 ? DotNetSdkSelector.ParseDotNetVersionOutput(r.StandardOutput) : null;
+
+			if (version is not null)
+				return new GlobalJsonSdkResolution(globalJson.Path, version, null, globalJson.HasVersion);
+
+			var failure = r.StandardOutput.Concat(r.StandardError).FirstOrDefault(l => !string.IsNullOrWhiteSpace(l))?.Trim()
+				?? $"dotnet --version exited with code {r.ExitCode}";
+
+			return new GlobalJsonSdkResolution(globalJson.Path, null, failure, globalJson.HasVersion);
 		}
 
 		public Task<IEnumerable<DotNetSdkInfo>> GetSdks()
