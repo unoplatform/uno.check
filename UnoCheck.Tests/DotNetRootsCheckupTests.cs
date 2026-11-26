@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using DotNetCheck;
 using DotNetCheck.Checkups;
 using Xunit;
 
@@ -211,6 +212,51 @@ namespace UnoCheck.Tests
 		{
 			// e.g. a broken DOTNET_ROOT value; must not throw out of the checkup.
 			Assert.Null(DotNetRootsCheckup.NormalizeRoot("bad\0path"));
+		}
+
+		[Fact]
+		public void KnownRootCandidates_OnWindows_LeaveOutTheUserProfile()
+		{
+			// A sandboxed caller is asked for every read of the user's profile (issue #641).
+			var candidates = DotNetRootsCheckup.KnownRootCandidates(
+				Platform.Windows,
+				home: @"C:\Users\someone",
+				programFiles: @"C:\Program Files");
+
+			Assert.Equal(new[] { Path.Join(@"C:\Program Files", "dotnet") }, candidates);
+		}
+
+		[Fact]
+		public void KnownRootCandidates_OnMac_IncludeTheUserDotnetFolder()
+		{
+			var candidates = DotNetRootsCheckup.KnownRootCandidates(
+				Platform.OSX,
+				home: "/Users/someone",
+				programFiles: null);
+
+			Assert.Equal(new[] { Path.Join("/Users/someone", ".dotnet"), "/usr/local/share/dotnet" }, candidates);
+		}
+
+		[Fact]
+		public void KnownRootCandidates_OnLinux_IncludeTheUserDotnetFolder()
+		{
+			var candidates = DotNetRootsCheckup.KnownRootCandidates(
+				Platform.Linux,
+				home: "/home/someone",
+				programFiles: null);
+
+			Assert.Equal(new[] { Path.Join("/home/someone", ".dotnet"), "/usr/lib/dotnet", "/usr/share/dotnet" }, candidates);
+		}
+
+		[Fact]
+		public void KnownRootCandidates_WithoutAHome_LeaveOutTheUserDotnetFolder()
+		{
+			var candidates = DotNetRootsCheckup.KnownRootCandidates(
+				Platform.Linux,
+				home: string.Empty,
+				programFiles: null);
+
+			Assert.Equal(new[] { "/usr/lib/dotnet", "/usr/share/dotnet" }, candidates);
 		}
 	}
 }
