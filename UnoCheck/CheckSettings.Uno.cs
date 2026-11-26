@@ -52,6 +52,11 @@ Targets: webassembly ios android macos linux windows"
             @"Correlation id stamped on structured-output events. Hosts pass their own id when launching a child process (e.g. an elevated fix) so both processes report as one logical run. Defaults to a new id per run.")]
         public string? CorrelationId { get; set; }
 
+        [CommandOption("--caller <NAME>")]
+        [Description(
+            @"Names the host that launched this run (for example an IDE extension or Uno Platform Studio), for telemetry only: it changes nothing about the checks. It is sent to Uno Platform telemetry as given, so use a product name, never a user, machine or organisation name. The value is lowercased; one with characters other than letters, digits, '.', '_' and '-', or longer than 32 characters, is recorded as 'other'. When omitted, the UNO_CHECK_CALLER environment variable is used.")]
+        public string? Caller { get; set; }
+
         [CommandOption("--allow-elevation-prompt")]
         [Description(
             @"Allow a structured macOS or Linux fix run to display the system authorization dialog (macOS administrator prompt / Linux polkit). Ignored in CI.")]

@@ -32,7 +32,7 @@ internal static class TelemetryClient
         }
     }
 
-    public static void TrackStartCheck(string[] requestedFrameworks)
+    public static void TrackStartCheck(string[] requestedFrameworks, CheckRunTelemetryContext context)
     {
         try
         {
@@ -46,10 +46,8 @@ internal static class TelemetryClient
                     .Take(10) ?? []);
 
             _telemetry.TrackEvent(
-                "check-start",
-                [
-                    ("RequestedFrameworks", frameworks),
-                ],
+                TelemetryNames.CheckStart,
+                BuildProperties(context, (TelemetryNames.RequestedFrameworks, frameworks)),
                 []
             );
         }
@@ -61,15 +59,15 @@ internal static class TelemetryClient
         }
     }
 
-    public static void TrackCheckSuccess(TimeSpan elapsed)
+    public static void TrackCheckSuccess(TimeSpan elapsed, CheckRunTelemetryContext context)
     {
         try
         {
             _telemetry.TrackEvent(
-                "check-success",
-                [],
+                TelemetryNames.CheckSuccess,
+                BuildProperties(context),
                 [
-                    ("Duration", elapsed.TotalSeconds)
+                    (TelemetryNames.Duration, elapsed.TotalSeconds)
                 ]
             );
         }
@@ -81,17 +79,15 @@ internal static class TelemetryClient
         }
     }
 
-    public static void TrackCheckWarning(TimeSpan elapsed, string warnChecks)
+    public static void TrackCheckWarning(TimeSpan elapsed, string warnChecks, CheckRunTelemetryContext context)
     {
         try
         {
             _telemetry.TrackEvent(
-                "check-warn",
+                TelemetryNames.CheckWarn,
+                BuildProperties(context, (TelemetryNames.ReportedChecks, warnChecks)),
                 [
-                    ("ReportedChecks", warnChecks),
-                ],
-                [
-                    ("Duration", elapsed.TotalSeconds)
+                    (TelemetryNames.Duration, elapsed.TotalSeconds)
                 ]
             );
         }
@@ -103,17 +99,15 @@ internal static class TelemetryClient
         }
     }
 
-    public static void TrackCheckFail(TimeSpan elapsed, string failedChecks)
+    public static void TrackCheckFail(TimeSpan elapsed, string failedChecks, CheckRunTelemetryContext context)
     {
         try
         {
             _telemetry.TrackEvent(
-                "check-fail",
+                TelemetryNames.CheckFail,
+                BuildProperties(context, (TelemetryNames.ReportedChecks, failedChecks)),
                 [
-                    ("ReportedChecks", failedChecks),
-                ],
-                [
-                    ("Duration", elapsed.TotalSeconds)
+                    (TelemetryNames.Duration, elapsed.TotalSeconds)
                 ]
             );
         }
@@ -123,5 +117,24 @@ internal static class TelemetryClient
             Console.WriteLine($"Telemetry failure: {e}");
 #endif
         }
+    }
+
+    /// <summary>
+    /// An event's own properties, followed by the run's context (uno.check#643). A context key the event
+    /// already sets is left out: the library turns the list into a dictionary, so a repeated key would
+    /// throw there, and the catch above would drop the whole event without a trace.
+    /// </summary>
+    internal static (string Key, string Value)[] BuildProperties(CheckRunTelemetryContext context, params (string Key, string Value)[] eventProperties)
+    {
+        var properties = new List<(string Key, string Value)>(eventProperties);
+        foreach (var property in (context ?? CheckRunTelemetryContext.Unknown).ToProperties())
+        {
+            if (!properties.Exists(p => string.Equals(p.Key, property.Key, StringComparison.Ordinal)))
+            {
+                properties.Add(property);
+            }
+        }
+
+        return properties.ToArray();
     }
 }

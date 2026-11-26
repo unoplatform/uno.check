@@ -116,6 +116,27 @@ public class BuildFixArgumentsTests
     }
 
     [Fact]
+    public void Caller_Survives_As_Telemetry_Records_It()
+    {
+        // An elevated child on Windows, or one under sudo, does not inherit UNO_CHECK_CALLER, so the
+        // caller travels as an argument. It is the cleaned value, the same one telemetry records.
+        var args = Build("openjdk", new CheckSettings { Caller = "My-Extension" });
+
+        Assert.Equal("my-extension", args[Array.IndexOf(args, "--caller") + 1]);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("two words")]
+    [InlineData("-leading-dash")]
+    public void A_Caller_That_Names_No_Host_Is_Not_Replayed(string? caller)
+    {
+        var args = Build("openjdk", new CheckSettings { Caller = caller });
+
+        Assert.DoesNotContain("--caller", args);
+    }
+
+    [Fact]
     public void Output_Options_Belong_To_The_Host_And_Are_Never_Replayed()
     {
         var args = Build("dotnet", new CheckSettings
