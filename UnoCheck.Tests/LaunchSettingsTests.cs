@@ -16,7 +16,9 @@ public class LaunchSettingsTests
         // UseAppHost=false runs the project through the dotnet host (`dotnet UnoCheck.dll`)
         // instead of the apphost exe, whose manifest requests requireAdministrator and
         // cannot start from a non-elevated test run (Win32 error 740).
-        var psi = new ProcessStartInfo("dotnet", $"run --project \"{projectPath}\" --framework net6.0 -p:UseAppHost=false --launch-profile UnoCheck -- --non-interactive --ci")
+        // -v q: since .NET SDK 11, `dotnet run` writes "Using launch settings from ..." to stderr,
+        // which the empty-stderr assertion below would otherwise treat as an error.
+        var psi = new ProcessStartInfo("dotnet", $"run -v q --project \"{projectPath}\" --framework net6.0 -p:UseAppHost=false --launch-profile UnoCheck -- --non-interactive --ci")
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
