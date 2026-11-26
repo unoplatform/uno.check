@@ -85,7 +85,7 @@ namespace DotNetCheck.Checkups
 				Util.Exception(ex);
 			}
 
-			var found = xamJdks.Concat(FindJdks())
+			var found = WithPathJdksIfNeeded(xamJdks.Concat(FindJdks()).ToList(), FindPathJdks)
 				.GroupBy(j => j.Directory.FullName)
 				.Select(g => g.First())
 				.ToList();
@@ -101,8 +101,7 @@ namespace DotNetCheck.Checkups
 
 			foreach (var jdk in jdks)
 			{
-				if ((jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
-					&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null))
+				if (IsCompatible(jdk))
 				{
 					ok = true;
 					ReportStatus($"{jdk.Version} ({jdk.Directory})", Status.Ok);
@@ -134,6 +133,30 @@ namespace DotNetCheck.Checkups
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
 			return Task.FromResult(NoCompatibleJdkResult(found));
+		}
+
+		internal bool IsCompatible(OpenJdkInfo jdk)
+			=> jdk.Version is not null
+				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
+				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
+
+		// The PATH is the last resort: reading its folders asks the user once per folder in a sandboxed host (issue #646).
+		internal IEnumerable<OpenJdkInfo> WithPathJdksIfNeeded(IReadOnlyCollection<OpenJdkInfo> known, Func<IEnumerable<OpenJdkInfo>> findOnPath)
+			=> known.Any(IsCompatible) ? known : known.Concat(findOnPath());
+
+		internal static IEnumerable<string> JavaPathEntries(string pathValue)
+			=> (pathValue ?? string.Empty)
+				.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+				.Where(entry => entry.Contains("java", StringComparison.OrdinalIgnoreCase) || entry.Contains("jdk", StringComparison.OrdinalIgnoreCase));
+
+		IEnumerable<OpenJdkInfo> FindPathJdks()
+		{
+			var paths = new List<OpenJdkInfo>();
+
+			foreach (var envPath in JavaPathEntries(Environment.GetEnvironmentVariable("PATH")))
+				SearchDirectoryForJdks(paths, envPath, true);
+
+			return paths;
 		}
 
 		// OpenJDK is only reported missing when no javac was found at all. Otherwise the message names what was found,
@@ -237,14 +260,6 @@ namespace DotNetCheck.Checkups
 
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JAVA_HOME") ?? string.Empty, true);
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JDK_HOME") ?? string.Empty, true);
-
-			var environmentPaths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
-
-			foreach (var envPath in environmentPaths)
-			{
-				if (envPath.Contains("java", StringComparison.OrdinalIgnoreCase) || envPath.Contains("jdk", StringComparison.OrdinalIgnoreCase))
-					SearchDirectoryForJdks(paths, envPath, true);
-			}
 
 			if (Util.IsLinux)
 			{

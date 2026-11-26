@@ -15,7 +15,7 @@ namespace DotNetCheck.Solutions
 			// A policy locked by group policy makes Set-ExecutionPolicy exit non-zero; the fix
 			// has to report that rather than claim the policy was changed.
 			Util.ThrowIfFailed(
-				ShellProcessRunner.Run("powershell", "-Command Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned"),
+				ShellProcessRunner.Run(WindowsToolPaths.PowerShell(), "-Command Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned"),
 				"Setting the PowerShell execution policy for the current user");
 
 			return Task.CompletedTask;

@@ -115,4 +115,61 @@ public class OpenJdkCheckupTests
 
         Assert.Equal(result.Message, check.Message);
     }
+
+    [Theory]
+    [InlineData("java")]
+    [InlineData("JDK")]
+    public void JavaPathEntries_KeepsOnlyEntriesThatNameJava(string marker)
+    {
+        var javaEntry = Path.Join("tools", $"some-{marker}-home", "bin");
+        var pathValue = string.Join(Path.PathSeparator, Path.Join("tools", "node"), javaEntry, "", Path.Join("tools", "git"));
+
+        Assert.Equal([javaEntry], OpenJdkCheckup.JavaPathEntries(pathValue));
+    }
+
+    [Fact]
+    public void JavaPathEntries_NoPath_IsEmpty()
+    {
+        Assert.Empty(OpenJdkCheckup.JavaPathEntries(null));
+    }
+
+    [Fact]
+    public void WithPathJdksIfNeeded_CompatibleJdkAlreadyFound_DoesNotSearchThePath()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var known = new[] { Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19") };
+        var searched = false;
+
+        var jdks = checkup.WithPathJdksIfNeeded(known, () =>
+        {
+            searched = true;
+            return [];
+        });
+
+        Assert.False(searched);
+        Assert.Equal(known, jdks);
+    }
+
+    [Fact]
+    public void WithPathJdksIfNeeded_NoCompatibleJdk_AddsTheOnesOnThePath()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var onPath = Jdk("/tools/openjdk-17.0.19", "17.0.19");
+
+        var jdks = checkup.WithPathJdksIfNeeded([tooOld], () => [onPath]);
+
+        Assert.Equal([tooOld, onPath], jdks);
+    }
+
+    [Fact]
+    public void IsCompatible_RequiresAMicrosoftOrOpenJdkBuildOfTheRightVersion()
+    {
+        var checkup = CheckupFor("17.0.19");
+
+        Assert.True(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/oracle/jdk-17.0.19", "17.0.19")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-unreadable", null)));
+    }
 }

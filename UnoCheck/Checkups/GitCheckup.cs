@@ -16,7 +16,7 @@ namespace DotNetCheck.Checkups
 
 		public override async Task<DiagnosticResult> Examine(SharedState state)
 		{
-			var result = new ShellProcessRunner(new("git", "--version") { Verbose = true }).WaitForExit();
+			var result = new ShellProcessRunner(new(WindowsToolPaths.Git(), "--version") { Verbose = true }).WaitForExit();
 
 			if (result.Success)
 			{
