@@ -14,11 +14,17 @@ namespace DotNetCheck.Checkups
 
 		public override string Title => "Git";
 
+		// A known install that doesn't run, for example a leftover folder, must not hide a Git that does.
+		internal static bool RunFromKnownInstall(string command, System.Func<string, bool> run)
+			=> run(command) || (command != ToolPaths.GitName && run(ToolPaths.GitName));
+
 		public override async Task<DiagnosticResult> Examine(SharedState state)
 		{
-			var result = new ShellProcessRunner(new(WindowsToolPaths.Git(), "--version") { Verbose = true }).WaitForExit();
+			var installed = RunFromKnownInstall(
+				ToolPaths.Git(),
+				command => new ShellProcessRunner(new(command, "--version") { Verbose = true }).WaitForExit().Success);
 
-			if (result.Success)
+			if (installed)
 			{
 				return DiagnosticResult.Ok(this);
 			}

@@ -118,7 +118,7 @@ namespace DotNetCheck.Solutions
 			{
 				Platform.Linux => "bash",
 				Platform.OSX => "bash",
-				Platform.Windows => "powershell",
+				Platform.Windows => ToolPaths.PowerShell(),
 				_ => throw new NotSupportedException($"Unsupported platform {Util.Platform}")
 			};
 

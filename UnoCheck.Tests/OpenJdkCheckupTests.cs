@@ -6,10 +6,7 @@ using NuGet.Versioning;
 
 namespace UnoCheck.Tests;
 
-/// <summary>
-/// Microsoft OpenJDK 17.0.21.0.2 reports a five-part version, which NuGetVersion can't parse. The checkup dropped
-/// that JDK without a word, then said OpenJDK was missing although a newer javac than the required one was installed.
-/// </summary>
+/// <summary>Which JDKs the OpenJDK checkup finds, how it reads their versions, and what it reports when none fits.</summary>
 public class OpenJdkCheckupTests
 {
     static OpenJdkCheckup CheckupFor(string version, bool requireExact = false)
@@ -140,7 +137,7 @@ public class OpenJdkCheckupTests
         var known = new[] { Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19") };
         var searched = false;
 
-        var jdks = checkup.WithPathJdksIfNeeded(known, () =>
+        var jdks = checkup.WithPathJdksIfNeeded(known, _ =>
         {
             searched = true;
             return [];
@@ -157,9 +154,21 @@ public class OpenJdkCheckupTests
         var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
         var onPath = Jdk("/tools/openjdk-17.0.19", "17.0.19");
 
-        var jdks = checkup.WithPathJdksIfNeeded([tooOld], () => [onPath]);
+        var jdks = checkup.WithPathJdksIfNeeded([tooOld], _ => [onPath]);
 
         Assert.Equal([tooOld, onPath], jdks);
+    }
+
+    [Fact]
+    public void WithPathJdksIfNeeded_NewerJdkOnlyOnThePath_IsNotConsideredWhenAKnownOneFits()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var known = Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19");
+        var newerOnPath = Jdk("/tools/openjdk-21.0.2", "21.0.2");
+
+        var jdks = checkup.WithPathJdksIfNeeded([known], _ => [newerOnPath]);
+
+        Assert.Equal([known], jdks);
     }
 
     [Fact]

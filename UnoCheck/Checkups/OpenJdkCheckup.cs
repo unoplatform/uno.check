@@ -140,23 +140,24 @@ namespace DotNetCheck.Checkups
 				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
 				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
 
-		// The PATH is the last resort: reading its folders asks the user once per folder in a sandboxed host (issue #646).
-		internal IEnumerable<OpenJdkInfo> WithPathJdksIfNeeded(IReadOnlyCollection<OpenJdkInfo> known, Func<IEnumerable<OpenJdkInfo>> findOnPath)
-			=> known.Any(IsCompatible) ? known : known.Concat(findOnPath());
+		// The PATH is the last resort: a sandboxed host asks the user for each of its folders that is read.
+		internal IEnumerable<OpenJdkInfo> WithPathJdksIfNeeded(IReadOnlyCollection<OpenJdkInfo> known, Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>> findOnPath)
+			=> known.Any(IsCompatible) ? known : known.Concat(findOnPath(known));
 
 		internal static IEnumerable<string> JavaPathEntries(string pathValue)
 			=> (pathValue ?? string.Empty)
 				.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
 				.Where(entry => entry.Contains("java", StringComparison.OrdinalIgnoreCase) || entry.Contains("jdk", StringComparison.OrdinalIgnoreCase));
 
-		IEnumerable<OpenJdkInfo> FindPathJdks()
+		// Seeded with the known JDKs, so a javac already found is not run a second time.
+		IEnumerable<OpenJdkInfo> FindPathJdks(IReadOnlyCollection<OpenJdkInfo> known)
 		{
-			var paths = new List<OpenJdkInfo>();
+			var paths = new List<OpenJdkInfo>(known);
 
 			foreach (var envPath in JavaPathEntries(Environment.GetEnvironmentVariable("PATH")))
 				SearchDirectoryForJdks(paths, envPath, true);
 
-			return paths;
+			return paths.Skip(known.Count);
 		}
 
 		// OpenJDK is only reported missing when no javac was found at all. Otherwise the message names what was found,

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNetCheck.DotNet;
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
 
@@ -29,8 +30,10 @@ namespace DotNetCheck.Checkups
                 return DiagnosticResult.Ok(this);
             }
             
+            var dotnet = DotNetSdk.ResolveExecutable(history);
+
             var check = await Util.ShellCommand(
-                "dotnet",
+                dotnet,
                 Directory.GetCurrentDirectory(),
                 Util.Verbose,
                 ["dev-certs", "https", "-c", "-t"]);
@@ -48,7 +51,7 @@ namespace DotNetCheck.Checkups
                 "This command will trust your local dev certs so that HTTPS works correctly in WebAssembly apps.",
                 new ActionSolution(
                     (_, cancel) => TrustDevCertAsync(token => Util.ShellCommand(
-                        "dotnet",
+                        dotnet,
                         Directory.GetCurrentDirectory(),
                         Util.Verbose,
                         token,

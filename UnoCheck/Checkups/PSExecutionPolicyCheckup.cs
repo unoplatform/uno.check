@@ -19,7 +19,7 @@ namespace DotNetCheck.Checkups
 			// See: https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
 			Environment.SetEnvironmentVariable("PSModulePath", string.Empty);
 
-			var result = ShellProcessRunner.Run(WindowsToolPaths.PowerShell(), "-Command Get-ExecutionPolicy -Scope CurrentUser");
+			var result = ShellProcessRunner.Run(ToolPaths.PowerShell(), "-Command Get-ExecutionPolicy -Scope CurrentUser");
 
 			if (result.Success)
 			{
