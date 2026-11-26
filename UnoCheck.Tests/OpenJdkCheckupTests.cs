@@ -131,13 +131,13 @@ public class OpenJdkCheckupTests
     }
 
     [Fact]
-    public void WithPathJdksIfNeeded_CompatibleJdkAlreadyFound_DoesNotSearchThePath()
+    public void WithLastResortsIfNeeded_CompatibleJdkAlreadyFound_DoesNotSearchThePath()
     {
         var checkup = CheckupFor("17.0.19");
         var known = new[] { Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19") };
         var searched = false;
 
-        var jdks = checkup.WithPathJdksIfNeeded(known, _ =>
+        var jdks = checkup.WithLastResortsIfNeeded(known, _ =>
         {
             searched = true;
             return [];
@@ -148,27 +148,68 @@ public class OpenJdkCheckupTests
     }
 
     [Fact]
-    public void WithPathJdksIfNeeded_NoCompatibleJdk_AddsTheOnesOnThePath()
+    public void WithLastResortsIfNeeded_NoCompatibleJdk_AddsTheOnesOnThePath()
     {
         var checkup = CheckupFor("17.0.19");
         var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
         var onPath = Jdk("/tools/openjdk-17.0.19", "17.0.19");
 
-        var jdks = checkup.WithPathJdksIfNeeded([tooOld], _ => [onPath]);
+        var jdks = checkup.WithLastResortsIfNeeded([tooOld], _ => [onPath]);
 
         Assert.Equal([tooOld, onPath], jdks);
     }
 
     [Fact]
-    public void WithPathJdksIfNeeded_NewerJdkOnlyOnThePath_IsNotConsideredWhenAKnownOneFits()
+    public void WithLastResortsIfNeeded_NewerJdkOnlyOnThePath_IsNotConsideredWhenAKnownOneFits()
     {
         var checkup = CheckupFor("17.0.19");
         var known = Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19");
         var newerOnPath = Jdk("/tools/openjdk-21.0.2", "21.0.2");
 
-        var jdks = checkup.WithPathJdksIfNeeded([known], _ => [newerOnPath]);
+        var jdks = checkup.WithLastResortsIfNeeded([known], _ => [newerOnPath]);
 
         Assert.Equal([known], jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_StopsAtTheFirstLastResortThatFindsACompatibleJdk()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var fromAndroidSdk = Jdk("/android/microsoft-jdk-17.0.19", "17.0.19");
+        var searchedThePath = false;
+
+        var jdks = checkup.WithLastResortsIfNeeded(
+            [tooOld],
+            _ => [fromAndroidSdk],
+            _ =>
+            {
+                searchedThePath = true;
+                return [];
+            });
+
+        Assert.False(searchedThePath);
+        Assert.Equal([tooOld, fromAndroidSdk], jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_EachLastResortSeesWhatWasFoundBefore()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var alsoTooOld = Jdk("/android/microsoft-jdk-11.0.2", "11.0.2");
+        IReadOnlyCollection<OpenJdkInfo>? seenByThePathSearch = null;
+
+        checkup.WithLastResortsIfNeeded(
+            [tooOld],
+            _ => [alsoTooOld],
+            known =>
+            {
+                seenByThePathSearch = known;
+                return [];
+            });
+
+        Assert.Equal([tooOld, alsoTooOld], seenByThePathSearch);
     }
 
     [Fact]

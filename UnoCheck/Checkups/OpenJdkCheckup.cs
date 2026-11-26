@@ -72,20 +72,7 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var xamJdks = new List<OpenJdkInfo>();
-			try
-			{
-				var xamSdkInfo = new AndroidSdkInfo((traceLevel, msg) => Util.Log(msg), null, null, null);
-
-				if (!string.IsNullOrEmpty(xamSdkInfo.JavaSdkPath))
-					SearchDirectoryForJdks(xamJdks, xamSdkInfo.JavaSdkPath);
-			}
-			catch (Exception ex)
-			{
-				Util.Exception(ex);
-			}
-
-			var found = WithPathJdksIfNeeded(xamJdks.Concat(FindJdks()).ToList(), FindPathJdks)
+			var found = WithLastResortsIfNeeded(FindJdks().ToList(), FindAndroidSdkJdks, FindPathJdks)
 				.GroupBy(j => j.Directory.FullName)
 				.Select(g => g.First())
 				.ToList();
@@ -140,9 +127,44 @@ namespace DotNetCheck.Checkups
 				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
 				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
 
-		// The PATH is the last resort: a sandboxed host asks the user for each of its folders that is read.
-		internal IEnumerable<OpenJdkInfo> WithPathJdksIfNeeded(IReadOnlyCollection<OpenJdkInfo> known, Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>> findOnPath)
-			=> known.Any(IsCompatible) ? known : known.Concat(findOnPath(known));
+		// The last resorts read the PATH's folders, and a sandboxed host asks the user for each of them. They are
+		// tried in order, and only while no compatible JDK has been found.
+		internal IReadOnlyCollection<OpenJdkInfo> WithLastResortsIfNeeded(
+			IReadOnlyCollection<OpenJdkInfo> known,
+			params Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>>[] lastResorts)
+		{
+			var found = known;
+
+			foreach (var lastResort in lastResorts)
+			{
+				if (found.Any(IsCompatible))
+					break;
+
+				found = found.Concat(lastResort(found)).ToList();
+			}
+
+			return found;
+		}
+
+		// AndroidSdkInfo searches every PATH folder for adb and java before it answers.
+		IEnumerable<OpenJdkInfo> FindAndroidSdkJdks(IReadOnlyCollection<OpenJdkInfo> known)
+		{
+			var paths = new List<OpenJdkInfo>(known);
+
+			try
+			{
+				var xamSdkInfo = new AndroidSdkInfo((traceLevel, msg) => Util.Log(msg), null, null, null);
+
+				if (!string.IsNullOrEmpty(xamSdkInfo.JavaSdkPath))
+					SearchDirectoryForJdks(paths, xamSdkInfo.JavaSdkPath);
+			}
+			catch (Exception ex)
+			{
+				Util.Exception(ex);
+			}
+
+			return paths.Skip(known.Count);
+		}
 
 		internal static IEnumerable<string> JavaPathEntries(string pathValue)
 			=> (pathValue ?? string.Empty)
