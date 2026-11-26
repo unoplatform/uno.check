@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -39,6 +40,9 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
+				if (AccessRefused.FindInOutput(result.StandardOutput.Concat(result.StandardError)) is { } refusal)
+					return Task.FromResult(AccessRefused.Result(this, refusal.Trim()));
+
 				return Task.FromResult(new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy."));
 			}
 		}

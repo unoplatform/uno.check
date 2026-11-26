@@ -129,6 +129,7 @@ namespace DotNetCheck.Cli
 			{
 
 			var checkupStatus = new Dictionary<string, Models.Status>();
+			var notCheckedCheckups = new HashSet<string>();
 			var sharedState = new SharedState();
 
 			var results = new Dictionary<string, DiagnosticResult>();
@@ -293,7 +294,9 @@ namespace DotNetCheck.Cli
 
 						if (depCheckup != null && depCheckup.IsPlatformSupported(Util.Platform))
 						{
-							if (!checkupStatus.TryGetValue(dep.CheckupId, out var depStatus) || depStatus == Models.Status.Error)
+							Models.Status? depStatus = checkupStatus.TryGetValue(dep.CheckupId, out var knownStatus) ? knownStatus : null;
+
+							if (DependencyBlocksDependents(depStatus, notCheckedCheckups.Contains(dep.CheckupId)))
 							{
 								if (dep.IsRequired)
 								{
@@ -359,13 +362,18 @@ namespace DotNetCheck.Cli
 				catch (Exception ex)
 				{
 					Util.Exception(ex);
-					diagnosis = new DiagnosticResult(Models.Status.Error, checkup, ex.Message);
+					diagnosis = DiagnoseFailure(checkup, ex);
 				}
 
 				results[checkup.Id] = diagnosis;
 
 				// Cache the status for dependencies
 				checkupStatus[checkup.Id] = diagnosis.Status;
+
+				if (diagnosis.CouldNotCheck)
+					notCheckedCheckups.Add(checkup.Id);
+				else
+					notCheckedCheckups.Remove(checkup.Id);
 
 				var healthCheck = BuildHealthCheck(checkup, diagnosis, settings);
 				reportChecks[checkup.Id] = healthCheck;
@@ -802,6 +810,16 @@ namespace DotNetCheck.Cli
 
 			return args.ToArray();
 		}
+
+		// A dependency that failed, never ran, or could not be checked says nothing its dependents can build on.
+		internal static bool DependencyBlocksDependents(Models.Status? dependencyStatus, bool dependencyCouldNotCheck)
+			=> dependencyStatus is null or Models.Status.Error || dependencyCouldNotCheck;
+
+		// A check that was refused access could not look, which is not the same as finding a problem (issue #647).
+		internal static DiagnosticResult DiagnoseFailure(Checkup checkup, Exception failure)
+			=> AccessRefused.FindRefusal(failure) is { } refusal
+				? AccessRefused.Result(checkup, refusal.Message)
+				: new DiagnosticResult(Models.Status.Error, checkup, failure.Message);
 
 		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null)
 		{

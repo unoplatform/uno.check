@@ -94,17 +94,24 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				// TODO: automatically install with vs_installer
-
-				var sb = new StringBuilder();
-				var result = new DiagnosticResult(
-					Status.Error,
-					this,
-					prescription: new Suggestion("Install missing workloads",
-					"Some required workloads were not found. You should run Visual Studio Installer to install the missing workloads.")
-				);
-				return result;
+				return MissingWorkloadsResult(VisualStudioWindowsCheckup.IsSetupStateReadRefused());
 			}
+		}
+
+		internal DiagnosticResult MissingWorkloadsResult(bool setupStateReadRefused)
+		{
+			if (setupStateReadRefused)
+			{
+				return AccessRefused.Result(this, $"access to '{VisualStudioWindowsCheckup.SetupStateFolder}' was refused, so Visual Studio workloads can't be listed.");
+			}
+
+			// TODO: automatically install with vs_installer
+			return new DiagnosticResult(
+				Status.Error,
+				this,
+				prescription: new Suggestion("Install missing workloads",
+				"Some required workloads were not found. You should run Visual Studio Installer to install the missing workloads.")
+			);
 		}
 	}
 }

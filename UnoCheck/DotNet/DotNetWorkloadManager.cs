@@ -349,6 +349,7 @@ namespace DotNetCheck.DotNet
 			string[] sudoInstalled = null;
 			var sudoContextAttempted = CanUseSudo;
 			var sudoContextSucceeded = false;
+			var failedOutput = userContextSucceeded ? [] : r.StandardOutput.Concat(r.StandardError).ToList();
 			if (sudoContextAttempted)
 			{
 				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
@@ -361,6 +362,9 @@ namespace DotNetCheck.DotNet
 					sudoInstalled = ParseInstalledWorkloadIds(sudoOutput);
 				}
 			}
+
+			if (!userContextSucceeded && !sudoContextSucceeded)
+				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), failedOutput);
 
 			return CombineInstalledWorkloads(
 				userContextSucceeded,
@@ -394,6 +398,15 @@ namespace DotNetCheck.DotNet
 					$"Could not parse `dotnet workload list --machine-readable` output. Output: {snippet}",
 					ex);
 			}
+		}
+
+		// A refused read is reported as such, so the check says it could not look instead of failing (issue #647).
+		internal static void ThrowWorkloadCommandFailed(string command, IEnumerable<string> output)
+		{
+			if (AccessRefused.FindInOutput(output) is { } refusal)
+				throw new UnauthorizedAccessException($"`{command}` was refused access: {refusal.Trim()}");
+
+			throw new Exception($"Workload command failed: `{command}`");
 		}
 
 		/// <summary>
