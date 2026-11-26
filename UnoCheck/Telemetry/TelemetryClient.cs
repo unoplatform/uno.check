@@ -127,13 +127,9 @@ internal static class TelemetryClient
     internal static (string Key, string Value)[] BuildProperties(CheckRunTelemetryContext context, params (string Key, string Value)[] eventProperties)
     {
         var properties = new List<(string Key, string Value)>(eventProperties);
-        foreach (var property in (context ?? CheckRunTelemetryContext.Unknown).ToProperties())
-        {
-            if (!properties.Exists(p => string.Equals(p.Key, property.Key, StringComparison.Ordinal)))
-            {
-                properties.Add(property);
-            }
-        }
+        properties.AddRange(
+            (context ?? CheckRunTelemetryContext.Unknown).ToProperties()
+                .Where(property => !eventProperties.Any(p => string.Equals(p.Key, property.Key, StringComparison.Ordinal))));
 
         return properties.ToArray();
     }

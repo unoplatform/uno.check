@@ -582,7 +582,19 @@ namespace DotNetCheck.Cli
             var targetPlatforms = new List<string>();
             foreach (var tfm in settings.Frameworks!)
             {
-                var parsedTfm = NuGetFramework.ParseFolder(tfm);
+                // A value NuGet rejects (e.g. 'portable-net45+net40-client') names no platform, so it is skipped
+                // rather than thrown: this runs before the command's try block, where a throw would leave a
+                // structured-output host with no report at all.
+                NuGetFramework parsedTfm;
+                try
+                {
+                    parsedTfm = NuGetFramework.ParseFolder(tfm);
+                }
+                catch (ArgumentException)
+                {
+                    Util.Log($"Ignoring --tfm '{tfm}': not a target framework uno-check can read.");
+                    continue;
+                }
 
                 if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
                 {
@@ -735,10 +747,12 @@ namespace DotNetCheck.Cli
 		/// against stable without fixing anything, and a versioned preview workload id became
 		/// unknown.
 		///
-		/// Everything replayed here arrived on this process' own command line, so it is handed
-		/// back verbatim as separate vector elements. The checkup id is the exception — it is
+		/// Almost everything replayed here arrived on this process' own command line, so it is
+		/// handed back verbatim as separate vector elements. Two exceptions: the checkup id is
 		/// assembled from manifest data rather than supplied by the caller, so it is
-		/// allow-listed by <see cref="Json.JsonlOutput.IsSafeCheckupId"/> before it gets here.
+		/// allow-listed by <see cref="Json.JsonlOutput.IsSafeCheckupId"/> before it gets here;
+		/// and <c>--caller</c> may have come from <c>UNO_CHECK_CALLER</c> rather than the command
+		/// line, and is replayed as telemetry records it (lowercased, and only when it names a host).
 		/// Output, logging and correlation options are deliberately absent: those belong to the
 		/// host that launches the fix, not to the diagnosis being reproduced.
 		/// </summary>

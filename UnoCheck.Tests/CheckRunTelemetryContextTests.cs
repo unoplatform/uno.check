@@ -58,11 +58,24 @@ public class CheckRunTelemetryContextTests
     [InlineData("two words")]
     [InlineData("-leading-dash")]
     [InlineData("a-name-that-is-much-longer-than-32-chars")]
+    [InlineData("_studio")]
+    [InlineData("studio-é")]
     public void An_Unsafe_Caller_Is_Recorded_As_Other_Never_Verbatim(string caller)
     {
         var context = CheckRunTelemetryContext.From(new CheckSettings { Caller = caller }, NoEnvironment);
 
         Assert.Equal("other", context.Caller);
+    }
+
+    [Theory]
+    [InlineData("none")]
+    [InlineData("other")]
+    [InlineData("unknown")]
+    [InlineData("NONE")]
+    public void A_Caller_Cannot_Take_A_Value_Uno_Check_Uses_Itself(string caller)
+    {
+        // '--caller none' would otherwise read as "nobody said", and would not be replayed to fix runs.
+        Assert.Equal("other", CheckRunTelemetryContext.NormalizeCaller(caller));
     }
 
     [Fact]
@@ -108,11 +121,20 @@ public class CheckRunTelemetryContextTests
     }
 
     [Fact]
-    public void An_Unknown_Target_Is_Named_As_Unknown_Never_Verbatim()
+    public void An_Unrecognised_Target_Is_Recorded_As_Other_Never_Verbatim()
     {
+        // 'other', not 'unknown': 'unknown' is reserved for a run that could not be described at all.
         var targets = CheckRunTelemetryContext.DescribeTargets(["ios", "my-secret-platform"]);
 
-        Assert.Equal("ios,unknown", targets);
+        Assert.Equal("ios,other", targets);
+    }
+
+    [Fact]
+    public void A_Target_Is_Read_Exactly_As_The_Run_Reads_It()
+    {
+        // The run doesn't trim --target, so " ios" checks no iOS: telemetry must not claim it does.
+        Assert.Equal(TargetPlatform.None, TargetPlatformHelper.GetTargetPlatformFromFlag(" ios"));
+        Assert.Equal("other", CheckRunTelemetryContext.DescribeTargets([" ios"]));
     }
 
     [Fact]
@@ -255,6 +277,27 @@ public class SettleRunTests
 
         Assert.Equal(["android"], settings.TargetPlatforms);
         Assert.Equal("android", context.Targets);
+    }
+
+    [Fact]
+    public void A_Framework_NuGet_Rejects_Is_Skipped_Rather_Than_Stopping_The_Run()
+    {
+        // ParseFolder throws on this value. Settling runs before the command's try block, so a throw here
+        // would leave a structured-output host with no report at all.
+        var settings = new CheckSettings { Frameworks = ["portable-net45+net40-client", "net10.0-android"] };
+
+        var context = CheckCommand.SettleRun(settings, NoEnvironment);
+
+        Assert.Equal(["android"], settings.TargetPlatforms);
+        Assert.Equal("android", context.Targets);
+    }
+
+    [Fact]
+    public void Only_Rejected_Frameworks_Means_Every_Platform()
+    {
+        var context = CheckCommand.SettleRun(new CheckSettings { Frameworks = ["portable-net45+net40-client"] }, NoEnvironment);
+
+        Assert.Equal("all", context.Targets);
     }
 
     [Fact]

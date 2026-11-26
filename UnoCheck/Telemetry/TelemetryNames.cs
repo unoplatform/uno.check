@@ -45,7 +45,10 @@ internal static class TelemetryNames
 	/// </summary>
 	internal const string None = "none";
 
-	/// <summary>A value was given but is not one uno-check records. Sent instead of the value itself.</summary>
+	/// <summary>
+	/// A value was given but is not one uno-check records: an unsafe or reserved caller, an IDE it doesn't act
+	/// on, or a target it doesn't recognise. Sent instead of the value itself.
+	/// </summary>
 	internal const string Other = "other";
 
 	/// <summary>The run checks every platform.</summary>

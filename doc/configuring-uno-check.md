@@ -220,7 +220,7 @@ uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" 
 
 A host application that runs uno-check for its users, such as an IDE extension or Uno Platform Studio, can name itself so that its runs can be told apart from runs a developer typed. The name is used for telemetry only and changes nothing about the checks.
 
-The name is sent to Uno Platform telemetry as given, so use a product name, never a user, machine or organisation name. It is lowercased, and a value with characters other than letters, digits, `.`, `_` and `-`, or longer than 32 characters, is recorded as `other`. When `--caller` is omitted, the `UNO_CHECK_CALLER` environment variable is used.
+The name is sent to Uno Platform telemetry as given, so use a product name, never a user, machine or organisation name. It is lowercased, and must start with an ASCII letter or digit and contain only ASCII letters, digits, `.`, `_` and `-`, up to 32 characters. Any other value (for example `_studio` or `studio-é`), and the reserved names `none`, `other` and `unknown`, is recorded as `other`. When `--caller` is omitted, the `UNO_CHECK_CALLER` environment variable is used.
 
 ```
 uno-check --json --non-interactive --caller my-extension

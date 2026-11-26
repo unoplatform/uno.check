@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace DotNetCheck;
@@ -15,12 +16,14 @@ namespace DotNetCheck;
 /// <para>
 /// <see cref="IdeOption"/>, <see cref="Targets"/> and the flags only ever take values from fixed lists.
 /// <see cref="Caller"/> is the one free-form value. It is lowercased, then kept only when it is a short name
-/// made of letters, digits, '.', '_' and '-'; anything else is recorded as <c>other</c>. So a path, an
+/// that starts with an ASCII letter or digit and continues with ASCII letters, digits, '.', '_' and '-', and
+/// is not one of the values uno-check uses itself (<c>none</c>, <c>other</c>, <c>unknown</c>); anything else is
+/// recorded as <c>other</c>. So a path, an
 /// email or a sentence never reaches telemetry, but a short name does, exactly as given. That is why hosts
 /// must pass a product name, never a user, machine or organisation name, and the documentation says so.
 /// </para>
 /// <para>
-/// Build it from settings that <see cref="CheckCommand.ApplyImpliedSettings"/> has settled, so it describes
+/// Build it from settings that <see cref="Cli.CheckCommand.ApplyImpliedSettings"/> has settled, so it describes
 /// the run that actually happens: <c>--tfm</c> has decided the platforms, and <c>--json</c>,
 /// <c>--json-file</c> and <c>--ci</c> have made the run non-interactive.
 /// </para>
@@ -70,7 +73,7 @@ internal sealed record CheckRunTelemetryContext(
 				Flag(settings.Fix),
 				Flag(settings.CI));
 		}
-		catch (Exception)
+		catch (Exception ex) when (!IsFatal(ex))
 		{
 			// Describing the run must never stop it: the same rule TelemetryClient applies to sending.
 			return Unknown;
@@ -89,12 +92,24 @@ internal sealed record CheckRunTelemetryContext(
 		}
 
 		var name = value!.Trim().ToLowerInvariant();
-		return name.Length <= MaxCallerLength && SafeCaller.IsMatch(name) ? name : TelemetryNames.Other;
+		if (name.Length > MaxCallerLength || !SafeCaller.IsMatch(name) || IsReservedValue(name))
+		{
+			return TelemetryNames.Other;
+		}
+
+		return name;
 	}
+
+	/// <summary>
+	/// A caller can't take a value uno-check records for its own reasons: <c>--caller none</c> would read as
+	/// "nobody said", and wouldn't be replayed to fix runs.
+	/// </summary>
+	private static bool IsReservedValue(string name)
+		=> name is TelemetryNames.None or TelemetryNames.Other or TelemetryNames.Unknown;
 
 	/// <summary>Whether a normalised caller names a host, and so is worth passing on to a fix run.</summary>
 	internal static bool IsReplayable(string caller)
-		=> caller is not (TelemetryNames.None or TelemetryNames.Other or TelemetryNames.Unknown);
+		=> !IsReservedValue(caller);
 
 	internal static string DescribeIde(string? value)
 	{
@@ -110,7 +125,9 @@ internal sealed record CheckRunTelemetryContext(
 	/// <summary>
 	/// The platforms the run checks, as canonical lowercase names, de-duplicated and sorted, so
 	/// <c>--target wasm --target web</c> and <c>--target webassembly</c> read the same. None, or any
-	/// <c>all</c>, means every platform.
+	/// <c>all</c>, means every platform. A value the run doesn't recognise is recorded as <c>other</c>. Values
+	/// are read exactly as the run reads them (<see cref="TargetPlatformHelper.GetTargetPlatformFromFlag"/>,
+	/// untrimmed), so <c>--target " ios"</c>, which checks no iOS, never reads as <c>ios</c>.
 	/// </summary>
 	internal static string DescribeTargets(string[]? targetPlatforms)
 	{
@@ -119,20 +136,18 @@ internal sealed record CheckRunTelemetryContext(
 			return TelemetryNames.AllTargets;
 		}
 
-		var names = new SortedSet<string>(StringComparer.Ordinal);
-		foreach (var flag in targetPlatforms)
+		var platforms = targetPlatforms
+			.Select(flag => flag is null ? TargetPlatform.None : TargetPlatformHelper.GetTargetPlatformFromFlag(flag))
+			.ToList();
+
+		if (platforms.Contains(TargetPlatform.All))
 		{
-			var platform = string.IsNullOrWhiteSpace(flag)
-				? TargetPlatform.None
-				: TargetPlatformHelper.GetTargetPlatformFromFlag(flag.Trim());
-
-			if (platform == TargetPlatform.All)
-			{
-				return TelemetryNames.AllTargets;
-			}
-
-			names.Add(platform == TargetPlatform.None ? TelemetryNames.Unknown : platform.ToString().ToLowerInvariant());
+			return TelemetryNames.AllTargets;
 		}
+
+		var names = new SortedSet<string>(
+			platforms.Select(platform => platform == TargetPlatform.None ? TelemetryNames.Other : platform.ToString().ToLowerInvariant()),
+			StringComparer.Ordinal);
 
 		return string.Join(",", names);
 	}
@@ -149,4 +164,8 @@ internal sealed record CheckRunTelemetryContext(
 	];
 
 	private static string Flag(bool value) => value ? TelemetryNames.True : TelemetryNames.False;
+
+	/// <summary>Failures no catch should swallow: the process is in no state to carry on.</summary>
+	private static bool IsFatal(Exception ex)
+		=> ex is OutOfMemoryException or StackOverflowException or AccessViolationException;
 }
