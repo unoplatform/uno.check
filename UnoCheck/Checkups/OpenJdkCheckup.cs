@@ -72,7 +72,7 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var found = WithLastResortsIfNeeded(FindJdks().ToList(), FindAndroidSdkJdks, FindPathJdks)
+			var found = WithLastResortsIfNeeded(FindJdks().ToList(), LastResorts(AppContainer.IsCurrentProcess).ToArray())
 				.GroupBy(j => j.Directory.FullName)
 				.Select(g => g.First())
 				.ToList();
@@ -126,6 +126,10 @@ namespace DotNetCheck.Checkups
 			=> jdk.Version is not null
 				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
 				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
+
+		// In an AppContainer only the known locations are searched; a JDK found nowhere else is reported missing.
+		internal IReadOnlyList<Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>>> LastResorts(bool inAppContainer)
+			=> inAppContainer ? [] : [FindAndroidSdkJdks, FindPathJdks];
 
 		// The last resorts read the PATH's folders, and a sandboxed host asks the user for each of them. They are
 		// tried in order, and only while no compatible JDK has been found.
