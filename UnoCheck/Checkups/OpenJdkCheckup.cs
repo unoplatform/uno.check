@@ -119,6 +119,9 @@ namespace DotNetCheck.Checkups
             if (ok)
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
+			if (AppContainer.IsCurrentProcess)
+				ReportStatus(SandboxedSearchNote, null);
+
 			return Task.FromResult(NoCompatibleJdkResult(found));
 		}
 
@@ -127,12 +130,13 @@ namespace DotNetCheck.Checkups
 				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
 				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
 
+		internal const string SandboxedSearchNote = "Running sandboxed: only the known locations and JAVA_HOME were searched, not the PATH.";
+
 		// In an AppContainer only the known locations are searched; a JDK found nowhere else is reported missing.
 		internal IReadOnlyList<Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>>> LastResorts(bool inAppContainer)
 			=> inAppContainer ? [] : [FindAndroidSdkJdks, FindPathJdks];
 
-		// The last resorts read the PATH's folders, and a sandboxed host asks the user for each of them. They are
-		// tried in order, and only while no compatible JDK has been found.
+		// Tried in order, and only while no compatible JDK has been found.
 		internal IReadOnlyCollection<OpenJdkInfo> WithLastResortsIfNeeded(
 			IReadOnlyCollection<OpenJdkInfo> known,
 			params Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>>[] lastResorts)
@@ -151,7 +155,7 @@ namespace DotNetCheck.Checkups
 		}
 
 		// AndroidSdkInfo searches every PATH folder for adb and java before it answers.
-		IEnumerable<OpenJdkInfo> FindAndroidSdkJdks(IReadOnlyCollection<OpenJdkInfo> known)
+		internal IEnumerable<OpenJdkInfo> FindAndroidSdkJdks(IReadOnlyCollection<OpenJdkInfo> known)
 		{
 			var paths = new List<OpenJdkInfo>(known);
 
@@ -176,7 +180,7 @@ namespace DotNetCheck.Checkups
 				.Where(entry => entry.Contains("java", StringComparison.OrdinalIgnoreCase) || entry.Contains("jdk", StringComparison.OrdinalIgnoreCase));
 
 		// Seeded with the known JDKs, so a javac already found is not run a second time.
-		IEnumerable<OpenJdkInfo> FindPathJdks(IReadOnlyCollection<OpenJdkInfo> known)
+		internal IEnumerable<OpenJdkInfo> FindPathJdks(IReadOnlyCollection<OpenJdkInfo> known)
 		{
 			var paths = new List<OpenJdkInfo>(known);
 

@@ -229,8 +229,13 @@ public class OpenJdkCheckupTests
 
     [Fact]
     public void LastResorts_OutsideAnAppContainer_AskTheAndroidSdkThenThePath()
-        => Assert.Equal(2, CheckupFor("17.0.19").LastResorts(inAppContainer: false).Count);
+    {
+        var checkup = CheckupFor("17.0.19");
 
+        Assert.Equal([checkup.FindAndroidSdkJdks, checkup.FindPathJdks], checkup.LastResorts(inAppContainer: false));
+    }
+
+    // Off Windows this is false without asking; on Windows (CI) it runs the token query.
     [Fact]
     public void AppContainer_TheTestRun_IsNotInOne()
         => Assert.False(AppContainer.IsCurrentProcess);
