@@ -11,8 +11,8 @@ namespace DotNetCheck.Checkups
 	{
 		// What Windows PowerShell 5.1's Get-ExecutionPolicy -Scope CurrentUser reads. Read directly: starting Windows
 		// PowerShell makes a sandboxed host ask the user for the default profile's folder.
-		internal const string CurrentUserPolicyKey = @"Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell";
-		internal const string PolicyValueName = "ExecutionPolicy";
+		const string CurrentUserPolicyKey = @"Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell";
+		const string PolicyValueName = "ExecutionPolicy";
 
 		const string RequiredPolicy = "RemoteSigned";
 
@@ -24,7 +24,7 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState state)
 		{
-			// For the PowerShell runs that follow, the fix and the SDK install.
+			// Must stay, though this check starts no PowerShell: the later runs (the fix, the SDK install) need it cleared.
 			// See: https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
 			Environment.SetEnvironmentVariable("PSModulePath", string.Empty);
 
@@ -42,7 +42,7 @@ namespace DotNetCheck.Checkups
 
 		internal DiagnosticResult PolicyResult(string currentUserPolicy)
 		{
-			if (string.Equals(currentUserPolicy, RequiredPolicy, StringComparison.OrdinalIgnoreCase))
+			if (string.Equals(currentUserPolicy?.Trim(), RequiredPolicy, StringComparison.OrdinalIgnoreCase))
 				return DiagnosticResult.Ok(this);
 
 			return new DiagnosticResult(

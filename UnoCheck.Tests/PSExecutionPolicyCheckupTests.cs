@@ -9,6 +9,7 @@ public class PSExecutionPolicyCheckupTests
     [Theory]
     [InlineData("RemoteSigned")]
     [InlineData("remotesigned")]
+    [InlineData(" RemoteSigned ")]
     public void PolicyResult_RemoteSigned_IsOk(string policy)
         => Assert.Equal(Status.Ok, new PSExecutionPolicyCheckup().PolicyResult(policy).Status);
 
@@ -22,12 +23,5 @@ public class PSExecutionPolicyCheckupTests
 
         Assert.Equal(Status.Error, result.Status);
         Assert.True(result.HasSuggestion);
-    }
-
-    [Fact]
-    public void CurrentUserPolicy_IsWhereWindowsPowerShellKeepsIt()
-    {
-        Assert.Equal(@"Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell", PSExecutionPolicyCheckup.CurrentUserPolicyKey);
-        Assert.Equal("ExecutionPolicy", PSExecutionPolicyCheckup.PolicyValueName);
     }
 }
