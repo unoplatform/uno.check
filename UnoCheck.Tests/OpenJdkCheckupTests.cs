@@ -222,4 +222,16 @@ public class OpenJdkCheckupTests
         Assert.False(checkup.IsCompatible(Jdk("/opt/oracle/jdk-17.0.19", "17.0.19")));
         Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-unreadable", null)));
     }
+
+    [Fact]
+    public void LastResorts_InAnAppContainer_SearchNothing()
+        => Assert.Empty(CheckupFor("17.0.19").LastResorts(inAppContainer: true));
+
+    [Fact]
+    public void LastResorts_OutsideAnAppContainer_AskTheAndroidSdkThenThePath()
+        => Assert.Equal(2, CheckupFor("17.0.19").LastResorts(inAppContainer: false).Count);
+
+    [Fact]
+    public void AppContainer_TheTestRun_IsNotInOne()
+        => Assert.False(AppContainer.IsCurrentProcess);
 }
