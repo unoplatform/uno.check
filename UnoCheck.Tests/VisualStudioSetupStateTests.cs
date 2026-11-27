@@ -6,7 +6,7 @@ namespace UnoCheck.Tests;
 public class VisualStudioSetupStateTests
 {
     [Fact]
-    public void SetupStateProbe_AskedTwice_ReadsTheFolderOnce()
+    public void SetupStateProbe_Refused_ReadsTheFolderOnce()
     {
         var reads = 0;
         var isRefused = VisualStudioWindowsCheckup.SetupStateProbe(folder =>
@@ -15,22 +15,32 @@ public class VisualStudioSetupStateTests
             throw new UnauthorizedAccessException($"Access to the path '{folder}' is denied.");
         });
 
-        Assert.True(isRefused());
-        Assert.True(isRefused());
+        Assert.True(isRefused.Value);
+        Assert.True(isRefused.Value);
         Assert.Equal(1, reads);
     }
 
     [Fact]
-    public void SetupStateProbe_ReadsTheSetupStateFolder()
+    public void SetupStateProbe_Readable_ReadsTheSetupStateFolderOnce()
     {
-        string? read = null;
+        var read = new List<string>();
         var isRefused = VisualStudioWindowsCheckup.SetupStateProbe(folder =>
         {
-            read = folder;
+            read.Add(folder);
             return [];
         });
 
-        Assert.False(isRefused());
-        Assert.Equal(VisualStudioWindowsCheckup.SetupStateFolder, read);
+        Assert.False(isRefused.Value);
+        Assert.False(isRefused.Value);
+        Assert.Equal([VisualStudioWindowsCheckup.SetupStateFolder], read);
+    }
+
+    [Fact]
+    public void IsSetupStateReadRefused_AnswersFromTheSharedProbe()
+    {
+        var answer = VisualStudioWindowsCheckup.IsSetupStateReadRefused();
+
+        Assert.True(VisualStudioWindowsCheckup.SetupStateReadRefused.IsValueCreated);
+        Assert.Equal(VisualStudioWindowsCheckup.SetupStateReadRefused.Value, answer);
     }
 }

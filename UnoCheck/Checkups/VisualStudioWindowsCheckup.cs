@@ -14,6 +14,9 @@ namespace DotNetCheck.Checkups
 		private static readonly Task<IEnumerable<VisualStudioInfo>> EmptyResult = 
 			Task.FromResult(Enumerable.Empty<VisualStudioInfo>());
 
+		// Read once per run: both Visual Studio checks ask, and a sandboxed host asks the user for each read.
+		internal static readonly Lazy<bool> SetupStateReadRefused = SetupStateProbe();
+
 		public override bool IsPlatformSupported(Platform platform)
 			=> platform == Platform.Windows;
 
@@ -69,17 +72,11 @@ namespace DotNetCheck.Checkups
 			=> Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Microsoft", "VisualStudio", "Setup");
 
 		// vswhere answers "no installs" when it is refused that folder, so an empty answer is checked against it.
-		// Read once per run: both Visual Studio checks ask, and a sandboxed host asks the user for each read.
 		internal static bool IsSetupStateReadRefused()
-			=> isSetupStateReadRefused();
+			=> SetupStateReadRefused.Value;
 
-		static readonly Func<bool> isSetupStateReadRefused = SetupStateProbe();
-
-		internal static Func<bool> SetupStateProbe(Func<string, IEnumerable<string>> enumerate = null)
-		{
-			var isRefused = new Lazy<bool>(() => AccessRefused.IsReadRefused(SetupStateFolder, enumerate));
-			return () => isRefused.Value;
-		}
+		internal static Lazy<bool> SetupStateProbe(Func<string, IEnumerable<string>> enumerate = null)
+			=> new(() => AccessRefused.IsReadRefused(SetupStateFolder, enumerate));
 
 		internal DiagnosticResult NothingFoundResult(bool setupStateReadRefused)
 		{
