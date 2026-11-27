@@ -216,6 +216,18 @@ Structured-output events carry a `correlation_id`, newly generated per run by de
 uno-check --fix --only androidsdk --json-file "%TEMP%\uno-check-fix-1234.jsonl" --correlation-id 6f2c1b6e
 ```
 
+### `--caller <NAME>` Name the host that launched the run
+
+A host application that runs uno-check for its users, such as an IDE extension or Uno Platform Studio, can name itself so that its runs can be told apart from runs a developer typed. The name is used for telemetry only and changes nothing about the checks.
+
+The name is sent to Uno Platform telemetry as given, so use a product name, never a user, machine or organisation name. It is lowercased, and must start with an ASCII letter or digit and contain only ASCII letters, digits, `.`, `_` and `-`, up to 32 characters. Any other value (for example `_studio` or `studio-é`), and the reserved names `none`, `other` and `unknown`, is recorded as `other`. When `--caller` is omitted, the `UNO_CHECK_CALLER` environment variable is used.
+
+```
+uno-check --json --non-interactive --caller my-extension
+```
+
+Fix arguments in structured output replay the caller, whether it came from `--caller` or `UNO_CHECK_CALLER`, so a fix the host launches reports the same caller even when it runs elevated without the environment. A value recorded as `other` is not replayed.
+
 ### `--allow-elevation-prompt` Allow macOS / Linux authorization dialogs
 
 Allows a structured macOS or Linux fix run to display the system authorization dialog when an individual solution needs to modify a protected location. Uno.Check itself remains in the current user's context; only the underlying command is authorized:

@@ -28,8 +28,6 @@ namespace DotNetCheck.Cli
 			// even telemetry can print (in DEBUG) and would corrupt the JSONL stream.
 			if (settings.Json || !string.IsNullOrEmpty(settings.JsonFile))
 			{
-				settings.NonInteractive = true;
-
 				// Program.Main already claimed stdout for --json before the command app was
 				// built, so parse errors could not land on the stream. Calling again is a
 				// no-op and covers hosts that construct the command directly.
@@ -53,15 +51,15 @@ namespace DotNetCheck.Cli
 
 			}
 
-			TelemetryClient.TrackStartCheck(settings.Frameworks);
+			// Settle what the options imply before anything reads them, so the run and its telemetry
+			// describe the same thing (uno.check#643).
+			var telemetryContext = SettleRun(settings, Environment.GetEnvironmentVariable);
+			TelemetryClient.TrackStartCheck(settings.Frameworks, telemetryContext);
 
 			Util.Verbose = settings.Verbose;
 			Util.LogFile = settings.LogFile;
 			Util.CI = settings.CI;
 			Util.AllowElevationPrompt = settings.AllowElevationPrompt;
-			if (settings.CI)
-				settings.NonInteractive = true;
-
 			Util.NonInteractive = settings.NonInteractive;
 
 			Console.Title = ToolInfo.ToolName;
@@ -181,21 +179,11 @@ namespace DotNetCheck.Cli
 				sharedState.SetEnvironmentVariable("CI", "true");
 			if (!string.IsNullOrEmpty(settings.UnoSdkVersion))
 				sharedState.SetEnvironmentVariable("UnoSdkVersion", settings.UnoSdkVersion);
-            if (settings.Frameworks is { Length: > 0 })
-                settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
-
+            // --tfm has already decided the target platforms (ApplyImpliedSettings).
             if (!string.IsNullOrEmpty(settings.Ide))
             {
                 skipList = skipList.Concat(
-					(
-						settings.Ide.ToLowerInvariant() switch
-						{
-							"rider" => Util.RiderSkips,
-							"vs" => Util.VSSkips,
-							"vscode" => Util.VSCodeSkips,
-							_ => []
-						}
-					)
+					KnownIdes.SkipsFor(settings.Ide)
 					.Select(s => new SkipInfo(s, "Not required by the current configuration", false))
 				)
 				.Distinct(SkipInfo.NameOnlyComparer)
@@ -512,7 +500,8 @@ namespace DotNetCheck.Cli
 			{
 				TelemetryClient.TrackCheckFail(
 					sw.Elapsed,
-					string.Join(",", erroredChecks.Select(c => (skippedFix.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)));
+					string.Join(",", erroredChecks.Select(c => (skippedFix.Contains(c.Checkup.Id) ? "~" : "") + c.Checkup.Id)),
+					telemetryContext);
 
 				AnsiConsole.Console.WriteLine();
 
@@ -525,7 +514,7 @@ namespace DotNetCheck.Cli
 			}
 			else if (hasWarnings)
 			{
-				TelemetryClient.TrackCheckWarning(sw.Elapsed, string.Join(",", warningChecks.Select(c => c.Checkup.Id)));
+				TelemetryClient.TrackCheckWarning(sw.Elapsed, string.Join(",", warningChecks.Select(c => c.Checkup.Id)), telemetryContext);
 
 				AnsiConsole.Console.WriteLine();
 
@@ -537,7 +526,7 @@ namespace DotNetCheck.Cli
 			}
 			else
 			{
-				TelemetryClient.TrackCheckSuccess(sw.Elapsed);
+				TelemetryClient.TrackCheckSuccess(sw.Elapsed, telemetryContext);
                 AnsiConsole.MarkupLine($"[bold blue]{Icon.Success} Congratulations, everything looks great![/]");
 			}
 
@@ -593,7 +582,19 @@ namespace DotNetCheck.Cli
             var targetPlatforms = new List<string>();
             foreach (var tfm in settings.Frameworks!)
             {
-                var parsedTfm = NuGetFramework.ParseFolder(tfm);
+                // A value NuGet rejects (e.g. 'portable-net45+net40-client') names no platform, so it is skipped
+                // rather than thrown: this runs before the command's try block, where a throw would leave a
+                // structured-output host with no report at all.
+                NuGetFramework parsedTfm;
+                try
+                {
+                    parsedTfm = NuGetFramework.ParseFolder(tfm);
+                }
+                catch (ArgumentException)
+                {
+                    Util.Log($"Ignoring --tfm '{tfm}': not a target framework uno-check can read.");
+                    continue;
+                }
 
                 if (parsedTfm.Version.Major >= 5 && parsedTfm.HasPlatform == false)
                 {
@@ -708,6 +709,36 @@ namespace DotNetCheck.Cli
 		}
 #nullable restore
 
+#nullable enable
+		/// <summary>
+		/// Settles the options and describes the run for telemetry (uno.check#643). The caller is resolved here
+		/// once, from <c>--caller</c> or <c>UNO_CHECK_CALLER</c>, and written back so that
+		/// <see cref="BuildFixArguments"/> replays it to fix runs.
+		/// </summary>
+		internal static CheckRunTelemetryContext SettleRun(CheckSettings settings, Func<string, string?>? getEnvironmentVariable)
+		{
+			ApplyImpliedSettings(settings);
+
+			var context = CheckRunTelemetryContext.From(settings, getEnvironmentVariable);
+			settings.Caller = CheckRunTelemetryContext.IsReplayable(context.Caller) ? context.Caller : null;
+			return context;
+		}
+
+		/// <summary>
+		/// Applies what the options imply, once, before anything reads them: <c>--json</c>, <c>--json-file</c>
+		/// and <c>--ci</c> make the run non-interactive, and <c>--tfm</c> decides the target platforms,
+		/// overriding <c>--target</c> (an empty list means every platform).
+		/// </summary>
+		internal static void ApplyImpliedSettings(CheckSettings settings)
+		{
+			if (settings.Json || !string.IsNullOrEmpty(settings.JsonFile) || settings.CI)
+				settings.NonInteractive = true;
+
+			if (settings.Frameworks is { Length: > 0 })
+				settings.TargetPlatforms = ParseTfmsToTargetPlatforms(settings);
+		}
+#nullable restore
+
 		/// <summary>
 		/// The argument vector a host runs to apply one fix. It must reproduce the diagnosis
 		/// that produced it, not just name the checkup: dropping the channel, manifest, target
@@ -716,10 +747,12 @@ namespace DotNetCheck.Cli
 		/// against stable without fixing anything, and a versioned preview workload id became
 		/// unknown.
 		///
-		/// Everything replayed here arrived on this process' own command line, so it is handed
-		/// back verbatim as separate vector elements. The checkup id is the exception — it is
+		/// Almost everything replayed here arrived on this process' own command line, so it is
+		/// handed back verbatim as separate vector elements. Two exceptions: the checkup id is
 		/// assembled from manifest data rather than supplied by the caller, so it is
-		/// allow-listed by <see cref="Json.JsonlOutput.IsSafeCheckupId"/> before it gets here.
+		/// allow-listed by <see cref="Json.JsonlOutput.IsSafeCheckupId"/> before it gets here;
+		/// and <c>--caller</c> may have come from <c>UNO_CHECK_CALLER</c> rather than the command
+		/// line, and is replayed as telemetry records it (lowercased, and only when it names a host).
 		/// Output, logging and correlation options are deliberately absent: those belong to the
 		/// host that launches the fix, not to the diagnosis being reproduced.
 		/// </summary>
@@ -789,6 +822,17 @@ namespace DotNetCheck.Cli
 			{
 				args.Add("--ide");
 				args.Add(settings.Ide);
+			}
+
+			// The host that asked for the diagnosis also launches the fix, so the fix run reports the same caller.
+			// SettleRun has already resolved it from --caller or UNO_CHECK_CALLER, because an elevated child on
+			// Windows, or one under sudo, does not inherit the environment. It is replayed as telemetry records it,
+			// and only when it names a host, so a value recorded as 'other' never travels on.
+			var caller = CheckRunTelemetryContext.NormalizeCaller(settings.Caller);
+			if (CheckRunTelemetryContext.IsReplayable(caller))
+			{
+				args.Add("--caller");
+				args.Add(caller);
 			}
 
 			if (!string.IsNullOrWhiteSpace(settings.UnoSdkVersion))
