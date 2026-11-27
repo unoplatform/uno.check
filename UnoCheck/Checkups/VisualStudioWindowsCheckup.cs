@@ -69,8 +69,17 @@ namespace DotNetCheck.Checkups
 			=> Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Microsoft", "VisualStudio", "Setup");
 
 		// vswhere answers "no installs" when it is refused that folder, so an empty answer is checked against it.
+		// Read once per run: both Visual Studio checks ask, and a sandboxed host asks the user for each read.
 		internal static bool IsSetupStateReadRefused()
-			=> AccessRefused.IsReadRefused(SetupStateFolder);
+			=> isSetupStateReadRefused();
+
+		static readonly Func<bool> isSetupStateReadRefused = SetupStateProbe();
+
+		internal static Func<bool> SetupStateProbe(Func<string, IEnumerable<string>> enumerate = null)
+		{
+			var isRefused = new Lazy<bool>(() => AccessRefused.IsReadRefused(SetupStateFolder, enumerate));
+			return () => isRefused.Value;
+		}
 
 		internal DiagnosticResult NothingFoundResult(bool setupStateReadRefused)
 		{
