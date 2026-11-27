@@ -349,6 +349,7 @@ namespace DotNetCheck.DotNet
 			string[] sudoInstalled = null;
 			var sudoContextAttempted = CanUseSudo;
 			var sudoContextSucceeded = false;
+			var failedOutput = userContextSucceeded ? [] : r.StandardError;
 			if (sudoContextAttempted)
 			{
 				// Invoke through `env` so DOTNET_CLI_UI_LANGUAGE survives sudo's default env_reset
@@ -361,6 +362,9 @@ namespace DotNetCheck.DotNet
 					sudoInstalled = ParseInstalledWorkloadIds(sudoOutput);
 				}
 			}
+
+			if (!userContextSucceeded && !sudoContextSucceeded)
+				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), failedOutput, Util.IsWindows);
 
 			return CombineInstalledWorkloads(
 				userContextSucceeded,
@@ -394,6 +398,16 @@ namespace DotNetCheck.DotNet
 					$"Could not parse `dotnet workload list --machine-readable` output. Output: {snippet}",
 					ex);
 			}
+		}
+
+		// On Windows a refused read means the check could not look, for example in a sandboxed host. Elsewhere it is
+		// a real fault of the install (an SDK owned by root), and stays an error.
+		internal static void ThrowWorkloadCommandFailed(string command, IEnumerable<string> errorLines, bool windows)
+		{
+			if (windows && AccessRefused.FindInOutput(errorLines) is { } refusal)
+				throw new UnauthorizedAccessException($"{AccessRefused.Summarize(refusal)} (from `{command}`)");
+
+			throw new Exception($"Workload command failed: `{command}`");
 		}
 
 		/// <summary>
@@ -441,7 +455,7 @@ namespace DotNetCheck.DotNet
 
 			// Throw if this failed with a bad exit code
 			if (r.ExitCode != 0)
-				throw new Exception("Workload command failed: `dotnet " + string.Join(' ', args) + "`");
+				ThrowWorkloadCommandFailed("dotnet " + string.Join(' ', args), r.StandardError, Util.IsWindows);
 
 			var output = FilterWorkloadCommandOutput(string.Join(" ", r.StandardOutput), RollbackOutputMarker);
 

@@ -60,10 +60,26 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				// VS is not installed, but another IDE might be, so don't raise an error
-				ReportStatus("Visual Studio is not installed", Status.Warning);
-				return new DiagnosticResult(Status.Warning, this);
+				return NothingFoundResult(IsSetupStateReadRefused());
 			}
+		}
+
+		/// <summary>Where Visual Studio records its installs, which vswhere reads.</summary>
+		internal static string SetupStateFolder
+			=> Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Microsoft", "VisualStudio", "Setup");
+
+		// vswhere answers "no installs" when it is refused that folder, so an empty answer is checked against it.
+		internal static bool IsSetupStateReadRefused()
+			=> AccessRefused.IsReadRefused(SetupStateFolder);
+
+		internal DiagnosticResult NothingFoundResult(bool setupStateReadRefused)
+		{
+			if (setupStateReadRefused)
+				return AccessRefused.FolderResult(this, SetupStateFolder, "installed Visual Studio versions can't be listed");
+
+			// VS is not installed, but another IDE might be, so don't raise an error
+			ReportStatus("Visual Studio is not installed", Status.Warning);
+			return new DiagnosticResult(Status.Warning, this);
 		}
 
 		public static Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo(string requires = "")

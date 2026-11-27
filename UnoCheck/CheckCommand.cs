@@ -293,11 +293,14 @@ namespace DotNetCheck.Cli
 
 						if (depCheckup != null && depCheckup.IsPlatformSupported(Util.Platform))
 						{
-							if (!checkupStatus.TryGetValue(dep.CheckupId, out var depStatus) || depStatus == Models.Status.Error)
+							Models.Status? depStatus = checkupStatus.TryGetValue(depCheckup.Id, out var knownStatus) ? knownStatus : null;
+							var depNotChecked = results.TryGetValue(depCheckup.Id, out var depResult) && depResult.CouldNotCheck;
+
+							if (DependencyBlocksDependents(depStatus, depNotChecked))
 							{
 								if (dep.IsRequired)
 								{
-                                    skipCheckup = new(checkup.Id, $"The dependent check {dep.CheckupId} is required first", true);
+									skipCheckup = new(checkup.Id, DependencySkipReason(dep.CheckupId, depNotChecked), true);
 								}
 								break;
 							}
@@ -359,7 +362,7 @@ namespace DotNetCheck.Cli
 				catch (Exception ex)
 				{
 					Util.Exception(ex);
-					diagnosis = new DiagnosticResult(Models.Status.Error, checkup, ex.Message);
+					diagnosis = DiagnoseFailure(checkup, ex, Util.IsWindows);
 				}
 
 				results[checkup.Id] = diagnosis;
@@ -507,6 +510,7 @@ namespace DotNetCheck.Cli
 
 			var warningChecks = results.Values.Where(d => d.Status == Models.Status.Warning && !skippedChecks.Contains(d.Checkup.Id));
 			var hasWarnings = warningChecks.Any();
+			var hasUnchecked = results.Values.Any(d => d.CouldNotCheck && !skippedChecks.Contains(d.Checkup.Id));
 
 			if (hasErrors)
 			{
@@ -534,6 +538,9 @@ namespace DotNetCheck.Cli
 
 				AnsiConsole.Console.WriteLine();
 				AnsiConsole.MarkupLine($"[bold darkorange3_1]{Icon.Warning} Things look almost great, except some pesky warning(s) which may or may not be a problem, but at least if they are, you'll know where to start searching![/]");
+
+				if (hasUnchecked)
+					AnsiConsole.MarkupLine($"[bold darkorange3_1]{Icon.Warning} Some checks could not run because access was refused, so the environment is not fully verified.[/]");
 			}
 			else
 			{
@@ -555,7 +562,7 @@ namespace DotNetCheck.Cli
 			ToolInfo.ExitPrompt(settings.NonInteractive);
 
 			Util.Log($"Has Errors? {hasErrors}");
-			var exitCode = hasErrors ? 1 : 0;
+			var exitCode = ExitCodeFor(hasErrors, hasUnchecked);
 			Environment.ExitCode = exitCode;
 
 			return exitCode;
@@ -803,6 +810,26 @@ namespace DotNetCheck.Cli
 			return args.ToArray();
 		}
 
+		// A run that could not look at everything has not verified the environment, so it does not exit as a success.
+		internal static int ExitCodeFor(bool hasErrors, bool hasUnchecked)
+			=> hasErrors || hasUnchecked ? 1 : 0;
+
+		internal static string DependencySkipReason(string dependencyId, bool dependencyCouldNotCheck)
+			=> dependencyCouldNotCheck
+				? $"The dependent check {dependencyId} could not be checked"
+				: $"The dependent check {dependencyId} is required first";
+
+		// A dependency that failed, never ran, or could not be checked says nothing its dependents can build on.
+		internal static bool DependencyBlocksDependents(Models.Status? dependencyStatus, bool dependencyCouldNotCheck)
+			=> dependencyStatus is null or Models.Status.Error || dependencyCouldNotCheck;
+
+		// On Windows a refused access means the check could not look, for example in a sandboxed host. Elsewhere it is
+		// a real fault of the install, and stays an error.
+		internal static DiagnosticResult DiagnoseFailure(Checkup checkup, Exception failure, bool windows)
+			=> windows && AccessRefused.FindRefusal(failure) is { } refusal
+				? AccessRefused.Result(checkup, refusal.Message)
+				: new DiagnosticResult(Models.Status.Error, checkup, failure.Message);
+
 		internal static Json.HealthCheck BuildHealthCheck(Checkup checkup, DiagnosticResult diagnosis, CheckSettings settings = null)
 		{
 			Json.FixInfo fix = null;
@@ -846,6 +873,7 @@ namespace DotNetCheck.Cli
 				Name = checkup.Title,
 				Status = Json.JsonlOutput.StatusName(diagnosis.Status),
 				Message = message,
+				CouldNotCheck = diagnosis.CouldNotCheck ? true : null,
 				Fix = fix,
 			};
 		}

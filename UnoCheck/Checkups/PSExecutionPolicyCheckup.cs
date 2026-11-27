@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using DotNetCheck.Models;
@@ -39,8 +41,23 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				return Task.FromResult(new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy."));
+				Util.Log(FailureDetails(result.ExitCode, result.StandardOutput, result.StandardError));
+				return Task.FromResult(FailedResult(result.StandardError));
 			}
 		}
+
+		// What powershell printed, for the log: the verdict alone can't say why it failed.
+		internal static string FailureDetails(int exitCode, IEnumerable<string> outputLines, IEnumerable<string> errorLines)
+			=> string.Join(
+				Environment.NewLine,
+				new[] { $"PowerShell execution policy: powershell exited with code {exitCode}.", "stdout:" }
+					.Concat(outputLines ?? Enumerable.Empty<string>())
+					.Append("stderr:")
+					.Concat(errorLines ?? Enumerable.Empty<string>()));
+
+		internal DiagnosticResult FailedResult(IEnumerable<string> errorLines)
+			=> AccessRefused.FindInOutput(errorLines) is { } refusal
+				? AccessRefused.Result(this, refusal)
+				: new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy.");
 	}
 }

@@ -35,5 +35,6 @@ If you run into problems with uno-check, you should generally try the following:
 
     Then rerun `uno-check`.
 
+1. If a check reports `Could not check: ...` (Windows only), uno-check was refused access to a file or folder it has to read, for example when it runs inside a sandboxed application and an access request was declined. The check does not know whether the tool is installed. Allow the access named in the message and run uno-check again. Until then uno-check exits with code `1`, because the environment was not verified.
 1. If you encounter the message `There were one or more problems detected. Please review the errors and correct them and run uno-check again.`, but if you have done all the previously mentioned steps, try running it with `--verbose` flag to see where it is failing.
 1. Finally, if you have other problems, run also with `--verbose` flag and capture the output and add it to a new issue.

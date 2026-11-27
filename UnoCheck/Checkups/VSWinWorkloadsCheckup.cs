@@ -83,6 +83,10 @@ namespace DotNetCheck.Checkups
 				}
 				else
 				{
+					// Asked on the first empty answer, before any workload is reported as missing.
+					if (missingWorkloads.Count == 0 && VisualStudioWindowsCheckup.IsSetupStateReadRefused())
+						return MissingWorkloadsResult(setupStateReadRefused: true);
+
 					ReportStatus($"{workload.Name ?? workload.Id} is not installed", Status.Error);
 					missingWorkloads.Add(workload);
 				}
@@ -94,17 +98,22 @@ namespace DotNetCheck.Checkups
 			}
 			else
 			{
-				// TODO: automatically install with vs_installer
-
-				var sb = new StringBuilder();
-				var result = new DiagnosticResult(
-					Status.Error,
-					this,
-					prescription: new Suggestion("Install missing workloads",
-					"Some required workloads were not found. You should run Visual Studio Installer to install the missing workloads.")
-				);
-				return result;
+				return MissingWorkloadsResult(setupStateReadRefused: false);
 			}
+		}
+
+		internal DiagnosticResult MissingWorkloadsResult(bool setupStateReadRefused)
+		{
+			if (setupStateReadRefused)
+				return AccessRefused.FolderResult(this, VisualStudioWindowsCheckup.SetupStateFolder, "Visual Studio workloads can't be listed");
+
+			// TODO: automatically install with vs_installer
+			return new DiagnosticResult(
+				Status.Error,
+				this,
+				prescription: new Suggestion("Install missing workloads",
+				"Some required workloads were not found. You should run Visual Studio Installer to install the missing workloads.")
+			);
 		}
 	}
 }

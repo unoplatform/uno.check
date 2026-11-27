@@ -80,6 +80,13 @@ Stream guarantees:
   dependency-failure skips (where the failed dependency's own `error` result is what makes the
   run unhealthy) and not-applicable checkups, so every checkup counted by
   `run_started.checkup_count` resolves to exactly one final state.
+- On Windows, a checkup that was refused access to what it has to read **could not check**. It arrives as
+  `status: "warning"` with `could_not_check: true`, a `message` starting `Could not check: `
+  that names what was refused, and no `fix`: its status says nothing about what it checks.
+  Its required dependents are skipped with `skip_reason` "The dependent check `<id>` could not
+  be checked". The report stays `degraded` when nothing else failed, and the exit code is `1`,
+  because the environment was not verified. On Linux and macOS a refused access is a fault of
+  the install and stays an error.
 - After a successful fix the checkup re-runs and emits a **second `checkup_result` for the
   same id with no second `checkup_started`**; the stream rule is last-result-per-id wins. The
   final `report` contains each checkup once, in its final state.
@@ -99,7 +106,8 @@ Stream guarantees:
 | `checkup_catalog` | emitted by `list --json` only: `schema_version`, `checkups[]` of `{ id, name, type_name }` (`name` is the display title, as in `checkup_result`; `type_name` is the checkup class name, which `--skip` also accepts) — the applicable-checkup menu for hosts building selection UIs that feed `--only`/`--skip` |
 
 **HealthCheck:** `id`, `name`, `status` (`ok`/`warning`/`error`/`skipped`), optional `message`,
-optional `skip_reason`, optional `fix` =
+optional `skip_reason`, optional `could_not_check` (`true` when the checkup was refused access;
+absent otherwise), optional `fix` =
 `{ issue_id, description, auto_fixable, requires_elevation, args }`.
 `args` is the argument vector for the per-item fix (`["--fix", "--only", "<id>",
 "--non-interactive"]`), to be passed straight to the uno-check process — deliberately never a
@@ -140,7 +148,8 @@ which we expect to avoid; a bump is announced in release notes.
 
 ### Exit codes
 
-`0` all checks passed · `1` checks failed or `--only` named an unknown id · `-1` (shells show
+`0` all checks passed · `1` checks failed, a checkup could not check (`could_not_check`), or
+`--only` named an unknown id · `-1` (shells show
 `255`) the tool could not run (e.g. manifest validation) · `130` canceled. Structured-mode
 hosts should prefer the `report` event over the exit code — the code cannot say *which*
 checks failed.
