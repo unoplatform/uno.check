@@ -18,11 +18,24 @@ namespace DotNetCheck.Checkups
 		internal static bool RunFromKnownInstall(string command, System.Func<string, bool> run)
 			=> run(command) || (command != ToolPaths.GitName && run(ToolPaths.GitName));
 
+		// Git reads its system and global config files at start, even for --version; a sandboxed host asks the user
+		// for the global one. Git 2.32 and later honour both variables; an older Git reads the files as before.
+		internal static ShellProcessRunnerOptions VersionCommand(string command)
+			=> new(command, "--version")
+			{
+				Verbose = true,
+				EnvironmentVariables = new System.Collections.Generic.Dictionary<string, string>
+				{
+					["GIT_CONFIG_NOSYSTEM"] = "1",
+					["GIT_CONFIG_GLOBAL"] = Util.IsWindows ? "NUL" : "/dev/null",
+				},
+			};
+
 		public override async Task<DiagnosticResult> Examine(SharedState state)
 		{
 			var installed = RunFromKnownInstall(
 				ToolPaths.Git(),
-				command => new ShellProcessRunner(new(command, "--version") { Verbose = true }).WaitForExit().Success);
+				command => new ShellProcessRunner(VersionCommand(command)).WaitForExit().Success);
 
 			if (installed)
 			{
