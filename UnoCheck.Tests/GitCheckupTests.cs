@@ -51,4 +51,15 @@ public class GitCheckupTests
         Assert.False(succeeded);
         Assert.Equal(["git"], tried);
     }
+
+    [Fact]
+    public void VersionCommand_ReadsNoGitConfigFile()
+    {
+        var options = GitCheckup.VersionCommand(GitExe);
+
+        Assert.Equal(GitExe, options.Executable);
+        Assert.Equal("--version", options.Args);
+        Assert.Equal("1", options.EnvironmentVariables["GIT_CONFIG_NOSYSTEM"]);
+        Assert.Equal(OperatingSystem.IsWindows() ? "NUL" : "/dev/null", options.EnvironmentVariables["GIT_CONFIG_GLOBAL"]);
+    }
 }
