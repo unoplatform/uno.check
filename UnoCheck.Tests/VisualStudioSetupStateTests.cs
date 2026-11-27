@@ -44,12 +44,17 @@ public class VisualStudioSetupStateTests
         Assert.Equal(VisualStudioWindowsCheckup.SetupStateReadRefused.Value, answer);
     }
 
-    [Fact]
-    public void IsSetupStateReadRefused_InAnAppContainer_DoesNotProbe()
-    {
-        var probe = VisualStudioWindowsCheckup.SetupStateProbe(_ => throw new InvalidOperationException("The folder must not be read."));
+    static Lazy<bool> ProbeThatMustNotRun()
+        => VisualStudioWindowsCheckup.SetupStateProbe(_ => throw new InvalidOperationException("The folder must not be read."));
 
-        Assert.True(VisualStudioWindowsCheckup.IsSetupStateReadRefused(inAppContainer: true, probe));
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void IsSetupStateReadRefused_InAnAppContainer_FollowsVsWhereWithoutProbing(bool vsWhereFoundNoInstall)
+    {
+        var probe = ProbeThatMustNotRun();
+
+        Assert.Equal(vsWhereFoundNoInstall, VisualStudioWindowsCheckup.IsSetupStateReadRefused(inAppContainer: true, () => vsWhereFoundNoInstall, probe));
         Assert.False(probe.IsValueCreated);
     }
 
@@ -58,7 +63,20 @@ public class VisualStudioSetupStateTests
     {
         var probe = VisualStudioWindowsCheckup.SetupStateProbe(folder => throw new UnauthorizedAccessException($"Access to the path '{folder}' is denied."));
 
-        Assert.True(VisualStudioWindowsCheckup.IsSetupStateReadRefused(inAppContainer: false, probe));
+        Assert.True(VisualStudioWindowsCheckup.IsSetupStateReadRefused(inAppContainer: false, () => throw new InvalidOperationException("vswhere must not be asked."), probe));
         Assert.True(probe.IsValueCreated);
     }
+
+    // A missing vswhere read nothing, so its empty answer means "not installed", not "refused".
+    [Fact]
+    public void VsWhereFoundNoInstall_NoVsWhere_IsFalseWithoutListing()
+        => Assert.False(VisualStudioWindowsCheckup.VsWhereFoundNoInstall(vsWherePath: null, () => throw new InvalidOperationException("Nothing to list.")));
+
+    [Fact]
+    public void VsWhereFoundNoInstall_AnInstallListed_IsFalse()
+        => Assert.False(VisualStudioWindowsCheckup.VsWhereFoundNoInstall("vswhere.exe", () => [new VisualStudioInfo()]));
+
+    [Fact]
+    public void VsWhereFoundNoInstall_NothingListed_IsTrue()
+        => Assert.True(VisualStudioWindowsCheckup.VsWhereFoundNoInstall("vswhere.exe", () => []));
 }
