@@ -9,12 +9,12 @@ public class DepsFileTests
     private static readonly TimeSpan PublishTimeout = TimeSpan.FromMinutes(5);
     private static readonly DirectoryInfo TestOutput = new(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar));
     private static readonly string Configuration = TestOutput.Parent!.Name;
-    private static readonly string RepoRoot = Path.GetFullPath(Path.Combine(TestOutput.FullName, "..", "..", "..", ".."));
+    private static readonly string RepoRoot = Path.GetFullPath(Path.Join(TestOutput.FullName, "..", "..", "..", ".."));
 
     [Fact]
     public void BuiltDepsFile_MarksNoLibraryServiceable()
     {
-        var depsFile = Path.Combine(RepoRoot, "UnoCheck", "bin", Configuration, "net6.0", "UnoCheck.deps.json");
+        var depsFile = Path.Join(RepoRoot, "UnoCheck", "bin", Configuration, "net6.0", "UnoCheck.deps.json");
 
         Assert.Empty(ServiceableLibraries(depsFile));
     }
@@ -23,10 +23,10 @@ public class DepsFileTests
     [Fact]
     public void PublishedDepsFile_MarksNoLibraryServiceable()
     {
-        var publishDir = Path.Combine(Path.GetTempPath(), "unocheck-deps-" + Guid.NewGuid().ToString("N"));
+        var publishDir = Path.Join(Path.GetTempPath(), "unocheck-deps-" + Guid.NewGuid().ToString("N"));
         try
         {
-            var project = Path.Combine(RepoRoot, "UnoCheck", "UnoCheck.csproj");
+            var project = Path.Join(RepoRoot, "UnoCheck", "UnoCheck.csproj");
             var psi = new ProcessStartInfo("dotnet")
             {
                 RedirectStandardOutput = true,
@@ -34,6 +34,7 @@ public class DepsFileTests
                 UseShellExecute = false,
                 WorkingDirectory = RepoRoot
             };
+
             // No node reuse or compiler server: a process outliving the publish would hold the redirected pipes open.
             foreach (var argument in new[] { "publish", project, "-c", Configuration, "-f", "net6.0", "-o", publishDir, "-v", "q", "-nologo", "-nr:false", "-p:UseSharedCompilation=false" })
             {
@@ -56,7 +57,7 @@ public class DepsFileTests
 
             Assert.True(process.ExitCode == 0, output.Result + error.Result);
 
-            Assert.Empty(ServiceableLibraries(Path.Combine(publishDir, "UnoCheck.deps.json")));
+            Assert.Empty(ServiceableLibraries(Path.Join(publishDir, "UnoCheck.deps.json")));
         }
         finally
         {
