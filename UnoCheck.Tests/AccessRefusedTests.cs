@@ -256,6 +256,18 @@ public class AccessRefusedTests
     }
 
     [Fact]
+    public void PowerShellPolicy_FailureDetails_NameTheExitCodeAndBothOutputs()
+    {
+        var details = PSExecutionPolicyCheckup.FailureDetails(1, ["out line"], ["err line 1", "err line 2"]);
+
+        Assert.Equal(
+            "PowerShell execution policy: powershell exited with code 1." + Environment.NewLine
+            + "stdout:" + Environment.NewLine + "out line" + Environment.NewLine
+            + "stderr:" + Environment.NewLine + "err line 1" + Environment.NewLine + "err line 2",
+            details);
+    }
+
+    [Fact]
     public void PowerShellPolicy_AnotherFailure_StaysAnError()
     {
         var result = new PSExecutionPolicyCheckup().FailedResult(["The term 'Get-ExecutionPolicy' is not recognized."]);
