@@ -405,7 +405,7 @@ namespace DotNetCheck.DotNet
 		internal static void ThrowWorkloadCommandFailed(string command, IEnumerable<string> errorLines, bool windows)
 		{
 			if (windows && AccessRefused.FindInOutput(errorLines) is { } refusal)
-				throw new UnauthorizedAccessException($"`{command}` was refused access: {AccessRefused.Summarize(refusal)}");
+				throw new UnauthorizedAccessException($"{AccessRefused.Summarize(refusal)} (from `{command}`)");
 
 			throw new Exception($"Workload command failed: `{command}`");
 		}

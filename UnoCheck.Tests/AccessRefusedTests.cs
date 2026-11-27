@@ -112,6 +112,54 @@ public class AccessRefusedTests
     }
 
     [Fact]
+    public void FindInOutput_PowerShellExecutionPolicyError_IsNotARefusal()
+    {
+        string[] output =
+        [
+            "File C:\\Users\\someone\\Documents\\WindowsPowerShell\\profile.ps1 cannot be loaded because running scripts is disabled on this system.",
+            "    + CategoryInfo          : SecurityError: (:) [], PSSecurityException",
+            "    + FullyQualifiedErrorId : UnauthorizedAccess",
+        ];
+
+        Assert.Null(AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void FindInOutput_AnEarlierRecord_ReportsTheMessageOfTheRefusedOne()
+    {
+        string[] output =
+        [
+            "#< CLIXML",
+            "Some-Warning : An unrelated record.",
+            "    + CategoryInfo          : NotSpecified: (:) [Some-Warning], InvalidOperationException",
+            "    + FullyQualifiedErrorId : Unrelated",
+            "",
+            "Get-ExecutionPolicy : Acesso ao Registro solicitado não é permitido.",
+            "    + CategoryInfo          : NotSpecified: (:) [Get-ExecutionPolicy], SecurityException",
+            "    + FullyQualifiedErrorId : System.Security.SecurityException,Microsoft.PowerShell.Commands.GetExecutionPolicyCommand",
+        ];
+
+        Assert.Equal(output[5], AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void FindInOutput_ClixmlBeforeTheRecord_IsSkipped()
+    {
+        string[] output =
+        [
+            "#< CLIXML",
+            "Get-ExecutionPolicy : Acesso ao Registro solicitado não é permitido.",
+            "    + FullyQualifiedErrorId : System.Security.SecurityException,Microsoft.PowerShell.Commands.GetExecutionPolicyCommand",
+        ];
+
+        Assert.Equal(output[1], AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void Summarize_DropsInvisibleFormatCharacters()
+        => Assert.Equal("refused here", AccessRefused.Summarize("refused\u202E here\u200B"));
+
+    [Fact]
     public void Summarize_KeepsTheRefusalAndDropsWhatPrecedesIt()
         => Assert.Equal(DeniedMessage, AccessRefused.Summarize("Unhandled exception: System.UnauthorizedAccessException: " + DeniedMessage));
 
@@ -161,7 +209,7 @@ public class AccessRefusedTests
     {
         var checkup = new GitCheckup();
 
-        var result = CheckCommand.DiagnoseFailure(checkup, new UnauthorizedAccessException(DeniedMessage));
+        var result = CheckCommand.DiagnoseFailure(checkup, new UnauthorizedAccessException(DeniedMessage), windows: true);
 
         Assert.Equal(Status.Warning, result.Status);
         Assert.False(result.HasSuggestion);
@@ -174,9 +222,31 @@ public class AccessRefusedTests
         var checkup = new GitCheckup();
         var wrapped = new InvalidOperationException("The check failed.", new UnauthorizedAccessException(DeniedMessage));
 
-        var result = CheckCommand.DiagnoseFailure(checkup, wrapped);
+        var result = CheckCommand.DiagnoseFailure(checkup, wrapped, windows: true);
 
         Assert.Equal("Could not check: " + DeniedMessage, result.Message);
+    }
+
+    [Fact]
+    public void DiagnoseFailure_OffWindows_ARefusalStaysAnError()
+    {
+        var checkup = new GitCheckup();
+
+        var result = CheckCommand.DiagnoseFailure(checkup, new UnauthorizedAccessException(DeniedMessage), windows: false);
+
+        Assert.Equal(Status.Error, result.Status);
+        Assert.False(result.CouldNotCheck);
+    }
+
+    [Fact]
+    public void DiagnoseFailure_RefusedWorkloadCommand_StillNamesTheCommand()
+    {
+        var thrown = Assert.Throws<UnauthorizedAccessException>(
+            () => DotNetWorkloadManager.ThrowWorkloadCommandFailed(WorkloadList, RefusedWorkloadOutput, windows: true));
+
+        var result = CheckCommand.DiagnoseFailure(new GitCheckup(), thrown, windows: true);
+
+        Assert.Equal($"Could not check: {DeniedMessage} (from `{WorkloadList}`)", result.Message);
     }
 
     [Fact]
@@ -184,7 +254,7 @@ public class AccessRefusedTests
     {
         var checkup = new GitCheckup();
 
-        var result = CheckCommand.DiagnoseFailure(checkup, new InvalidOperationException("Something else."));
+        var result = CheckCommand.DiagnoseFailure(checkup, new InvalidOperationException("Something else."), windows: true);
 
         Assert.Equal(Status.Error, result.Status);
         Assert.Equal("Something else.", result.Message);
@@ -247,7 +317,7 @@ public class AccessRefusedTests
         var thrown = Assert.Throws<UnauthorizedAccessException>(
             () => DotNetWorkloadManager.ThrowWorkloadCommandFailed(WorkloadList, RefusedWorkloadOutput, windows: true));
 
-        Assert.Equal($"`{WorkloadList}` was refused access: {DeniedMessage}", thrown.Message);
+        Assert.Equal($"{DeniedMessage} (from `{WorkloadList}`)", thrown.Message);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -20,7 +21,9 @@ namespace DotNetCheck.Models
 		const int WindowsAccessDenied = 5;
 		const int UnixAccessDenied = 13;
 		const string ExceptionName = nameof(UnauthorizedAccessException);
-		const string SecurityExceptionName = nameof(SecurityException);
+		const string SecurityExceptionName = "System.Security.SecurityException";
+		const string PowerShellRecordEnd = "+ FullyQualifiedErrorId";
+		const string PowerShellClixml = "#< CLIXML";
 		const string DeniedPathStart = "Access to the path";
 		const string DeniedPathEnd = "denied";
 		const string DeniedRegistry = "Requested registry access is not allowed";
@@ -73,14 +76,29 @@ namespace DotNetCheck.Models
 		internal static string FindInOutput(IEnumerable<string> errorLines)
 		{
 			var lines = (errorLines ?? Enumerable.Empty<string>()).Where(line => line is not null).ToList();
-			var refusal = lines.FirstOrDefault(NamesRefusal);
+			var refusal = lines.FindIndex(NamesRefusal);
+			if (refusal < 0)
+				return null;
 
-			// PowerShell prints its message, which can be translated, on the first line, and the exception type only
-			// on its "+ CategoryInfo" and "+ FullyQualifiedErrorId" lines.
-			return refusal is not null && IsPowerShellErrorDetail(refusal)
-				? lines.FirstOrDefault(line => !string.IsNullOrWhiteSpace(line))
-				: refusal;
+			// PowerShell prints its message, which can be translated, on the first line of the error record, and the
+			// exception type only on the record's "+ CategoryInfo" and "+ FullyQualifiedErrorId" lines.
+			return IsPowerShellErrorDetail(lines[refusal])
+				? PowerShellRecordMessage(lines, refusal)
+				: lines[refusal];
 		}
+
+		static string PowerShellRecordMessage(List<string> lines, int detailLine)
+		{
+			var start = detailLine;
+			while (start > 0 && !string.IsNullOrWhiteSpace(lines[start - 1]) && !EndsPowerShellRecord(lines[start - 1]))
+				start--;
+
+			return lines.Skip(start).FirstOrDefault(line => !string.IsNullOrWhiteSpace(line) && !EndsPowerShellRecord(line));
+		}
+
+		static bool EndsPowerShellRecord(string line)
+			=> line.TrimStart().StartsWith(PowerShellRecordEnd, StringComparison.Ordinal)
+				|| line.StartsWith(PowerShellClixml, StringComparison.Ordinal);
 
 		static bool NamesRefusal(string line)
 			=> line.Contains(ExceptionName, StringComparison.Ordinal)
@@ -115,7 +133,7 @@ namespace DotNetCheck.Models
 		}
 
 		// The detail can be a raw line of a child process's output: keep the part that names the refusal, drop
-		// control characters, and bound its length before it reaches a host's display.
+		// control and invisible formatting characters, and bound its length before it reaches a host's display.
 		internal static string Summarize(string detail)
 		{
 			var text = (detail ?? string.Empty).Trim();
@@ -127,7 +145,7 @@ namespace DotNetCheck.Models
 			var clean = new StringBuilder(text.Length);
 			foreach (var character in text)
 			{
-				if (!char.IsControl(character))
+				if (!char.IsControl(character) && CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.Format)
 					clean.Append(character);
 			}
 

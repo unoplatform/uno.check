@@ -293,8 +293,8 @@ namespace DotNetCheck.Cli
 
 						if (depCheckup != null && depCheckup.IsPlatformSupported(Util.Platform))
 						{
-							Models.Status? depStatus = checkupStatus.TryGetValue(dep.CheckupId, out var knownStatus) ? knownStatus : null;
-							var depNotChecked = results.TryGetValue(dep.CheckupId, out var depResult) && depResult.CouldNotCheck;
+							Models.Status? depStatus = checkupStatus.TryGetValue(depCheckup.Id, out var knownStatus) ? knownStatus : null;
+							var depNotChecked = results.TryGetValue(depCheckup.Id, out var depResult) && depResult.CouldNotCheck;
 
 							if (DependencyBlocksDependents(depStatus, depNotChecked))
 							{
@@ -362,7 +362,7 @@ namespace DotNetCheck.Cli
 				catch (Exception ex)
 				{
 					Util.Exception(ex);
-					diagnosis = DiagnoseFailure(checkup, ex);
+					diagnosis = DiagnoseFailure(checkup, ex, Util.IsWindows);
 				}
 
 				results[checkup.Id] = diagnosis;
@@ -823,9 +823,10 @@ namespace DotNetCheck.Cli
 		internal static bool DependencyBlocksDependents(Models.Status? dependencyStatus, bool dependencyCouldNotCheck)
 			=> dependencyStatus is null or Models.Status.Error || dependencyCouldNotCheck;
 
-		// A check that was refused access could not look, which is not the same as finding a problem.
-		internal static DiagnosticResult DiagnoseFailure(Checkup checkup, Exception failure)
-			=> AccessRefused.FindRefusal(failure) is { } refusal
+		// On Windows a refused access means the check could not look, for example in a sandboxed host. Elsewhere it is
+		// a real fault of the install, and stays an error.
+		internal static DiagnosticResult DiagnoseFailure(Checkup checkup, Exception failure, bool windows)
+			=> windows && AccessRefused.FindRefusal(failure) is { } refusal
 				? AccessRefused.Result(checkup, refusal.Message)
 				: new DiagnosticResult(Models.Status.Error, checkup, failure.Message);
 

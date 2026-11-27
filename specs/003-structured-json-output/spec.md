@@ -80,12 +80,13 @@ Stream guarantees:
   dependency-failure skips (where the failed dependency's own `error` result is what makes the
   run unhealthy) and not-applicable checkups, so every checkup counted by
   `run_started.checkup_count` resolves to exactly one final state.
-- A checkup that was refused access to what it has to read **could not check**. It arrives as
+- On Windows, a checkup that was refused access to what it has to read **could not check**. It arrives as
   `status: "warning"` with `could_not_check: true`, a `message` starting `Could not check: `
   that names what was refused, and no `fix`: its status says nothing about what it checks.
   Its required dependents are skipped with `skip_reason` "The dependent check `<id>` could not
   be checked". The report stays `degraded` when nothing else failed, and the exit code is `1`,
-  because the environment was not verified.
+  because the environment was not verified. On Linux and macOS a refused access is a fault of
+  the install and stays an error.
 - After a successful fix the checkup re-runs and emits a **second `checkup_result` for the
   same id with no second `checkup_started`**; the stream rule is last-result-per-id wins. The
   final `report` contains each checkup once, in its final state.
