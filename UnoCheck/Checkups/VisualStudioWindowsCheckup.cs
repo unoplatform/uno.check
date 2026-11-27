@@ -73,7 +73,12 @@ namespace DotNetCheck.Checkups
 
 		// vswhere answers "no installs" when it is refused that folder, so an empty answer is checked against it.
 		internal static bool IsSetupStateReadRefused()
-			=> SetupStateReadRefused.Value;
+			=> IsSetupStateReadRefused(AppContainer.IsCurrentProcess, SetupStateReadRefused);
+
+		// In an AppContainer the empty answer is taken as refused without reading the folder: vswhere was just asked
+		// for it, and the probe would ask the user a second time.
+		internal static bool IsSetupStateReadRefused(bool inAppContainer, Lazy<bool> probe)
+			=> inAppContainer || probe.Value;
 
 		internal static Lazy<bool> SetupStateProbe(Func<string, IEnumerable<string>> enumerate = null)
 			=> new(() => AccessRefused.IsReadRefused(SetupStateFolder, enumerate));
