@@ -43,6 +43,12 @@ namespace DotNetCheck
 		internal static string PowerShell()
 			=> Util.IsWindows ? ResolvePowerShell(Environment.SystemDirectory, File.Exists) : PowerShellName;
 
+		/// <summary>PowerShell arguments that run <paramref name="command"/> without reading the user's profile script or waiting for input.</summary>
+		/// <param name="command">The PowerShell command to run.</param>
+		/// <returns>The argument string.</returns>
+		internal static string PowerShellCommand(string command)
+			=> "-NoProfile -NonInteractive -Command " + command;
+
 		internal static string ResolvePowerShell(string systemDirectory, Func<string, bool> fileExists)
 		{
 			if (!IsLocalFullPath(systemDirectory))

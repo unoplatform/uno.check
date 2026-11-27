@@ -36,6 +36,10 @@ public class ToolPathsTests
         => Assert.Equal("powershell", ToolPaths.ResolvePowerShell(string.Empty, _ => true));
 
     [Fact]
+    public void PowerShellCommand_SkipsTheUsersProfileAndNeverPrompts()
+        => Assert.Equal("-NoProfile -NonInteractive -Command Get-ExecutionPolicy", ToolPaths.PowerShellCommand("Get-ExecutionPolicy"));
+
+    [Fact]
     public void GitInstallRoots_MachineLocationsComeBeforeTheUsersOwn()
     {
         var roots = ToolPaths.GitInstallRoots([MachineRegistryGit], ProgramFiles, ProgramFilesX86, [UserRegistryGit], LocalAppData, elevated: false);
