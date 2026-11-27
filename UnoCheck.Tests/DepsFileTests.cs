@@ -14,6 +14,7 @@ public class DepsFileTests
     [Fact]
     public void BuiltDepsFile_MarksNoLibraryServiceable()
     {
+        // net6.0: the framework this net10.0 project's reference to UnoCheck resolves to, the nearest one it targets.
         var depsFile = Path.Join(RepoRoot, "UnoCheck", "bin", Configuration, "net6.0", "UnoCheck.deps.json");
 
         Assert.Empty(ServiceableLibraries(depsFile));
@@ -41,6 +42,7 @@ public class DepsFileTests
                 psi.ArgumentList.Add(argument);
             }
 
+            // The test host's MSBuild variables would pin the child publish to the test runner's SDK.
             foreach (var inherited in new[] { "MSBuildSDKsPath", "MSBUILD_EXE_PATH", "MSBuildExtensionsPath" })
             {
                 psi.Environment.Remove(inherited);
@@ -61,10 +63,27 @@ public class DepsFileTests
         }
         finally
         {
-            if (Directory.Exists(publishDir))
+            DeleteBestEffort(publishDir);
+        }
+    }
+
+    // A killed publish can still hold files in the folder on Windows; a failed cleanup must not replace the test's own failure.
+    private static void DeleteBestEffort(string folder)
+    {
+        try
+        {
+            if (Directory.Exists(folder))
             {
-                Directory.Delete(publishDir, recursive: true);
+                Directory.Delete(folder, recursive: true);
             }
+        }
+        catch (IOException ex)
+        {
+            Console.Error.WriteLine($"Could not delete {folder}: {ex.Message}");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.Error.WriteLine($"Could not delete {folder}: {ex.Message}");
         }
     }
 

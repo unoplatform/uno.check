@@ -129,7 +129,7 @@
 			WriteOnlyWhenDifferent="true" />
 	</Target>
 
-	<Target Name="MarkPublishDepsFileNotServiceable" AfterTargets="GeneratePublishDependencyFile" Condition="'$(IntermediateDepsFilePath)' != '' and Exists('$(IntermediateDepsFilePath)')">
+	<Target Name="MarkPublishDepsFileNotServiceable" AfterTargets="GeneratePublishDependencyFile" Condition="Exists('$(IntermediateDepsFilePath)')">
 		<WriteLinesToFile
 			File="$(IntermediateDepsFilePath)"
 			Lines="$([MSBuild]::Escape($([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(IntermediateDepsFilePath)')), '$(_ServiceableFlag)', '${1}false'))))"
