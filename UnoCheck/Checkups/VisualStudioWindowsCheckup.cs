@@ -14,6 +14,12 @@ namespace DotNetCheck.Checkups
 		private static readonly Task<IEnumerable<VisualStudioInfo>> EmptyResult = 
 			Task.FromResult(Enumerable.Empty<VisualStudioInfo>());
 
+		// Read once per run: both Visual Studio checks ask, and a sandboxed host asks the user for each read.
+		internal static readonly Lazy<bool> SetupStateReadRefused = SetupStateProbe();
+
+		// vswhere's plain listing, once per run: both checks need it, and in a sandbox each run of vswhere reads the setup folder.
+		static readonly Lazy<IReadOnlyList<VisualStudioInfo>> Installs = new(() => GetWindowsInfo().GetAwaiter().GetResult().ToList());
+
 		public override bool IsPlatformSupported(Platform platform)
 			=> platform == Platform.Windows;
 
@@ -32,7 +38,7 @@ namespace DotNetCheck.Checkups
 
 		public override async Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var vsinfo = await GetWindowsInfo();
+			var vsinfo = Installs.Value;
 
 			// Defensive null check (should not occur with current implementation, but guards against future changes)
 			if (vsinfo == null)
@@ -70,7 +76,19 @@ namespace DotNetCheck.Checkups
 
 		// vswhere answers "no installs" when it is refused that folder, so an empty answer is checked against it.
 		internal static bool IsSetupStateReadRefused()
-			=> AccessRefused.IsReadRefused(SetupStateFolder);
+			=> IsSetupStateReadRefused(AppContainer.IsCurrentProcess, () => VsWhereFoundNoInstall(VsWherePath(), () => Installs.Value), SetupStateReadRefused);
+
+		// In an AppContainer vswhere's plain listing decides, without reading the folder: vswhere was just asked for it,
+		// and the probe would ask the user a second time.
+		internal static bool IsSetupStateReadRefused(bool inAppContainer, Func<bool> vsWhereFoundNoInstall, Lazy<bool> probe)
+			=> inAppContainer ? vsWhereFoundNoInstall() : probe.Value;
+
+		// A missing vswhere read nothing, so its empty answer can't mean the folder was refused.
+		internal static bool VsWhereFoundNoInstall(string vsWherePath, Func<IEnumerable<VisualStudioInfo>> installs)
+			=> vsWherePath is not null && !installs().Any();
+
+		internal static Lazy<bool> SetupStateProbe(Func<string, IEnumerable<string>> enumerate = null)
+			=> new(() => AccessRefused.IsReadRefused(SetupStateFolder, enumerate));
 
 		internal DiagnosticResult NothingFoundResult(bool setupStateReadRefused)
 		{
@@ -82,19 +100,18 @@ namespace DotNetCheck.Checkups
 			return new DiagnosticResult(Status.Warning, this);
 		}
 
+		static string VsWherePath()
+			=> new[] { Environment.SpecialFolder.ProgramFilesX86, Environment.SpecialFolder.ProgramFiles }
+				.Select(folder => Path.Combine(Environment.GetFolderPath(folder), "Microsoft Visual Studio", "Installer", "vswhere.exe"))
+				.FirstOrDefault(File.Exists);
+
 		public static Task<IEnumerable<VisualStudioInfo>> GetWindowsInfo(string requires = "")
 		{
 			var items = new List<VisualStudioInfo>();
 
-			var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
-				"Microsoft Visual Studio", "Installer", "vswhere.exe");
+			var path = VsWherePath();
 
-
-			if (!File.Exists(path))
-				path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-				"Microsoft Visual Studio", "Installer", "vswhere.exe");
-
-			if (!File.Exists(path))
+			if (path is null)
 				return EmptyResult;
 
 			var r = ShellProcessRunner.Run(path,
