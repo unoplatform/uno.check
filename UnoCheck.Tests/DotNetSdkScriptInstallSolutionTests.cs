@@ -26,4 +26,14 @@ public class DotNetSdkScriptInstallSolutionTests
     {
         Assert.False(DotNetSdkScriptInstallSolution.IsDirectoryWritableOrCreatable(string.Empty));
     }
+
+    [Fact]
+    public void WindowsArguments_RunTheScriptAsAFile_SoAPathWithASpaceStaysOneArgument()
+    {
+        var args = DotNetSdkScriptInstallSolution.WindowsArguments(@"C:\Users\some one\AppData\Local\Temp\dotnet-install.ps1", @"C:\Program Files\dotnet", "10.0.100");
+
+        Assert.Equal(
+            ["-NoProfile", "-NonInteractive", "-File", "\"C:\\Users\\some one\\AppData\\Local\\Temp\\dotnet-install.ps1\"", "-InstallDir", "\"C:\\Program Files\\dotnet\"", "-Version", "10.0.100"],
+            args);
+    }
 }

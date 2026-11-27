@@ -99,6 +99,11 @@ namespace DotNetCheck.Solutions
 				? fallback
 				: Path.Combine(root, folder);
 
+		// -File, not the implicit -Command: under -Command PowerShell joins the arguments back into one line without
+		// their quotes, so "C:\Program Files\dotnet" reaches the script as two words.
+		internal static string[] WindowsArguments(string scriptPath, string sdkRoot, string version)
+			=> ["-NoProfile", "-NonInteractive", "-File", Util.QuoteForProcessArgs(scriptPath), "-InstallDir", Util.QuoteForProcessArgs(sdkRoot), "-Version", version];
+
 		public override async Task Implement(SharedState sharedState, CancellationToken cancellationToken)
 		{
 			await base.Implement(sharedState, cancellationToken);
@@ -123,7 +128,7 @@ namespace DotNetCheck.Solutions
 			};
 
 			var args = Util.IsWindows
-				? new[] { "-NoProfile", "-NonInteractive", Util.QuoteForProcessArgs(scriptPath), "-InstallDir", Util.QuoteForProcessArgs(sdkRoot), "-Version", Version }
+				? WindowsArguments(scriptPath, sdkRoot, Version)
 				: new[] { scriptPath, "--install-dir", sdkRoot, "--version", Version };
 
 			Util.Log($"Executing dotnet-install script...");
