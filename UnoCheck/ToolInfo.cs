@@ -162,7 +162,7 @@ namespace DotNetCheck
 			return true;
 		}
 
-		public static Task<NuGetVersion> GetLatestVersion(bool includePrerelease) => 
+		public static Task<NuGetVersion?> GetLatestVersion(bool includePrerelease) => 
 			NuGetHelper.GetLatestPackageVersionAsync("Uno.Check", includePrerelease);
 
         public static void ExitPrompt(bool nonInteractive)

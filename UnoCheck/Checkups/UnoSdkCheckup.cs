@@ -28,12 +28,23 @@ namespace DotNetCheck.Checkups
 			{
 				state.TryGetState("unosdk", "unoSdkLatestVersion", out unoSdkVersion);
 
-				unoSdkVersion ??= (await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.IncludePrereleaseUnoPackages(Manifest))).ToString();
+				if (unoSdkVersion is null)
+				{
+					var latest = await NuGetHelper.GetLatestPackageVersionAsync("Uno.Sdk", ToolInfo.IncludePrereleaseUnoPackages(Manifest));
+					if (latest is null)
+					{
+						return new DiagnosticResult(
+							Status.Warning,
+							this,
+							"Could not determine the latest Uno.Sdk version from the configured NuGet sources.");
+					}
+
+					unoSdkVersion = latest.ToString();
+				}
 			}
 
-			var defaultSettings = Settings.LoadDefaultSettings(root: null);
-
-			var packagesPath = SettingsUtility.GetGlobalPackagesFolder(defaultSettings);
+			var packagesPath = NuGetSourceResolver.Current?.GlobalPackagesFolder
+				?? SettingsUtility.GetGlobalPackagesFolder(Settings.LoadDefaultSettings(root: null));
 
 			if (Directory.Exists(Path.Combine(packagesPath, "uno.sdk", unoSdkVersion)))
 			{
