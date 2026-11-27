@@ -88,6 +88,30 @@ public class AccessRefusedTests
     }
 
     [Fact]
+    public void FindInOutput_LocalizedPowerShellRefusal_ReturnsItsMessage()
+    {
+        string[] output =
+        [
+            "Get-ExecutionPolicy : Acesso ao Registro solicitado não é permitido.",
+            "No linha:1 caractere:1",
+            "+ Get-ExecutionPolicy -Scope CurrentUser",
+            "+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+            "    + CategoryInfo          : NotSpecified: (:) [Get-ExecutionPolicy], SecurityException",
+            "    + FullyQualifiedErrorId : System.Security.SecurityException,Microsoft.PowerShell.Commands.GetExecutionPolicyCommand",
+        ];
+
+        Assert.Equal(output[0], AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
+    public void FindInOutput_SecurityExceptionOnItsOwnLine_IsFound()
+    {
+        string[] output = ["Unhandled exception: System.Security.SecurityException: Acesso ao Registro solicitado não é permitido."];
+
+        Assert.Equal(output[0], AccessRefused.FindInOutput(output));
+    }
+
+    [Fact]
     public void Summarize_KeepsTheRefusalAndDropsWhatPrecedesIt()
         => Assert.Equal(DeniedMessage, AccessRefused.Summarize("Unhandled exception: System.UnauthorizedAccessException: " + DeniedMessage));
 

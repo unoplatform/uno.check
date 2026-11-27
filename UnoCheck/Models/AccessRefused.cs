@@ -20,6 +20,7 @@ namespace DotNetCheck.Models
 		const int WindowsAccessDenied = 5;
 		const int UnixAccessDenied = 13;
 		const string ExceptionName = nameof(UnauthorizedAccessException);
+		const string SecurityExceptionName = nameof(SecurityException);
 		const string DeniedPathStart = "Access to the path";
 		const string DeniedPathEnd = "denied";
 		const string DeniedRegistry = "Requested registry access is not allowed";
@@ -70,11 +71,25 @@ namespace DotNetCheck.Models
 		/// <param name="errorLines">The process's error lines.</param>
 		/// <returns>That line, or null when none does.</returns>
 		internal static string FindInOutput(IEnumerable<string> errorLines)
-			=> (errorLines ?? Enumerable.Empty<string>()).FirstOrDefault(line =>
-				line is not null
-				&& (line.Contains(ExceptionName, StringComparison.Ordinal)
-					|| line.Contains(DeniedRegistry, StringComparison.OrdinalIgnoreCase)
-					|| (line.Contains(DeniedPathStart, StringComparison.OrdinalIgnoreCase) && line.Contains(DeniedPathEnd, StringComparison.OrdinalIgnoreCase))));
+		{
+			var lines = (errorLines ?? Enumerable.Empty<string>()).Where(line => line is not null).ToList();
+			var refusal = lines.FirstOrDefault(NamesRefusal);
+
+			// PowerShell prints its message, which can be translated, on the first line, and the exception type only
+			// on its "+ CategoryInfo" and "+ FullyQualifiedErrorId" lines.
+			return refusal is not null && IsPowerShellErrorDetail(refusal)
+				? lines.FirstOrDefault(line => !string.IsNullOrWhiteSpace(line))
+				: refusal;
+		}
+
+		static bool NamesRefusal(string line)
+			=> line.Contains(ExceptionName, StringComparison.Ordinal)
+				|| line.Contains(SecurityExceptionName, StringComparison.Ordinal)
+				|| line.Contains(DeniedRegistry, StringComparison.OrdinalIgnoreCase)
+				|| (line.Contains(DeniedPathStart, StringComparison.OrdinalIgnoreCase) && line.Contains(DeniedPathEnd, StringComparison.OrdinalIgnoreCase));
+
+		static bool IsPowerShellErrorDetail(string line)
+			=> line.TrimStart().StartsWith("+ ", StringComparison.Ordinal);
 
 		/// <summary>Whether listing <paramref name="folder"/> is refused, as opposed to the folder being absent or readable.</summary>
 		/// <param name="folder">The folder to list.</param>
