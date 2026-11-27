@@ -123,7 +123,7 @@ namespace DotNetCheck.Solutions
 			};
 
 			var args = Util.IsWindows
-				? new[] { Util.QuoteForProcessArgs(scriptPath), "-InstallDir", Util.QuoteForProcessArgs(sdkRoot), "-Version", Version }
+				? new[] { "-NoProfile", "-NonInteractive", Util.QuoteForProcessArgs(scriptPath), "-InstallDir", Util.QuoteForProcessArgs(sdkRoot), "-Version", Version }
 				: new[] { scriptPath, "--install-dir", sdkRoot, "--version", Version };
 
 			Util.Log($"Executing dotnet-install script...");

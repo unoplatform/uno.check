@@ -8,6 +8,9 @@ namespace DotNetCheck.Checkups
 {
 	internal class PSExecutionPolicyCheckup : Checkup
 	{
+		// Module-qualified: by bare name, Windows PowerShell 5.1 searches every PATH folder for a program of that name first.
+		internal const string GetPolicyCommand = @"Microsoft.PowerShell.Security\Get-ExecutionPolicy -Scope CurrentUser";
+
 		public override string Id => "psexecpolicy";
 
 		public override string Title => $"PowerShell Execution Policy";
@@ -19,7 +22,7 @@ namespace DotNetCheck.Checkups
 			// See: https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
 			Environment.SetEnvironmentVariable("PSModulePath", string.Empty);
 
-			var result = ShellProcessRunner.Run(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(@"Microsoft.PowerShell.Security\Get-ExecutionPolicy -Scope CurrentUser"));
+			var result = ShellProcessRunner.Run(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(GetPolicyCommand));
 
 			if (result.Success)
 			{

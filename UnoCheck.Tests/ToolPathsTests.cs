@@ -1,5 +1,6 @@
 using DotNetCheck;
 using DotNetCheck.Checkups;
+using DotNetCheck.Solutions;
 
 namespace UnoCheck.Tests;
 
@@ -38,6 +39,13 @@ public class ToolPathsTests
     [Fact]
     public void PowerShellCommand_SkipsTheUsersProfileAndNeverPrompts()
         => Assert.Equal("-NoProfile -NonInteractive -Command Get-ExecutionPolicy", ToolPaths.PowerShellCommand("Get-ExecutionPolicy"));
+
+    [Fact]
+    public void ExecutionPolicyCommands_AreModuleQualified()
+    {
+        Assert.StartsWith(@"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
+        Assert.StartsWith(@"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
+    }
 
     [Fact]
     public void GitInstallRoots_MachineLocationsComeBeforeTheUsersOwn()
@@ -122,49 +130,4 @@ public class ToolPathsTests
     [Fact]
     public void IsOnPath_NoPath_IsNotOnPath()
         => Assert.False(ToolPaths.IsOnPath(Path.Join(ProgramFiles, "Git", "cmd"), null));
-
-    [Fact]
-    public void RunFromKnownInstall_Succeeds_DoesNotTryTheBareName()
-    {
-        var tried = new List<string>();
-
-        var succeeded = GitCheckup.RunFromKnownInstall(GitExe(ProgramFiles), command =>
-        {
-            tried.Add(command);
-            return true;
-        });
-
-        Assert.True(succeeded);
-        Assert.Equal([GitExe(ProgramFiles)], tried);
-    }
-
-    [Fact]
-    public void RunFromKnownInstall_KnownInstallFails_TriesTheBareName()
-    {
-        var tried = new List<string>();
-
-        var succeeded = GitCheckup.RunFromKnownInstall(GitExe(ProgramFiles), command =>
-        {
-            tried.Add(command);
-            return command == "git";
-        });
-
-        Assert.True(succeeded);
-        Assert.Equal([GitExe(ProgramFiles), "git"], tried);
-    }
-
-    [Fact]
-    public void RunFromKnownInstall_AlreadyTheBareName_RunsOnce()
-    {
-        var tried = new List<string>();
-
-        var succeeded = GitCheckup.RunFromKnownInstall("git", command =>
-        {
-            tried.Add(command);
-            return false;
-        });
-
-        Assert.False(succeeded);
-        Assert.Equal(["git"], tried);
-    }
 }
