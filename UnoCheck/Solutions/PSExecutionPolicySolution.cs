@@ -7,7 +7,7 @@ namespace DotNetCheck.Solutions
 {
 	internal class PSExecutionPolicySolution : Solution
 	{
-		internal const string SetPolicyCommand = ToolPaths.OwnModulesOnly + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned";
+		internal const string SetPolicyCommand = ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned";
 
 		/// <summary>Sets the policy for <c>-Scope CurrentUser</c> only — never the machine scope.</summary>
 		public override bool RequiresElevation => false;

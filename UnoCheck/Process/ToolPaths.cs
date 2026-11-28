@@ -44,10 +44,11 @@ namespace DotNetCheck
 			=> Util.IsWindows ? ResolvePowerShell(Environment.SystemDirectory, File.Exists) : PowerShellName;
 
 		/// <summary>
-		/// Starts a Windows PowerShell command on its own modules only, so a module-qualified cmdlet loads even when the
-		/// caller's PSModulePath names another PowerShell's modules, as PowerShell 7 and GitHub's Windows runner do.
+		/// A PowerShell statement, placed before a command, that limits module autoloading to <c>$PSHOME\Modules</c>, so a
+		/// module-qualified cmdlet loads even when the caller's PSModulePath names another PowerShell's modules, as
+		/// PowerShell 7 and GitHub's Windows runner do.
 		/// </summary>
-		internal const string OwnModulesOnly = "$env:PSModulePath = $PSHOME + '\\Modules'; ";
+		internal const string PowerShellOwnModulesPrefix = "$env:PSModulePath = $PSHOME + '\\Modules'; ";
 
 		/// <summary>PowerShell arguments that run <paramref name="command"/> without reading the user's profile script or waiting for input.</summary>
 		/// <param name="command">The PowerShell command to run.</param>

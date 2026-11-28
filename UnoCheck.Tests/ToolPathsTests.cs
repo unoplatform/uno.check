@@ -41,17 +41,18 @@ public class ToolPathsTests
         => Assert.Equal("-NoProfile -NonInteractive -Command Get-ExecutionPolicy", ToolPaths.PowerShellCommand("Get-ExecutionPolicy"));
 
     [Fact]
-    public void ExecutionPolicyCommands_AreModuleQualified()
+    public void ExecutionPolicyCommands_AreModuleQualified_OnWindowsPowerShellsOwnModules()
     {
-        Assert.StartsWith(ToolPaths.OwnModulesOnly + @"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
-        Assert.StartsWith(ToolPaths.OwnModulesOnly + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
+        Assert.StartsWith(ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
+        Assert.StartsWith(ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
     }
 
-    // GitHub's Windows runner and any PowerShell 7 session hand the child a PSModulePath without Windows PowerShell's modules.
+    // GitHub's Windows runner and any PowerShell 7 session hand the child a PSModulePath without Windows PowerShell's
+    // modules; a folder that does not exist stands in for PowerShell 7's.
     [Fact]
     public void GetPolicyCommand_WithAnotherPowerShellsModulePath_StillLoadsItsModule()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() || !Path.IsPathRooted(ToolPaths.PowerShell()))
             return;
 
         var start = new System.Diagnostics.ProcessStartInfo(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(PSExecutionPolicyCheckup.GetPolicyCommand))
@@ -65,10 +66,10 @@ public class ToolPathsTests
         using var process = System.Diagnostics.Process.Start(start)!;
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        Assert.True(process.WaitForExit(TimeSpan.FromMinutes(1)), "Windows PowerShell did not exit within a minute.");
 
         Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {error}");
-        Assert.False(string.IsNullOrWhiteSpace(output.Result));
+        Assert.Contains(output.Result.Trim(), new[] { "Restricted", "AllSigned", "RemoteSigned", "Unrestricted", "Bypass", "Undefined" });
     }
 
     [Fact]
