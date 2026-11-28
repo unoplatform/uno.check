@@ -43,8 +43,32 @@ public class ToolPathsTests
     [Fact]
     public void ExecutionPolicyCommands_AreModuleQualified()
     {
-        Assert.StartsWith(@"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
-        Assert.StartsWith(@"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
+        Assert.StartsWith(ToolPaths.OwnModulesOnly + @"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
+        Assert.StartsWith(ToolPaths.OwnModulesOnly + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
+    }
+
+    // GitHub's Windows runner and any PowerShell 7 session hand the child a PSModulePath without Windows PowerShell's modules.
+    [Fact]
+    public void GetPolicyCommand_WithAnotherPowerShellsModulePath_StillLoadsItsModule()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var start = new System.Diagnostics.ProcessStartInfo(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(PSExecutionPolicyCheckup.GetPolicyCommand))
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        start.Environment["PSModulePath"] = Path.Join(Root, "PowerShell", "7", "Modules");
+
+        using var process = System.Diagnostics.Process.Start(start)!;
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {error}");
+        Assert.False(string.IsNullOrWhiteSpace(output.Result));
     }
 
     [Fact]
