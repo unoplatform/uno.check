@@ -6,10 +6,7 @@ using NuGet.Versioning;
 
 namespace UnoCheck.Tests;
 
-/// <summary>
-/// Microsoft OpenJDK 17.0.21.0.2 reports a five-part version, which NuGetVersion can't parse. The checkup dropped
-/// that JDK without a word, then said OpenJDK was missing although a newer javac than the required one was installed.
-/// </summary>
+/// <summary>Which JDKs the OpenJDK checkup finds, how it reads their versions, and what it reports when none fits.</summary>
 public class OpenJdkCheckupTests
 {
     static OpenJdkCheckup CheckupFor(string version, bool requireExact = false)
@@ -114,5 +111,115 @@ public class OpenJdkCheckupTests
         var check = CheckCommand.BuildHealthCheck(checkup, result);
 
         Assert.Equal(result.Message, check.Message);
+    }
+
+    [Theory]
+    [InlineData("java")]
+    [InlineData("JDK")]
+    public void JavaPathEntries_KeepsOnlyEntriesThatNameJava(string marker)
+    {
+        var javaEntry = Path.Join("tools", $"some-{marker}-home", "bin");
+        var pathValue = string.Join(Path.PathSeparator, Path.Join("tools", "node"), javaEntry, "", Path.Join("tools", "git"));
+
+        Assert.Equal([javaEntry], OpenJdkCheckup.JavaPathEntries(pathValue));
+    }
+
+    [Fact]
+    public void JavaPathEntries_NoPath_IsEmpty()
+    {
+        Assert.Empty(OpenJdkCheckup.JavaPathEntries(null));
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_CompatibleJdkAlreadyFound_DoesNotSearchThePath()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var known = new[] { Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19") };
+        var searched = false;
+
+        var jdks = checkup.WithLastResortsIfNeeded(known, _ =>
+        {
+            searched = true;
+            return [];
+        });
+
+        Assert.False(searched);
+        Assert.Equal(known, jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_NoCompatibleJdk_AddsTheOnesOnThePath()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var onPath = Jdk("/tools/openjdk-17.0.19", "17.0.19");
+
+        var jdks = checkup.WithLastResortsIfNeeded([tooOld], _ => [onPath]);
+
+        Assert.Equal([tooOld, onPath], jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_NewerJdkOnlyOnThePath_IsNotConsideredWhenAKnownOneFits()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var known = Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19");
+        var newerOnPath = Jdk("/tools/openjdk-21.0.2", "21.0.2");
+
+        var jdks = checkup.WithLastResortsIfNeeded([known], _ => [newerOnPath]);
+
+        Assert.Equal([known], jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_StopsAtTheFirstLastResortThatFindsACompatibleJdk()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var fromAndroidSdk = Jdk("/android/microsoft-jdk-17.0.19", "17.0.19");
+        var searchedThePath = false;
+
+        var jdks = checkup.WithLastResortsIfNeeded(
+            [tooOld],
+            _ => [fromAndroidSdk],
+            _ =>
+            {
+                searchedThePath = true;
+                return [];
+            });
+
+        Assert.False(searchedThePath);
+        Assert.Equal([tooOld, fromAndroidSdk], jdks);
+    }
+
+    [Fact]
+    public void WithLastResortsIfNeeded_EachLastResortSeesWhatWasFoundBefore()
+    {
+        var checkup = CheckupFor("17.0.19");
+        var tooOld = Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1");
+        var alsoTooOld = Jdk("/android/microsoft-jdk-11.0.2", "11.0.2");
+        IReadOnlyCollection<OpenJdkInfo>? seenByThePathSearch = null;
+
+        checkup.WithLastResortsIfNeeded(
+            [tooOld],
+            _ => [alsoTooOld],
+            known =>
+            {
+                seenByThePathSearch = known;
+                return [];
+            });
+
+        Assert.Equal([tooOld, alsoTooOld], seenByThePathSearch);
+    }
+
+    [Fact]
+    public void IsCompatible_RequiresAMicrosoftOrOpenJdkBuildOfTheRightVersion()
+    {
+        var checkup = CheckupFor("17.0.19");
+
+        Assert.True(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-17.0.19", "17.0.19")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-11.0.1", "11.0.1")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/oracle/jdk-17.0.19", "17.0.19")));
+        Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-unreadable", null)));
     }
 }

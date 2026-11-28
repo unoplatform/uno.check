@@ -72,20 +72,7 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState history)
 		{
-			var xamJdks = new List<OpenJdkInfo>();
-			try
-			{
-				var xamSdkInfo = new AndroidSdkInfo((traceLevel, msg) => Util.Log(msg), null, null, null);
-
-				if (!string.IsNullOrEmpty(xamSdkInfo.JavaSdkPath))
-					SearchDirectoryForJdks(xamJdks, xamSdkInfo.JavaSdkPath);
-			}
-			catch (Exception ex)
-			{
-				Util.Exception(ex);
-			}
-
-			var found = xamJdks.Concat(FindJdks())
+			var found = WithLastResortsIfNeeded(FindJdks().ToList(), FindAndroidSdkJdks, FindPathJdks)
 				.GroupBy(j => j.Directory.FullName)
 				.Select(g => g.First())
 				.ToList();
@@ -101,8 +88,7 @@ namespace DotNetCheck.Checkups
 
 			foreach (var jdk in jdks)
 			{
-				if ((jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
-					&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null))
+				if (IsCompatible(jdk))
 				{
 					ok = true;
 					ReportStatus($"{jdk.Version} ({jdk.Directory})", Status.Ok);
@@ -134,6 +120,66 @@ namespace DotNetCheck.Checkups
 				return Task.FromResult(DiagnosticResult.Ok(this));
 
 			return Task.FromResult(NoCompatibleJdkResult(found));
+		}
+
+		internal bool IsCompatible(OpenJdkInfo jdk)
+			=> jdk.Version is not null
+				&& (jdk.JavaC.FullName.Contains("microsoft", StringComparison.OrdinalIgnoreCase) || jdk.JavaC.FullName.Contains("openjdk", StringComparison.OrdinalIgnoreCase))
+				&& jdk.Version.IsCompatible(Version, RequireExact ? Version : null);
+
+		// The last resorts read the PATH's folders, and a sandboxed host asks the user for each of them. They are
+		// tried in order, and only while no compatible JDK has been found.
+		internal IReadOnlyCollection<OpenJdkInfo> WithLastResortsIfNeeded(
+			IReadOnlyCollection<OpenJdkInfo> known,
+			params Func<IReadOnlyCollection<OpenJdkInfo>, IEnumerable<OpenJdkInfo>>[] lastResorts)
+		{
+			var found = known;
+
+			foreach (var lastResort in lastResorts)
+			{
+				if (found.Any(IsCompatible))
+					break;
+
+				found = found.Concat(lastResort(found)).ToList();
+			}
+
+			return found;
+		}
+
+		// AndroidSdkInfo searches every PATH folder for adb and java before it answers.
+		IEnumerable<OpenJdkInfo> FindAndroidSdkJdks(IReadOnlyCollection<OpenJdkInfo> known)
+		{
+			var paths = new List<OpenJdkInfo>(known);
+
+			try
+			{
+				var xamSdkInfo = new AndroidSdkInfo((traceLevel, msg) => Util.Log(msg), null, null, null);
+
+				if (!string.IsNullOrEmpty(xamSdkInfo.JavaSdkPath))
+					SearchDirectoryForJdks(paths, xamSdkInfo.JavaSdkPath);
+			}
+			catch (Exception ex)
+			{
+				Util.Exception(ex);
+			}
+
+			return paths.Skip(known.Count);
+		}
+
+		internal static IEnumerable<string> JavaPathEntries(string pathValue)
+			=> (pathValue ?? string.Empty)
+				.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+				.Where(entry => entry.Contains("java", StringComparison.OrdinalIgnoreCase) || entry.Contains("jdk", StringComparison.OrdinalIgnoreCase));
+
+		// Seeded with the known JDKs, so a javac already found is not run a second time.
+		IEnumerable<OpenJdkInfo> FindPathJdks(IReadOnlyCollection<OpenJdkInfo> known)
+		{
+			var paths = new List<OpenJdkInfo>(known);
+
+			foreach (var envPath in JavaPathEntries(Environment.GetEnvironmentVariable("PATH")))
+				SearchDirectoryForJdks(paths, envPath, true);
+
+			return paths.Skip(known.Count);
 		}
 
 		// OpenJDK is only reported missing when no javac was found at all. Otherwise the message names what was found,
@@ -237,14 +283,6 @@ namespace DotNetCheck.Checkups
 
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JAVA_HOME") ?? string.Empty, true);
 			SearchDirectoryForJdks(paths, Environment.GetEnvironmentVariable("JDK_HOME") ?? string.Empty, true);
-
-			var environmentPaths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
-
-			foreach (var envPath in environmentPaths)
-			{
-				if (envPath.Contains("java", StringComparison.OrdinalIgnoreCase) || envPath.Contains("jdk", StringComparison.OrdinalIgnoreCase))
-					SearchDirectoryForJdks(paths, envPath, true);
-			}
 
 			if (Util.IsLinux)
 			{
