@@ -1,8 +1,9 @@
+using System.Diagnostics;
 using DotNetCheck.Checkups;
 
 namespace UnoCheck.Tests;
 
-/// <summary>Git is run from its known install first, and by bare name only when that fails.</summary>
+/// <summary>How the Git check runs Git: from its known install first, and without reading any git config file.</summary>
 public class GitCheckupTests
 {
     static readonly string GitExe = Path.Join(Path.GetTempPath(), "uno-check-tests", "tools", "Program Files", "Git", "cmd", "git.exe");
@@ -50,5 +51,58 @@ public class GitCheckupTests
 
         Assert.False(succeeded);
         Assert.Equal(["git"], tried);
+    }
+
+    [Fact]
+    public void VersionCommand_TurnsOffTheSystemAndGlobalConfig()
+    {
+        var options = GitCheckup.VersionCommand(GitExe);
+
+        Assert.Equal(GitExe, options.Executable);
+        Assert.Equal("--version", options.Args);
+        Assert.Equal("1", options.EnvironmentVariables["GIT_CONFIG_NOSYSTEM"]);
+        Assert.Equal(OperatingSystem.IsWindows() ? "NUL" : "/dev/null", options.EnvironmentVariables["GIT_CONFIG_GLOBAL"]);
+    }
+
+    // Git reads its global config even for --version: a broken one makes plain `git --version` fail.
+    [Fact]
+    public void VersionCommand_GitDoesNotReadABrokenGlobalConfig()
+    {
+        var home = Directory.CreateTempSubdirectory("uno-check-git-home-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Join(home, ".gitconfig"), "[broken");
+
+            if (RunGitVersion(home, new Dictionary<string, string>()) is not int plainExitCode)
+                return; // no git on this machine
+
+            Assert.NotEqual(0, plainExitCode);
+            Assert.Equal(0, RunGitVersion(home, GitCheckup.VersionCommand("git").EnvironmentVariables));
+        }
+        finally
+        {
+            Directory.Delete(home, recursive: true);
+        }
+    }
+
+    static int? RunGitVersion(string home, IReadOnlyDictionary<string, string> environment)
+    {
+        var psi = new ProcessStartInfo("git", "--version") { RedirectStandardOutput = true, RedirectStandardError = true };
+        psi.Environment["HOME"] = home;
+        foreach (var variable in environment)
+            psi.Environment[variable.Key] = variable.Value;
+
+        try
+        {
+            using var process = Process.Start(psi)!;
+            process.StandardOutput.ReadToEnd();
+            process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return null;
+        }
     }
 }
