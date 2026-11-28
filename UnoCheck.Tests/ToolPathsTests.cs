@@ -41,40 +41,8 @@ public class ToolPathsTests
         => Assert.Equal("-NoProfile -NonInteractive -Command Get-ExecutionPolicy", ToolPaths.PowerShellCommand("Get-ExecutionPolicy"));
 
     [Fact]
-    public void ExecutionPolicyCommands_AreModuleQualified_OnWindowsPowerShellsOwnModules()
-    {
-        Assert.StartsWith(ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Get-ExecutionPolicy ", PSExecutionPolicyCheckup.GetPolicyCommand);
-        Assert.StartsWith(ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
-    }
-
-    // GitHub's Windows runner and any PowerShell 7 session hand the child a PSModulePath without Windows PowerShell's
-    // modules; a folder that does not exist stands in for PowerShell 7's.
-    [Fact]
-    public void GetPolicyCommand_WithAnotherPowerShellsModulePath_StillLoadsItsModule()
-    {
-        if (!OperatingSystem.IsWindows() || !Path.IsPathRooted(ToolPaths.PowerShell()))
-            return;
-
-        var start = new System.Diagnostics.ProcessStartInfo(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(PSExecutionPolicyCheckup.GetPolicyCommand))
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        start.Environment["PSModulePath"] = Path.Join(Root, "PowerShell", "7", "Modules");
-
-        using var process = System.Diagnostics.Process.Start(start)!;
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(TimeSpan.FromMinutes(1)))
-        {
-            process.Kill(entireProcessTree: true);
-            Assert.Fail("Windows PowerShell did not exit within a minute.");
-        }
-
-        Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {error.Result}");
-        Assert.Contains(output.Result.Trim(), new[] { "Restricted", "AllSigned", "RemoteSigned", "Unrestricted", "Bypass", "Undefined" });
-    }
+    public void ExecutionPolicyCommand_IsModuleQualified_OnWindowsPowerShellsOwnModules()
+        => Assert.StartsWith(ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Set-ExecutionPolicy ", PSExecutionPolicySolution.SetPolicyCommand);
 
     [Fact]
     public void GitInstallRoots_MachineLocationsComeBeforeTheUsersOwn()

@@ -3,13 +3,18 @@ using System.Threading.Tasks;
 
 using DotNetCheck.Models;
 using DotNetCheck.Solutions;
+using Microsoft.Win32;
 
 namespace DotNetCheck.Checkups
 {
 	internal class PSExecutionPolicyCheckup : Checkup
 	{
-		// Module-qualified: by bare name, Windows PowerShell 5.1 searches every PATH folder for a program of that name first.
-		internal const string GetPolicyCommand = ToolPaths.PowerShellOwnModulesPrefix + @"Microsoft.PowerShell.Security\Get-ExecutionPolicy -Scope CurrentUser";
+		// What Windows PowerShell 5.1's Get-ExecutionPolicy -Scope CurrentUser reads. Read directly: starting Windows
+		// PowerShell makes a sandboxed host ask the user for the default profile's folder.
+		const string CurrentUserPolicyKey = @"Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell";
+		const string PolicyValueName = "ExecutionPolicy";
+
+		const string RequiredPolicy = "RemoteSigned";
 
 		public override string Id => "psexecpolicy";
 
@@ -19,31 +24,32 @@ namespace DotNetCheck.Checkups
 
 		public override Task<DiagnosticResult> Examine(SharedState state)
 		{
+			// Must stay, though this check starts no PowerShell: the later runs (the fix, the SDK install) need it cleared.
 			// See: https://github.com/PowerShell/PowerShell/issues/18530#issuecomment-1325691850
 			Environment.SetEnvironmentVariable("PSModulePath", string.Empty);
 
-			var result = ShellProcessRunner.Run(ToolPaths.PowerShell(), ToolPaths.PowerShellCommand(GetPolicyCommand));
+			return Task.FromResult(PolicyResult(ReadCurrentUserPolicy()));
+		}
 
-			if (result.Success)
-			{
-				if (result.StandardOutput.Count != 0 && result.StandardOutput[0] == "RemoteSigned")
-				{
-					return Task.FromResult(DiagnosticResult.Ok(this));
-				}
-				else
-				{
-					return Task.FromResult(
-						new DiagnosticResult(
-							Status.Error,
-							this,
-							"PowerShell execution policy for current user is not RemoteSigned.",
-							new("Change PowerShell execution policy to RemoteSigned", new PSExecutionPolicySolution())));
-				}
-			}
-			else
-			{
-				return Task.FromResult(new DiagnosticResult(Status.Error, this, "Failed to get PowerShell execution policy."));
-			}
+		// Null when the current user has no policy of their own, which PowerShell reports as Undefined.
+		static string ReadCurrentUserPolicy()
+		{
+#pragma warning disable CA1416 // Examined on Windows only (IsPlatformSupported).
+			using var key = Registry.CurrentUser.OpenSubKey(CurrentUserPolicyKey);
+			return key?.GetValue(PolicyValueName) as string;
+#pragma warning restore CA1416
+		}
+
+		internal DiagnosticResult PolicyResult(string currentUserPolicy)
+		{
+			if (string.Equals(currentUserPolicy?.Trim(), RequiredPolicy, StringComparison.OrdinalIgnoreCase))
+				return DiagnosticResult.Ok(this);
+
+			return new DiagnosticResult(
+				Status.Error,
+				this,
+				"PowerShell execution policy for current user is not RemoteSigned.",
+				new("Change PowerShell execution policy to RemoteSigned", new PSExecutionPolicySolution()));
 		}
 	}
 }
