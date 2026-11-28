@@ -65,10 +65,14 @@ public class ToolPathsTests
 
         using var process = System.Diagnostics.Process.Start(start)!;
         var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEnd();
-        Assert.True(process.WaitForExit(TimeSpan.FromMinutes(1)), "Windows PowerShell did not exit within a minute.");
+        var error = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(TimeSpan.FromMinutes(1)))
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail("Windows PowerShell did not exit within a minute.");
+        }
 
-        Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {error}");
+        Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {error.Result}");
         Assert.Contains(output.Result.Trim(), new[] { "Restricted", "AllSigned", "RemoteSigned", "Unrestricted", "Bypass", "Undefined" });
     }
 
