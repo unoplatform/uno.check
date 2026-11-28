@@ -222,4 +222,21 @@ public class OpenJdkCheckupTests
         Assert.False(checkup.IsCompatible(Jdk("/opt/oracle/jdk-17.0.19", "17.0.19")));
         Assert.False(checkup.IsCompatible(Jdk("/opt/microsoft/jdk-unreadable", null)));
     }
+
+    [Fact]
+    public void LastResorts_InAnAppContainer_SearchNothing()
+        => Assert.Empty(CheckupFor("17.0.19").LastResorts(inAppContainer: true));
+
+    [Fact]
+    public void LastResorts_OutsideAnAppContainer_AskTheAndroidSdkThenThePath()
+    {
+        var checkup = CheckupFor("17.0.19");
+
+        Assert.Equal([checkup.FindAndroidSdkJdks, checkup.FindPathJdks], checkup.LastResorts(inAppContainer: false));
+    }
+
+    // Off Windows this is false without asking; on Windows (CI) it runs the token query.
+    [Fact]
+    public void AppContainer_TheTestRun_IsNotInOne()
+        => Assert.False(AppContainer.IsCurrentProcess);
 }
