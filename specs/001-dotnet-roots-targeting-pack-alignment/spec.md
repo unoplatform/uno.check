@@ -61,8 +61,12 @@ Two new checkups:
   - the `DOTNET_ROOT`-family variables when set, probed in the host's order:
     `DOTNET_ROOT_<ARCH>` (net6+ hosts), then `DOTNET_ROOT(x86)` for 32-bit processes,
     then `DOTNET_ROOT`,
-  - conventional locations per OS: `~/.dotnet`, `/usr/lib/dotnet`, `/usr/share/dotnet`
-    (Linux), `/usr/local/share/dotnet` (macOS), `%ProgramFiles%\dotnet` (Windows).
+  - conventional locations per OS: `~/.dotnet` and `/usr/lib/dotnet`, `/usr/share/dotnet`
+    (Linux), `~/.dotnet` and `/usr/local/share/dotnet` (macOS), `%ProgramFiles%\dotnet`
+    (Windows). `~/.dotnet` is the dotnet-install default on Linux and macOS only, and on
+    Windows the user profile is not probed at all: a sandboxed caller (Uno Platform Studio's
+    Windows package) is asked for access to every read of it (#641). An SDK there is still
+    reported when `DOTNET_ROOT` or `PATH` names it.
 - Report the inventory (root, SDKs present, workload-set/manifest mode) at info level.
 - **Warning** when the effective root (F1) differs from the `PATH` dotnet root, stating
   explicitly: which root IDE/devserver tooling resolves, which root terminal commands hit,

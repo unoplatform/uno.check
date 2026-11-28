@@ -178,17 +178,42 @@ namespace DotNetCheck.Checkups
 
 		private static IEnumerable<string> EnumerateKnownRoots()
 		{
+			// Not resolved on Windows: GetFolderPath verifies the folder, a read a sandboxed caller is asked for.
+			var home = Util.IsWindows ? string.Empty : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+			var candidates = KnownRootCandidates(
+				Util.Platform,
+				home,
+				Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
+
+			// Only roots that actually carry SDKs matter for the divergence analysis.
+			foreach (var candidate in candidates.Where(candidate => Directory.Exists(Path.Join(candidate, "sdk"))))
+			{
+				yield return NormalizeRoot(candidate);
+			}
+		}
+
+		/// <summary>
+		/// The usual .NET install locations on <paramref name="platform"/>, whether or not they exist.
+		/// </summary>
+		/// <param name="platform">The operating system to list locations for.</param>
+		/// <param name="home">The user's profile folder, or an empty string when there is none.</param>
+		/// <param name="programFiles">The Program Files folder; read on Windows only.</param>
+		/// <returns>The candidate roots, most user-specific first.</returns>
+		/// <remarks>
+		/// <c>~/.dotnet</c> is the dotnet-install default on Linux and macOS only. On Windows SDKs go to
+		/// Program Files, and probing the profile asks a sandboxed caller for access (issue #641).
+		/// </remarks>
+		internal static IReadOnlyList<string> KnownRootCandidates(Platform platform, string home, string programFiles)
+		{
+			if (platform == Platform.Windows)
+				return new[] { Path.Join(programFiles, "dotnet") };
+
 			var candidates = new List<string>();
 
-			var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 			if (!string.IsNullOrEmpty(home))
 				candidates.Add(Path.Join(home, ".dotnet"));
 
-			if (Util.IsWindows)
-			{
-				candidates.Add(Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet"));
-			}
-			else if (Util.IsMac)
+			if (platform == Platform.OSX)
 			{
 				candidates.Add("/usr/local/share/dotnet");
 			}
@@ -198,11 +223,7 @@ namespace DotNetCheck.Checkups
 				candidates.Add("/usr/share/dotnet");
 			}
 
-			// Only roots that actually carry SDKs matter for the divergence analysis.
-			foreach (var candidate in candidates.Where(candidate => Directory.Exists(Path.Join(candidate, "sdk"))))
-			{
-				yield return NormalizeRoot(candidate);
-			}
+			return candidates;
 		}
 
 		internal static string NormalizeRoot(string path)
